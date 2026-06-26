@@ -1,0 +1,17 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "module": "ESNext",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@vitacare/shared-types": ["../../packages/shared-types/src/index.ts"],
+      "@vitacare/utils": ["../../packages/utils/src/index.ts"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "nativewind-env.d.ts"
+  ]
+}

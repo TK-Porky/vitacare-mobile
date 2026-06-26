@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "VitaCare",
+    "slug": "vitacare",
+    "version": "0.0.1",
+    "scheme": "vitacare",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "VitaCare utilise votre position pour trouver des établissements de santé à proximité."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.anonymous.vitacare"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "VitaCare utilise votre position pour trouver des établissements de santé à proximité."
+        }
+      ],
+      "expo-router",
+      "expo-secure-store",
+      "expo-splash-screen",
+      "expo-status-bar",
+      "@maplibre/maplibre-react-native",
+      "expo-sharing"
+    ]
+  }
+}
