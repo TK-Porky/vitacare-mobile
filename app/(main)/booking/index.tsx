@@ -200,9 +200,12 @@ export default function BookingScreen() {
 
     setIsSubmitting(true);
     try {
+      const y = booking.date.getFullYear();
+      const m = String(booking.date.getMonth() + 1).padStart(2, '0');
+      const d = String(booking.date.getDate()).padStart(2, '0');
       const appointment = await appointmentService.create({
         providerId: provider.id ?? 0,
-        date: booking.date.toISOString().split('T')[0],
+        date: `${y}-${m}-${d}`,
         time: booking.time,
         reason: booking.reason || 'Consultation générale',
         paymentMethod: booking.paymentMethod === 'now' ? booking.paymentProvider : 'later',

@@ -64,8 +64,11 @@ export const appointmentService = {
 
   async reschedule(id: number | string, data: RescheduleAppointmentRequest): Promise<AppointmentResponse> {
     const startTime = `${data.newDate}T${data.newTime}:00`;
-    const endDateTime = new Date(new Date(startTime).getTime() + 30 * 60 * 1000);
-    const newEndTime = endDateTime.toISOString().slice(0, 19);
+    const [sh, sm] = data.newTime.split(':').map(Number);
+    let m = sh * 60 + sm + 30;
+    const eh = Math.floor(m / 60) % 24;
+    const em = m % 60;
+    const newEndTime = `${data.newDate}T${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:00`;
     const payload = {
       newStartTime: startTime,
       newEndTime,
@@ -116,8 +119,11 @@ export const appointmentService = {
 
   async rescheduleAppointment(id: number | string, data: RescheduleAppointmentRequest): Promise<AppointmentResponse> {
     const startTime = `${data.newDate}T${data.newTime}:00`;
-    const endDateTime = new Date(new Date(startTime).getTime() + 30 * 60 * 1000);
-    const newEndTime = endDateTime.toISOString().slice(0, 19);
+    const [sh, sm] = data.newTime.split(':').map(Number);
+    let m = sh * 60 + sm + 30;
+    const eh = Math.floor(m / 60) % 24;
+    const em = m % 60;
+    const newEndTime = `${data.newDate}T${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}:00`;
     const payload = {
       newStartTime: startTime,
       newEndTime,
