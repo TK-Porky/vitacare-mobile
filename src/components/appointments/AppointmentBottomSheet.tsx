@@ -8,12 +8,13 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { AppBottomSheet, AppBottomSheetRef } from "../generics";
-import { PrimaryButton } from "../buttons";
-import { GrayButton } from "../buttons/GrayButton";
-import { colors, fontFamily, fontSize } from "../../themes";
-import { AppointmentStatus } from "../../types/api-responses";
+import { AppBottomSheet, AppBottomSheetRef } from "@/components/generics";
+import { PrimaryButton } from "@/components/buttons/PrimaryButton";
+import { GrayButton } from "@/components/buttons/GrayButton";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { AppointmentStatus } from "@/types/api-responses";
 import { Appointment } from "@/types";
+import { parseAppointmentDate } from "@/utils/formatDate";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,6 +126,7 @@ export const AppointmentDetailBottomSheet = forwardRef<
     const currency = appointment.currency ?? "XCFA";
     const fmt = (n: number) => `${formatPrice(n)} ${currency}`;
     const statusCfg = STATUS_CONFIG[appointment.status];
+    const { day, month, year } = parseAppointmentDate(appointment.date);
 
     const handleReschedule = () => {
       sheetRef.current?.close();
@@ -227,7 +229,9 @@ export const AppointmentDetailBottomSheet = forwardRef<
 
         <SectionTitle>Date & Heure</SectionTitle>
         <InfoRow icon="calendar-outline">
-          <Text style={styles.bodyText}>{appointment.dateTime}</Text>
+          <Text style={styles.bodyText}>
+            {day} {month} {year} à {appointment.time}
+          </Text>
         </InfoRow>
 
         <SectionTitle>Lieux</SectionTitle>

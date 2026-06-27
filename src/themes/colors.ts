@@ -25,6 +25,18 @@ export const colors = {
   gray800: "#2E2D30",
   gray900: "#1B181B",
 
+  // Blue
+  blue: "#007AFF",
+  blueLight: "rgba(0, 122, 255, 0.1)",
+  blueDark: "#005BB5",
+  blueMid: "#008CFF",
+
+  // Purple
+  purple: "#9747FF",
+  purpleLight: "rgba(151, 71, 255, 0.1)",
+  purpleDark: "#732D9E",
+  purpleMid: "#B069FF",
+
   ink: "#1B181B",
   inkLight: "rgba(27, 24, 27, 0.55)",
   inkMuted: "rgba(27, 24, 27, 0.35)",
