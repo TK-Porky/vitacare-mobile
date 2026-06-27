@@ -27,6 +27,7 @@ import { colors, fontFamily, fontSize } from '../../../src/themes';
 import { apiClient } from '../../../src/lib/api.client';
 import { API_ENDPOINTS } from '../../../src/types/api-endpoints';
 import { appointmentService } from '../../../src/services/appointment.service';
+import { notificationService } from '../../../src/services/notification.service';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -211,6 +212,17 @@ export default function BookingScreen() {
         paymentMethod: booking.paymentMethod === 'now' ? booking.paymentProvider : 'later',
       });
       createdAppointmentId.current = appointment.id;
+
+      // Planifier une notification locale pour le rappel RDV
+      const [hours, mins] = booking.time!.split(':').map(Number);
+      const appointmentDate = new Date(booking.date!);
+      appointmentDate.setHours(hours, mins, 0, 0);
+      notificationService.scheduleAppointmentReminder({
+        appointmentId: String(appointment.id),
+        doctorName: provider.name,
+        appointmentDate,
+      });
+
       setIsSubmitting(false);
 
       if (booking.paymentMethod === 'later') {

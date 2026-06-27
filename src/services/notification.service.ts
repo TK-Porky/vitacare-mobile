@@ -248,6 +248,18 @@ class NotificationService {
     await this.deleteFromInbox(identifier);
   }
 
+  /**
+   * Cancel a notification by a data key/value pair (e.g. treatmentId, appointmentId).
+   * Recherche dans la boîte de réception et annule la notification programmée correspondante.
+   */
+  async cancelByDataKey(key: string, value: string): Promise<void> {
+    const inbox = await this.getInbox();
+    const match = inbox.find((n) => n.data?.[key] === value);
+    if (match) {
+      await this.cancel(match.id);
+    }
+  }
+
   /** Cancel ALL scheduled notifications (e.g. on logout). */
   async cancelAll(): Promise<void> {
     try {
