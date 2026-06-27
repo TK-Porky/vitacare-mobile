@@ -1,18 +1,20 @@
-import { AppointmentStatus } from './api-responses';
+import { AppointmentStatus } from "./api-responses";
 
 export interface Appointment {
-  id: string;
+  id: number | string;
+  title: string;
   doctorName: string;
   doctorAvatarUri: string;
   avatarUri?: string;
   specialty: string;
-  motif: string;
+  reason: string;
   clinic: string;
   address: string;
   date: string;
   time: string;
   dateTime?: string;
   status: AppointmentStatus;
+  paymentMethod: string;
   badge?: string | null;
   total?: number;
   currency?: string;

@@ -380,8 +380,6 @@ export default function LocationScreen() {
     [],
   );
 
-  const cameraSettingsRef = useRef(cameraSettings);
-
   // Dans updateMapLocation
   const updateMapLocation = useCallback(
     (
@@ -451,7 +449,7 @@ export default function LocationScreen() {
       };
       setUserMarker(marker);
 
-      updateMapLocation(coords, ZOOM_LEVELS.user); // ✅ maintenant dans les deps
+      updateMapLocation(coords, ZOOM_LEVELS.user);
       await reverseGeocode(coords);
     } catch (error) {
       console.error("[Location] Get location error:", error);
@@ -568,7 +566,7 @@ export default function LocationScreen() {
     }
 
     try {
-      await updateProfile({
+      const res = await updateProfile({
         fullName: user?.fullName ?? "",
         email: user?.email ?? "",
         phoneNumber: user?.phoneNumber ?? "",

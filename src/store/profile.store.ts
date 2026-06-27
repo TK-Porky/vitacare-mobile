@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { profileService } from "../services/profile.service";
-import { UpdateProfileInput, ChangePasswordInput, UpdatePreferencesInput, UpdateLocationInput } from "../schemas/profile.schema";
+import {
+  UpdateProfileInput,
+  ChangePasswordInput,
+  UpdatePreferencesInput,
+} from "../schemas/profile.schema";
 import { useAuthStore } from "./auth.store";
+import { UserProfileResponse } from "@/types/api-responses";
 
 interface ProfileState {
   isLoading: boolean;
@@ -10,10 +15,14 @@ interface ProfileState {
 
   // Actions
   getProfile: () => Promise<void>;
-  updateProfile: (data: UpdateProfileInput) => Promise<void>;
+  updateProfile: (data: UpdateProfileInput) => Promise<UserProfileResponse>;
   changePassword: (data: ChangePasswordInput) => Promise<void>;
   updatePreferences: (data: UpdatePreferencesInput) => Promise<void>;
-  uploadAvatar: (fileUri: string, fileName: string, fileType: string) => Promise<void>;
+  uploadAvatar: (
+    fileUri: string,
+    fileName: string,
+    fileType: string,
+  ) => Promise<void>;
   clearState: () => void;
 }
 
@@ -23,21 +32,21 @@ export const useProfileStore = create<ProfileState>((set) => ({
   success: false,
 
   /**
-   * 
-   * @param data 
+   *
+   * @param data
    */
-  getProfile: async() => {
-    set({ isLoading: true, error: null, success: false});
+  getProfile: async () => {
+    set({ isLoading: true, error: null, success: false });
     try {
       await profileService.getProfile();
 
       useAuthStore.getState().hydrate();
 
-      set({ success: true});
+      set({ success: true });
     } catch (e: any) {
-      set({ error: e?.message ?? "Erreur lors de la récupération du profil."});
+      set({ error: e?.message ?? "Erreur lors de la récupération du profil." });
     } finally {
-      set({ isLoading: false})
+      set({ isLoading: false });
     }
   },
 
@@ -47,8 +56,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
   updateProfile: async (data) => {
     set({ isLoading: true, error: null, success: false });
     try {
-
-      await profileService.updateProfile({
+      const res = await profileService.updateProfile({
         fullName: data.fullName,
         phoneNumber: data.phoneNumber,
         dateOfBirth: data.dateOfBirth,
@@ -59,12 +67,18 @@ export const useProfileStore = create<ProfileState>((set) => ({
         longitude: data.longitude,
       });
 
-      // Update auth store user data
-      useAuthStore.getState().hydrate(); // Or manually set if hydrate is too heavy
-      
+      if (res.statusCode !== 0) {
+        set({ error: res.message, success: false });
+        return res;
+      }
+
+      await useAuthStore.getState().hydrate();
+
       set({ success: true });
+      return res;
     } catch (e: any) {
       set({ error: e?.message ?? "Erreur lors de la mise à jour du profil." });
+      throw new Error(e?.message ?? "Erreur lors de la mise à jour du profil.");
     } finally {
       set({ isLoading: false });
     }
@@ -82,7 +96,9 @@ export const useProfileStore = create<ProfileState>((set) => ({
       });
       set({ success: true });
     } catch (e: any) {
-      set({ error: e?.message ?? "Erreur lors du changement de mot de passe." });
+      set({
+        error: e?.message ?? "Erreur lors du changement de mot de passe.",
+      });
     } finally {
       set({ isLoading: false });
     }
@@ -99,11 +115,13 @@ export const useProfileStore = create<ProfileState>((set) => ({
           language: data.language,
         });
       }
-      
-      if (data.notifications !== undefined || 
-          data.medicationReminders !== undefined || 
-          data.appointmentReminders !== undefined || 
-          data.promotions !== undefined) {
+
+      if (
+        data.notifications !== undefined ||
+        data.medicationReminders !== undefined ||
+        data.appointmentReminders !== undefined ||
+        data.promotions !== undefined
+      ) {
         await profileService.updateNotificationPreferences({
           push: data.notifications,
           medicationReminders: data.medicationReminders,
@@ -114,7 +132,9 @@ export const useProfileStore = create<ProfileState>((set) => ({
 
       set({ success: true });
     } catch (e: any) {
-      set({ error: e?.message ?? "Erreur lors de la mise à jour des préférences." });
+      set({
+        error: e?.message ?? "Erreur lors de la mise à jour des préférences.",
+      });
     } finally {
       set({ isLoading: false });
     }
@@ -126,28 +146,41 @@ export const useProfileStore = create<ProfileState>((set) => ({
   uploadAvatar: async (fileUri, fileName, fileType) => {
     set({ isLoading: true, error: null, success: false });
     try {
-      const result = await profileService.uploadAvatar(fileUri, fileName, fileType);
-      console.log('[ProfileStore] Avatar upload result:', JSON.stringify(result));
-      
+      const result = await profileService.uploadAvatar(
+        fileUri,
+        fileName,
+        fileType,
+      );
+      console.log(
+        "[ProfileStore] Avatar upload result:",
+        JSON.stringify(result),
+      );
+
       // Immediately update the auth store user with the new avatar URL
       const authState = useAuthStore.getState();
       if (authState.user && result.avatarUrl) {
         useAuthStore.setState({
           user: { ...authState.user, avatarUrl: result.avatarUrl },
         });
-        console.log('[ProfileStore] Auth store user avatarUrl updated to:', result.avatarUrl);
+        console.log(
+          "[ProfileStore] Auth store user avatarUrl updated to:",
+          result.avatarUrl,
+        );
       }
-      
+
       // Also re-fetch the full profile from backend to ensure consistency
       try {
         await authState.hydrate();
       } catch (hydrateError) {
-        console.warn('[ProfileStore] Hydrate after avatar upload failed (non-critical):', hydrateError);
+        console.warn(
+          "[ProfileStore] Hydrate after avatar upload failed (non-critical):",
+          hydrateError,
+        );
       }
-      
+
       set({ success: true });
     } catch (e: any) {
-      console.error('[ProfileStore] Avatar upload error:', e);
+      console.error("[ProfileStore] Avatar upload error:", e);
       set({ error: e?.message ?? "Erreur lors de l'envoi de l'avatar." });
       throw e; // Re-throw so the UI can handle it
     } finally {
