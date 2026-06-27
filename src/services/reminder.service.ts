@@ -62,11 +62,11 @@ export const reminderService = {
   },
 
   /**
-   * Create a new reminder
+   * Create a new reminder via dashboard endpoint (lookup or create medication by name)
    */
   async createReminder(data: CreateReminderRequest): Promise<ReminderResponse> {
     const res = await apiClient.post<ReminderDetailResponse>(
-      API_ENDPOINTS.REMINDERS.CREATE, 
+      API_ENDPOINTS.DASHBOARD.ADD_MEDICATION, 
       data
     );
     if (!res.success) throw new Error(res.error ?? "Failed to create reminder");

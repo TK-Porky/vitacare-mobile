@@ -9,6 +9,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { reminderService } from '../services/reminder.service';
+import { notificationService } from '../services/notification.service';
 import type { 
   CreateReminderRequest, 
   UpdateReminderRequest,
@@ -116,8 +117,20 @@ export const useReminders = (query?: RemindersListQuery) => {
    */
   const createReminderMutation = useMutation({
     mutationFn: (data: CreateReminderRequest) => reminderService.createReminder(data),
-    onSuccess: () => {
-      // Invalidate and refetch reminders list
+    onSuccess: (created) => {
+      // Planifier une notification locale pour le rappel de traitement
+      const [hours, mins] = created.scheduledHour.split(':').map(Number);
+      const reminderTime = new Date();
+      reminderTime.setHours(hours, mins, 0, 0);
+      if (reminderTime <= new Date()) {
+        reminderTime.setDate(reminderTime.getDate() + 1);
+      }
+      notificationService.scheduleTreatmentReminder({
+        treatmentId: created.id,
+        treatmentName: created.medicationName,
+        reminderTime,
+      });
+
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
       queryClient.invalidateQueries({ queryKey: reminderKeys.summary() });
     },
@@ -144,9 +157,10 @@ export const useReminders = (query?: RemindersListQuery) => {
   const deleteReminderMutation = useMutation({
     mutationFn: (id: string) => reminderService.deleteReminder(id),
     onSuccess: (_, id) => {
-      // Remove from cache
+      // Annuler la notification locale associée
+      notificationService.cancelByDataKey('treatmentId', id);
+
       queryClient.removeQueries({ queryKey: reminderKeys.detail(id) });
-      // Invalidate lists
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
       queryClient.invalidateQueries({ queryKey: reminderKeys.summary() });
     },
@@ -174,9 +188,17 @@ export const useReminders = (query?: RemindersListQuery) => {
     mutationFn: ({ id, minutes }: { id: string; minutes: number }) => 
       reminderService.snoozeReminder(id, minutes),
     onSuccess: (data, variables) => {
-      // Update the specific reminder in cache
+      // Reporter la notification locale
+      const [hours, mins] = data.scheduledHour.split(':').map(Number);
+      const reminderTime = new Date();
+      reminderTime.setHours(hours + Math.floor(variables.minutes / 60), mins + variables.minutes % 60, 0, 0);
+      notificationService.scheduleTreatmentReminder({
+        treatmentId: data.id,
+        treatmentName: data.medicationName,
+        reminderTime,
+      });
+
       queryClient.setQueryData(reminderKeys.detail(variables.id), data);
-      // Invalidate lists and summary
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
       queryClient.invalidateQueries({ queryKey: reminderKeys.summary() });
     },

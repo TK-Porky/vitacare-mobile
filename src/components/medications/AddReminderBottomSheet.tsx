@@ -17,9 +17,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { AppBottomSheet, AppBottomSheetRef } from "../generics";
 import { PrimaryButton } from "../buttons";
 import { colors, fontFamily, fontSize } from "../../themes";
+import { medicationService } from "../../services/medication.service";
 
 export type ReminderData = {
   drugName: string;
+  medicationId?: number;
   form: string;
   dosageValue: string;
   dosageUnit: string;
@@ -354,15 +356,57 @@ export const AddReminderBottomSheet = forwardRef<
   const sheetRef = useRef<AppBottomSheetRef>(null);
   const [data, setData] = useState<ReminderData>(DEFAULT_REMINDER);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [searchResults, setSearchResults] = useState<{ id: number; name: string; form: string }[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const patch = useCallback((partial: Partial<ReminderData>) => {
     setData((prev) => ({ ...prev, ...partial }));
   }, []);
 
+  const handleDrugNameChange = useCallback((text: string) => {
+    patch({ drugName: text, medicationId: undefined });
+    setShowResults(false);
+
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+
+    if (text.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const results = await medicationService.searchMedications(text);
+        setSearchResults(
+          results.slice(0, 8).map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            form: r.dosageForm ?? '',
+          }))
+        );
+        setShowResults(results.length > 0);
+      } catch {
+        // API indisponible, laisser l'utilisateur taper manuellement
+      }
+    }, 300);
+  }, [patch]);
+
+  const selectMedication = useCallback((item: { id: number; name: string; form: string }) => {
+    patch({
+      medicationId: item.id,
+      drugName: item.name,
+      form: item.form || data.form,
+    });
+    setShowResults(false);
+  }, [data.form, patch]);
+
   useImperativeHandle(ref, () => ({
     open: () => {
       setData(DEFAULT_REMINDER);
       setShowTimePicker(false);
+      setSearchResults([]);
+      setShowResults(false);
       sheetRef.current?.open();
     },
     close: () => sheetRef.current?.close(),
@@ -392,10 +436,26 @@ export const AddReminderBottomSheet = forwardRef<
         <TextInput
           style={styles.nameInput}
           value={data.drugName}
-          onChangeText={(t) => patch({ drugName: t })}
+          onChangeText={handleDrugNameChange}
           placeholder="Ex: Amoxicilline"
           placeholderTextColor={colors.inkFaint}
+          onFocus={() => searchResults.length > 0 && setShowResults(true)}
         />
+        {showResults && searchResults.length > 0 && (
+          <View style={styles.searchDropdown}>
+            {searchResults.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.searchItem}
+                onPress={() => selectMedication(item)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.searchItemName}>{item.name}</Text>
+                {item.form ? <Text style={styles.searchItemForm}>{item.form}</Text> : null}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       <View style={[styles.field, { zIndex: 300 }]}>
@@ -556,5 +616,43 @@ const styles = StyleSheet.create({
   cta: {
     marginTop: 8,
     marginBottom: Platform.OS === "ios" ? 24 : 12,
+  },
+  searchDropdown: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    zIndex: 999,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    overflow: "hidden",
+  },
+  searchItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  searchItemName: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    flex: 1,
+  },
+  searchItemForm: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginLeft: 8,
   },
 });

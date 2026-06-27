@@ -9,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { queryClient } from '../src/lib/query.client';
 import { useAuthStore } from '../src/store';
+import { useNotificationBootstrapper } from '../src/hooks/useNotificationBootstrapper';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -28,6 +29,8 @@ function RootNavigator() {
   const isHydrated  = useAuthStore((s) => s.isHydrated);
   const accessToken = useAuthStore((s) => s.accessToken);
   const segments    = useSegments();
+
+  useNotificationBootstrapper();
 
   useEffect(() => { hydrate(); }, []);
 
