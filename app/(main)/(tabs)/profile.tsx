@@ -9,12 +9,14 @@ import {
   Image,
   Platform,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "../../../src/themes";
 import { router } from "expo-router";
 import { useAuthStore } from "../../../src/store";
+import { useProfile } from "@/hooks";
 import { profileService } from "../../../src/services/profile.service";
 
 // ================================================================================== //
@@ -229,13 +231,14 @@ function MenuSection({
 export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const { isLoading, refetch } = useProfile();
   const [address, setAddress] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.address) {
       setAddress(user.address);
     }
-  }, []);
+  }, [user]);
 
   // Safe check for the user's avatar URL
   const avatarUri =
@@ -326,6 +329,14 @@ export default function ProfileScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refetch}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
         {/* ── Page title ── */}
         <Text style={styles.pageTitle}>Votre Profile</Text>

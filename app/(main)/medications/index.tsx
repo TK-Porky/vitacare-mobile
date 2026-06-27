@@ -92,11 +92,15 @@ function DrugCard({
         )}
       </View>
       <View style={styles.drugInfo}>
-        <Text style={styles.drugCategory}>{item.dosageForm || "Médicament"}</Text>
+        <Text style={styles.drugCategory}>
+          {item.dosageForm || "Médicament"}
+        </Text>
         <Text style={styles.drugName} numberOfLines={2}>
           {item.name}
         </Text>
-        {item.referencePrice != null && <Text style={styles.drugPrice}>{item.referencePrice} FCFA</Text>}
+        {item.referencePrice != null && (
+          <Text style={styles.drugPrice}>{item.referencePrice} FCFA</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -135,7 +139,9 @@ export default function MedecineScreen({ onReminders }: Props) {
   // ── Categories dérivées des dosageForm ──
   const categories = React.useMemo(() => {
     const forms = new Set<string>();
-    medications.forEach(m => { if (m.dosageForm) forms.add(m.dosageForm); });
+    medications.forEach((m) => {
+      if (m.dosageForm) forms.add(m.dosageForm);
+    });
     return Array.from(forms).map((form, i) => ({
       id: String(i + 1),
       label: form,
@@ -293,6 +299,8 @@ export default function MedecineScreen({ onReminders }: Props) {
               setSearchQuery("");
               fetchMedications();
             }}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
       >

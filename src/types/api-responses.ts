@@ -1,4 +1,4 @@
-import { ClinicProvider } from './clinicProvider';
+import { ClinicProvider } from "./clinicProvider";
 
 /**
  * Types des réponses API pour la communication avec le backend VitaCare
@@ -77,8 +77,8 @@ export interface BookingRequest {
   date: string; // ISO date string
   time: string; // HH:mm format
   reason: string;
-  paymentMethod: 'now' | 'later';
-  paymentProvider?: 'mobile_money' | 'orange_money' | 'card';
+  paymentMethod: "now" | "later";
+  paymentProvider?: "mobile_money" | "orange_money" | "card";
 }
 
 export interface BookingResponse {
@@ -89,7 +89,7 @@ export interface BookingResponse {
   reason: string;
   paymentMethod: string;
   paymentProvider?: string;
-  status: 'confirmed' | 'pending' | 'paid' | 'cancelled';
+  status: AppointmentStatus;
   total: number;
   currency: string;
   createdAt: string;
@@ -107,13 +107,14 @@ export interface TimeSlotsResponse {
 // ---------------------------------------------------------------------------
 
 export type AppointmentStatus =
-  | 'PENDING'
-  | 'CONFIRMED'
-  | 'IN_PROGRESS'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'NO_SHOW'
-  | 'RESCHEDULED';
+  | "PENDING"
+  | "CONFIRMED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "NO_SHOW"
+  | "PAID"
+  | "RESCHEDULED";
 
 export interface AppointmentResponse {
   id: number;
@@ -178,7 +179,7 @@ export interface MedicationResponse {
   name: string;
   time: string;
   dosage: string;
-  status: 'taken' | 'missed' | 'pending';
+  status: "taken" | "missed" | "pending";
   active?: boolean;
 }
 
@@ -250,7 +251,13 @@ export interface PaymentResponse {
   amount: number;
   currency: string;
   paymentMethod: string;
-  paymentStatus: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'REFUNDED';
+  paymentStatus:
+    | "PENDING"
+    | "PROCESSING"
+    | "SUCCESS"
+    | "FAILED"
+    | "CANCELLED"
+    | "REFUNDED";
   sharepayReference: string | null;
   sharepayTransactionId: string | null;
   phoneNumber: string;
@@ -268,7 +275,7 @@ export interface NotificationResponse {
   id: string;
   title: string;
   body: string;
-  type: 'appointment' | 'medication' | 'payment' | 'system';
+  type: "appointment" | "medication" | "payment" | "system";
   read: boolean;
   createdAt: string;
   data?: any;
@@ -277,7 +284,6 @@ export interface NotificationResponse {
 export interface NotificationsListResponse extends PaginatedResponse<NotificationResponse> {}
 
 export interface MarkNotificationReadResponse extends ApiResponse<null> {}
-
 
 // ---------------------------------------------------------------------------
 // Store Medications (Catalogue Medipedia/BDPM)
@@ -337,7 +343,12 @@ export interface MedicationDetailResponse extends StoreMedicationResponse {
 // Reminders
 // ---------------------------------------------------------------------------
 
-export type ReminderStatus = 'PENDING' | 'TAKEN' | 'SNOOZED' | 'MISSED' | 'CANCELLED';
+export type ReminderStatus =
+  | "PENDING"
+  | "TAKEN"
+  | "SNOOZED"
+  | "MISSED"
+  | "CANCELLED";
 
 export interface ReminderResponse {
   id: string;
@@ -387,7 +398,7 @@ export interface UserProfileResponse {
   phoneNumber?: string;
   avatarUrl?: string;
   dateOfBirth?: string;
-  gender?: 'male' | 'female' | 'other';
+  gender?: "male" | "female" | "other";
   bloodGroup?: string;
   medicalHistory?: string;
   address?: string;
@@ -400,6 +411,8 @@ export interface UserProfileResponse {
     emailNotifications: boolean;
     smsNotifications: boolean;
   };
+  statusCode: number;
+  message: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -422,7 +435,7 @@ export interface ApiErrorResponse extends ApiResponse {
 // Types d'état pour les requêtes
 // ---------------------------------------------------------------------------
 
-export type RequestStatus = 'idle' | 'loading' | 'success' | 'error';
+export type RequestStatus = "idle" | "loading" | "success" | "error";
 
 export interface RequestState<T = any> {
   status: RequestStatus;

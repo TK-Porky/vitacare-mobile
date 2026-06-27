@@ -1,85 +1,30 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import {
   StyleSheet,
   ScrollView,
   StatusBar,
   View,
   Text,
-  Alert,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { colors, fontFamily, fontSize } from "../../../src/themes";
-import { appointmentService } from "../../../src/services";
-import { Appointment } from "../../../src/types";
-import { AppointmentResponse } from "../../../src/types/api-responses";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { Appointment } from "@/types";
 import {
   AppointmentDetailBottomSheet,
   AppointmentDetailBottomSheetRef,
-  AppointmentSheetData,
-} from "../../../src/components/appointments/";
+} from "@/components/appointments/";
 import {
   AppHeader,
   TabsSection,
   MonthHeader,
   AppointmentCard,
   AppointmentCardSkeleton,
-} from "../../../src/components";
-import { Bell, Calendar, Plus } from "lucide-react-native";
-
-// ── Mapper backend → UI ───────────────────────────────────────────────────────
-
-function toAppointment(r: AppointmentResponse): Appointment {
-  return {
-    id: String(r.id),
-    doctorName: r.doctorName,
-    doctorAvatarUri: r.doctorAvatarUrl ?? "",
-    avatarUri: r.doctorAvatarUrl ?? "",
-    specialty: r.specialty,
-    motif: r.reason ?? "",
-    clinic: r.clinicName,
-    address: r.clinicAddress,
-    date: r.date,
-    time: r.time,
-    dateTime: r.dateTime,
-    status: normalizeStatus(r.status),
-    total: r.total ?? undefined,
-  };
-}
-
-function normalizeStatus(s: string): Appointment["status"] {
-  const low = s.toLowerCase();
-  if (low === "confirmed") return "confirmed";
-  if (low === "pending") return "pending";
-  if (low === "paid") return "paid";
-  if (low === "cancelled") return "cancelled";
-  return "pending";
-}
-
-function isUpcoming(dateTime: string): boolean {
-  return new Date(dateTime) >= new Date();
-}
-
-// ── toSheetData ───────────────────────────────────────────────────────────────
-
-function toSheetData(item: Appointment): AppointmentSheetData {
-  return {
-    id: item.id,
-    title: `Visite`,
-    doctorName: item.doctorName,
-    doctorAvatarUri: item.doctorAvatarUri || item.avatarUri || "",
-    specialty: item.specialty,
-    status: item.status,
-    reason: item.motif,
-    dateTime: item.dateTime ?? `${item.date} à ${item.time}`,
-    clinicName: item.clinic,
-    locationSuffix: item.address,
-    paymentMethod: "Payer à la consultation",
-    invoiceLines: item.invoiceLines ?? [],
-    total: item.total ?? 0,
-    currency: item.currency ?? "XCFA",
-  };
-}
+} from "@/components";
+import { Calendar } from "lucide-react-native";
+import { useAppointments } from "@/hooks";
+import { toSheetData, isUpcoming } from "@/utils/mapper";
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -88,30 +33,23 @@ export default function AppointmentScreen() {
   const appointmentRef = useRef<AppointmentDetailBottomSheetRef>(null);
 
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
-  const [isLoading, setIsLoading] = useState(true);
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [selectedItem, setSelectedItem] = useState<AppointmentSheetData | null>(
-    null,
-  );
+  const [selectedItem, setSelectedItem] = useState<Appointment | undefined>();
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<
+    string | undefined
+  >();
 
-  const fetchAll = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const items = await appointmentService.getAll();
-      setAllAppointments(items.map(toAppointment));
-    } catch (err) {
-      console.warn("Failed to fetch appointments", err);
-      setAllAppointments([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const {
+    appointments,
+    isLoading,
+    isRefreshing,
+    error,
+    refresh,
+    fetchAll,
+    isCancelling,
+    cancelAppointment,
+  } = useAppointments();
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
-
-  const displayed = allAppointments.filter((a) =>
+  const displayed = appointments.filter((a) =>
     activeTab === "upcoming"
       ? isUpcoming(a.dateTime ?? a.date)
       : !isUpcoming(a.dateTime ?? a.date),
@@ -119,26 +57,43 @@ export default function AppointmentScreen() {
 
   const handleCardPress = useCallback((item: Appointment) => {
     setSelectedItem(toSheetData(item));
+    setSelectedAppointmentId(String(item.id || 0));
     appointmentRef.current?.open();
   }, []);
 
   const handleCancel = useCallback(async () => {
-    const id = selectedItem?.id;
-    if (!id) return;
-    try {
-      await appointmentService.cancel(id);
-      await fetchAll();
-    } catch (err: any) {
-      Alert.alert(
-        "Erreur",
-        err?.message || "Impossible d'annuler le rendez-vous.",
-      );
-    }
-  }, [selectedItem?.id, fetchAll]);
+    if (!selectedAppointmentId) return;
 
-  const handleReservation = () => {
+    const success = await cancelAppointment(selectedAppointmentId);
+    if (success) {
+      appointmentRef.current?.close();
+      setSelectedItem(undefined);
+      setSelectedAppointmentId(undefined);
+    }
+  }, [selectedAppointmentId, cancelAppointment]);
+
+  const handleReservation = useCallback(() => {
     router.push("/booking" as never);
-  };
+  }, [router]);
+
+  const handleShowOnMap = useCallback(() => {
+    router.push("/home/map" as never);
+  }, [router]);
+
+  // Affichage d'erreur
+  if (error && !isLoading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <AppHeader title="Rendez-vous" />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.retryText} onPress={refresh}>
+            Réessayer
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -151,6 +106,14 @@ export default function AppointmentScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
         {isLoading ? (
           <>
@@ -162,7 +125,7 @@ export default function AppointmentScreen() {
           <>
             <MonthHeader
               monthLabel={currentMonthLabel()}
-              count={isLoading ? 3 : displayed.length}
+              count={displayed.length}
             />
             {displayed.map((item) => (
               <AppointmentCard
@@ -173,25 +136,28 @@ export default function AppointmentScreen() {
             ))}
           </>
         ) : (
-          <>
-            <View style={styles.empty}>
-              <View style={styles.emptyIcon}>
-                <Calendar size={40} color={colors.inkLight} />
-              </View>
-              <Text style={styles.emptyText}>Aucun rendez-vous</Text>
+          <View style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <Calendar size={40} color={colors.inkLight} />
             </View>
-          </>
+            <Text style={styles.emptyText}>
+              {activeTab === "upcoming"
+                ? "Aucun rendez-vous à venir"
+                : "Aucun rendez-vous passé"}
+            </Text>
+          </View>
         )}
       </ScrollView>
 
       <AppointmentDetailBottomSheet
         ref={appointmentRef}
-        appointment={selectedItem ?? undefined}
+        appointment={selectedItem}
         actionVariant={activeTab === "upcoming" ? "reschedule" : "book_again"}
         onReschedule={handleReservation}
         onBookAgain={handleReservation}
         onCancel={handleCancel}
-        onShowOnMap={() => router.push("/home/map" as never)}
+        onShowOnMap={handleShowOnMap}
+        /*isCancelling={isCancelling}*/
       />
     </SafeAreaView>
   );
@@ -232,5 +198,24 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: fontSize.base,
     color: colors.inkLight,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.base,
+    color: colors.danger || "red",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  retryText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.base,
+    color: colors.primary,
+    textDecorationLine: "underline",
   },
 });

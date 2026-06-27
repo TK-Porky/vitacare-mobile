@@ -1,5 +1,14 @@
 import React, { useEffect } from "react";
-import { ScrollView, View, Text, StyleSheet, StatusBar, ActivityIndicator, RefreshControl, Alert } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  StatusBar,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+} from "react-native";
 import { router } from "expo-router";
 import { Flame, Pill, TrendingUp } from "lucide-react-native";
 import {
@@ -25,12 +34,16 @@ type BoardProps = {
 // ================================================================================== //
 // Main
 // ================================================================================== //
-export default function DashboardScreen({ onMap, notificationBell }: BoardProps) {
+export default function DashboardScreen({
+  onMap,
+  notificationBell,
+}: BoardProps) {
   // ================================================================================== //
   // Hooks
   // ================================================================================== //
-  const { data, isLoading, error, fetchOverview, updateMedicationStatus } = useDashboardStore();
-  const user = useAuthStore(state => state.user);
+  const { data, isLoading, error, fetchOverview, updateMedicationStatus } =
+    useDashboardStore();
+  const user = useAuthStore((state) => state.user);
 
   // ================================================================================== //
   // Effects
@@ -61,35 +74,36 @@ export default function DashboardScreen({ onMap, notificationBell }: BoardProps)
   /**
    * Handle medication press to update status
    */
-  const handleMedicationPress = (medicationId: number, currentStatus: string) => {
-    if (currentStatus !== 'pending') return;
+  const handleMedicationPress = (
+    medicationId: number,
+    currentStatus: string,
+  ) => {
+    if (currentStatus !== "pending") return;
 
-    Alert.alert(
-      "Suivi de prise",
-      "Avez-vous pris ce médicament ?",
-      [
-        {
-          text: "Non, manqué",
-          style: "destructive",
-          onPress: () => updateMedicationStatus({ 
-            medicationId, 
-            status: 'missed' 
+    Alert.alert("Suivi de prise", "Avez-vous pris ce médicament ?", [
+      {
+        text: "Non, manqué",
+        style: "destructive",
+        onPress: () =>
+          updateMedicationStatus({
+            medicationId,
+            status: "missed",
           }),
-        },
-        {
-          text: "Oui, pris",
-          onPress: () => updateMedicationStatus({ 
-            medicationId, 
-            status: 'taken',
-            takenAt: new Date().toISOString()
+      },
+      {
+        text: "Oui, pris",
+        onPress: () =>
+          updateMedicationStatus({
+            medicationId,
+            status: "taken",
+            takenAt: new Date().toISOString(),
           }),
-        },
-        {
-          text: "Plus tard",
-          style: "cancel"
-        }
-      ]
-    );
+      },
+      {
+        text: "Plus tard",
+        style: "cancel",
+      },
+    ]);
   };
 
   /**
@@ -119,7 +133,9 @@ export default function DashboardScreen({ onMap, notificationBell }: BoardProps)
     return (
       <View style={styles.errorContainer}>
         <HelperText message={error} type="error" />
-        <Text style={styles.retry} onPress={() => fetchOverview()}>Réessayer</Text>
+        <Text style={styles.retry} onPress={() => fetchOverview()}>
+          Réessayer
+        </Text>
       </View>
     );
   }
@@ -129,10 +145,10 @@ export default function DashboardScreen({ onMap, notificationBell }: BoardProps)
   // ================================================================================== //
   // Utility Functions
   // ================================================================================== //
-  const todayStr = new Date().toLocaleDateString('fr-FR', { 
-    weekday: 'long', 
-    day: 'numeric', 
-    month: 'long' 
+  const todayStr = new Date().toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
   });
 
   // ================================================================================== //
@@ -145,19 +161,32 @@ export default function DashboardScreen({ onMap, notificationBell }: BoardProps)
         backgroundColor={colors.primary}
         barStyle="dark-content"
       />
-      <AppHeader onSearch={handleSearch} onMap={onMap} notificationBell={notificationBell} />
+      <AppHeader
+        onSearch={handleSearch}
+        onMap={onMap}
+        notificationBell={notificationBell}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
         }
       >
         {/* Greeting */}
         <View style={styles.greeting}>
           <Text style={styles.greetingText}>
-            Bienvenue <Text style={styles.greetingName}>{user?.fullName || data.currentUser}</Text> !
+            Bienvenue{" "}
+            <Text style={styles.greetingName}>
+              {user?.fullName || data.currentUser}
+            </Text>{" "}
+            !
           </Text>
           <Text style={styles.greetingDate}>Aujourd'hui, {todayStr}</Text>
         </View>
@@ -191,20 +220,25 @@ export default function DashboardScreen({ onMap, notificationBell }: BoardProps)
 
         {/* Prises du jour */}
         <View style={styles.section}>
-          <SectionHeader title="Prises du jour" onSeeAll={handleSeeAllMedications} />
+          <SectionHeader
+            title="Prises du jour"
+            onSeeAll={handleSeeAllMedications}
+          />
           {data.medications.length === 0 ? (
             <Text style={styles.emptyText}>Aucune prise programmée</Text>
-          ):(
+          ) : (
             <>
               {data.medications.map((medication) => (
                 <MedicationItem
-                key={medication.id}
-                name={medication.name}
-                dose={medication.dosage}
-                status={medication.status}
-                time={medication.time}
-                onPress={() => handleMedicationPress(medication.id, medication.status)}
-              />
+                  key={medication.id}
+                  name={medication.name}
+                  dose={medication.dosage}
+                  status={medication.status}
+                  time={medication.time}
+                  onPress={() =>
+                    handleMedicationPress(medication.id, medication.status)
+                  }
+                />
               ))}
             </>
           )}
@@ -212,10 +246,13 @@ export default function DashboardScreen({ onMap, notificationBell }: BoardProps)
 
         {/* Rendez-vous */}
         <View style={styles.section}>
-          <SectionHeader title="Vos Rendez-vous" onSeeAll={handleSeeAllAppointments} />
+          <SectionHeader
+            title="Vos Rendez-vous"
+            onSeeAll={handleSeeAllAppointments}
+          />
           {data.appointments.length === 0 ? (
             <Text style={styles.emptyText}>Aucun rendez-vous prévu</Text>
-          ):(
+          ) : (
             <>
               {data.appointments.slice(0, 3).map((appointment) => {
                 const dateStr = appointment.date;
@@ -303,4 +340,3 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 });
-
