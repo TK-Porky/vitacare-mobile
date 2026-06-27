@@ -197,11 +197,10 @@ export default function MedecineScreen({ onReminders }: Props) {
 
     try {
       await createReminder({
-        medicationId: drug.id,
-        patientId: user.id,
-        scheduledDate: new Date().toISOString().split("T")[0],
-        scheduledTime: "08:00",
-        notes: `Médicament: ${drug.name}${drug.dosageForm ? `, Forme: ${drug.dosageForm}` : ""}`,
+        name: drug.name,
+        dosage: drug.dosage,
+        times: ["08:00"],
+        notes: drug.dosageForm ? `Forme: ${drug.dosageForm}` : undefined,
       });
 
       Alert.alert(

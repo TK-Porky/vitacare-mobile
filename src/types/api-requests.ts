@@ -215,10 +215,12 @@ export interface UpdateNotificationPreferencesRequest {
 // ---------------------------------------------------------------------------
 
 export interface CreateReminderRequest {
-  medicationId: string;
-  patientId: string;
-  scheduledDate: string; // ISO date string
-  scheduledTime: string; // HH:mm format
+  name: string;
+  dosage?: string;
+  frequency?: string;
+  startDate?: string;
+  endDate?: string;
+  times: string[];
   notes?: string;
 }
 
@@ -251,7 +253,7 @@ export interface RemindersListQuery {
 }
 
 export interface BulkCreateRemindersRequest {
-  reminders: Omit<CreateReminderRequest, 'patientId'>[];
+  reminders: CreateReminderRequest[];
   patientId: string;
 }
 

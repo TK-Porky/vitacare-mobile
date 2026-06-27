@@ -43,19 +43,15 @@ type FilterStatus = "all" | "PENDING" | "TAKEN" | "MISSED";
 /**
  * Map ReminderData to CreateReminderRequest
  */
-const mapReminderDataToRequest = (
-  data: ReminderData,
-  patientId: string,
-): CreateReminderRequest => {
-  // Create dosage string
-  const dosage = `${data.dosageValue}${data.dosageUnit}`;
+const mapReminderDataToRequest = (data: ReminderData): CreateReminderRequest => {
+  const dosage = data.dosageValue ? `${data.dosageValue}${data.dosageUnit}` : undefined;
+  const freq = data.frequencyCount ? `${data.frequencyCount}x/${data.frequencyUnit.toLowerCase()}` : undefined;
 
   return {
-    medicationId: "med_" + Date.now(), // You'll need to get this from your medication list
-    patientId: patientId,
-    scheduledDate: new Date().toISOString().split("T")[0], // Today's date
-    scheduledTime: data.time,
-    notes: `Forme: ${data.form}, Dosage: ${dosage}, Fréquence: ${data.frequencyCount}x/${data.frequencyUnit.toLowerCase()}`,
+    name: data.drugName,
+    dosage,
+    frequency: freq,
+    times: [data.time],
   };
 };
 
@@ -132,10 +128,7 @@ export default function RemindersScreen({ onStore }: Props) {
         }
 
         // Map the form data to API request
-        const requestData = mapReminderDataToRequest(
-          data,
-          user.id, // Use the user ID from the store
-        );
+        const requestData = mapReminderDataToRequest(data);
 
         // Create the reminder
         await createReminder(requestData);
