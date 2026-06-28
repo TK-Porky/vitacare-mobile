@@ -1,3 +1,4 @@
+import { NotificationData } from "./notifications";
 import { ClinicProvider } from "./clinicProvider";
 
 /**
@@ -16,12 +17,27 @@ export interface ApiResponse<T = any> {
   statusCode?: number;
 }
 
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+export interface BackendPaginatedResponse<T = NotificationData> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface PaginatedResponse<T = NotificationData> extends ApiResponse<
+  T[]
+> {
+  data: T[];
   pagination: {
-    page: number;
-    limit: number;
     total: number;
+    page: number;
+    pageSize: number;
     totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
   };
 }
 

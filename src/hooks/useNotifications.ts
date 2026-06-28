@@ -1,124 +1,381 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as ExpoNotifications from "expo-notifications";
 import { useRouter } from "expo-router";
-import { notificationService } from "../services/notification.service";
-import type { VitaCareNotification } from "@vitacare/shared-types";
+import { notificationService } from "@/services/notification.service";
+import type { NotificationData } from "@/types";
+import { Alert } from "react-native";
 
 interface UseNotificationsReturn {
-  inbox: VitaCareNotification[];
+  inbox: NotificationData[];
   unreadCount: number;
   isLoading: boolean;
+  isRefreshing: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
+  error: string | null;
   pushToken: string | null;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
+  loadMore: () => Promise<void>;
+  clearError: () => void;
 }
 
+const PAGE_SIZE = 20;
+
 /**
- * Gère la boîte de réception des notifications (lecture, marquage, suppression).
+ * Initialises the notification service, listens for new notifications,
+ * and provides the in-app inbox.
  *
- * L'initialisation globale (permissions, canaux, push token, listeners)
- * est déjà faite par `useNotificationBootstrapper()` dans _layout.tsx.
+ * Mount this hook once in the root layout.
  */
 export function useNotifications(): UseNotificationsReturn {
-  const [inbox, setInbox] = useState<VitaCareNotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [pushToken, setPushToken] = useState<string | null>(null);
+  const router = useRouter();
 
+  // ── États ──────────────────────────────────────────────────────────────
+  const [inbox, setInbox] = useState<NotificationData[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pushToken, setPushToken] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(true);
+
+  // ── Refs ────────────────────────────────────────────────────────────────
   const foregroundSub = useRef<ExpoNotifications.Subscription | null>(null);
   const responseSub = useRef<ExpoNotifications.Subscription | null>(null);
+  const refreshTimeout = useRef<NodeJS.Timeout | null>(null);
+  const isFirstLoad = useRef(true);
 
-  const refresh = useCallback(async () => {
-    const [msgs, count] = await Promise.all([
-      notificationService.getInbox(),
-      notificationService.getUnreadCount(),
-    ]);
-    setInbox(msgs);
-    setUnreadCount(count);
+  // ── Nettoyage ──────────────────────────────────────────────────────────
+  const cleanup = useCallback(() => {
+    if (refreshTimeout.current) {
+      clearTimeout(refreshTimeout.current);
+      refreshTimeout.current = null;
+    }
   }, []);
 
+  // ── Fonction de rafraîchissement ──────────────────────────────────────
+  const refresh = useCallback(
+    async (showLoading = false) => {
+      // Éviter les appels concurrents
+      if (isRefreshing) return;
+
+      try {
+        if (showLoading) {
+          setIsRefreshing(true);
+        }
+
+        // Récupérer les notifications avec pagination
+        const response = await notificationService.getInbox(1, PAGE_SIZE);
+
+        // Extraire les données de la réponse paginée
+        const notifications = response.data || [];
+        const count = notifications.filter((n) => !n.read).length;
+
+        // Vérifier que le composant est toujours monté
+        if (isMounted) {
+          setInbox(notifications);
+          setUnreadCount(count);
+          setHasMore(response.pagination?.hasNextPage ?? false);
+          setPage(1);
+          setError(null);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(
+            err?.message || "Erreur lors du chargement des notifications",
+          );
+          // Ne pas vider l'inbox en cas d'erreur
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
+      }
+    },
+    [isMounted, isRefreshing],
+  );
+
+  // ── Fonction de chargement de plus de notifications ──────────────────
+  const loadMore = useCallback(async () => {
+    // Vérifications avant de charger
+    if (isLoadingMore || !hasMore || isRefreshing || isLoading) {
+      return;
+    }
+
+    try {
+      setIsLoadingMore(true);
+
+      const nextPage = page + 1;
+      const response = await notificationService.getInbox(nextPage, PAGE_SIZE);
+
+      // Extraire les données de la réponse paginée
+      const newNotifications = response.data || [];
+
+      if (isMounted) {
+        setInbox((prev) => {
+          // Éviter les doublons
+          const existingIds = new Set(prev.map((n) => n.id));
+          const uniqueNewNotifications = newNotifications.filter(
+            (n) => !existingIds.has(n.id),
+          );
+          return [...prev, ...uniqueNewNotifications];
+        });
+        setPage(nextPage);
+        setHasMore(response.pagination?.hasNextPage ?? false);
+      }
+    } catch (err: any) {
+      if (isMounted) {
+        // Ne pas afficher d'erreur bloquante pour le chargement de plus
+        console.warn("Failed to load more notifications:", err);
+      }
+    } finally {
+      if (isMounted) {
+        setIsLoadingMore(false);
+      }
+    }
+  }, [isLoadingMore, hasMore, page, isRefreshing, isLoading, isMounted]);
+
+  // ── Initialisation ──────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
     async function init() {
-      setIsLoading(true);
-      const token = await notificationService.loadSavedToken();
-      if (!cancelled) setPushToken(token);
-      await refresh();
-      if (!cancelled) setIsLoading(false);
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Récupérer le token sauvegardé
+        const token = await notificationService.loadSavedToken();
+        if (!cancelled && isMounted) {
+          setPushToken(token);
+        }
+
+        // Charger les notifications
+        await refresh(false);
+      } catch (err: any) {
+        if (!cancelled && isMounted) {
+          setError(err?.message || "Erreur d'initialisation");
+          setIsLoading(false);
+        }
+      }
     }
 
     init();
 
-    // Foreground: save incoming notif to inbox and refresh
-    foregroundSub.current = notificationService.addForegroundListener(() => {
-      refresh();
-    });
-
-    // Tapped notification: deep-link based on data.category
-    responseSub.current = notificationService.addResponseListener(
-      (response) => {
-        const data = response.notification.request.content.data;
-
-        notificationService
-          .markAsRead(response.notification.request.identifier)
-          .then(refresh);
-
-        if (!data) return;
-        switch (data.category) {
-          case "appointment_reminder":
-          case "appointment_confirmed":
-          case "appointment_cancelled":
-            router.push(`/(tabs)/appointments`);
-            break;
-          case "treatment_reminder":
-          case "treatment_refill":
-            router.push(`/(main)/(tabs)/medications`);
-            break;
-          default:
-            router.push(`/(modals)/notifications`);
-        }
+    // ── Foreground listener ──────────────────────────────────────────────
+    foregroundSub.current = notificationService.addForegroundListener(
+      (notification) => {
+        // Rafraîchir avec un délai pour éviter les appels trop fréquents
+        cleanup();
+        refreshTimeout.current = setTimeout(() => {
+          refresh(false);
+        }, 500);
       },
     );
 
+    // ── Response listener (tapped notification) ──────────────────────────
+    responseSub.current = notificationService.addResponseListener(
+      async (response) => {
+        const data = response.notification.request.content.data;
+        const notificationId = response.notification.request.identifier;
+
+        // Marquer comme lu en arrière-plan
+        try {
+          await notificationService.markAsRead(notificationId);
+          await refresh(false);
+        } catch (err) {
+          console.warn("Failed to mark notification as read:", err);
+        }
+
+        // Deep linking
+        if (!data || !data.type) {
+          router.push("/(modals)/notifications");
+          return;
+        }
+
+        // Navigation basée sur la catégorie
+        const category = data.type;
+        const navigationMap: Record<string, string> = {
+          appointment_reminder: "/(tabs)/appointments",
+          appointment_confirmed: "/(tabs)/appointments",
+          appointment_cancelled: "/(tabs)/appointments",
+          treatment_reminder: "/(main)/(tabs)/medications",
+          treatment_refill: "/(main)/(tabs)/medications",
+          health_tip: "/(main)/(tabs)/health",
+        };
+
+        const route =
+          navigationMap[category as keyof typeof navigationMap] ||
+          "/(modals)/notifications";
+
+        // Petite pause pour laisser le temps au marquage de se faire
+        setTimeout(() => {
+          router.push(route as never);
+        }, 100);
+      },
+    );
+
+    // ── Cleanup ──────────────────────────────────────────────────────────
     return () => {
       cancelled = true;
+      cleanup();
       foregroundSub.current?.remove();
       responseSub.current?.remove();
     };
-  }, [refresh, router]);
+  }, [refresh, router, isMounted, cleanup]);
 
+  // ── Marquer comme lu ────────────────────────────────────────────────────
   const markAsRead = useCallback(
     async (id: string) => {
-      await notificationService.markAsRead(id);
-      await refresh();
+      if (!id) return;
+
+      try {
+        await notificationService.markAsRead(id);
+
+        // Mise à jour optimiste de l'UI
+        setInbox((prev) =>
+          prev.map((notif) =>
+            notif.id === id
+              ? { ...notif, read: true, readAt: new Date().toISOString() }
+              : notif,
+          ),
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+
+        // Rafraîchir en arrière-plan pour synchroniser
+        await refresh(false);
+      } catch (err: any) {
+        setError(err?.message || "Erreur lors du marquage");
+        // Revenir à l'état précédent en cas d'erreur
+        await refresh(false);
+      }
     },
     [refresh],
   );
 
+  // ── Marquer tout comme lu ──────────────────────────────────────────────
   const markAllAsRead = useCallback(async () => {
-    await notificationService.markAllAsRead();
-    await refresh();
-  }, [refresh]);
+    if (unreadCount === 0) return;
 
+    // Confirmation utilisateur
+    return new Promise<void>((resolve, reject) => {
+      Alert.alert(
+        "Marquer tout comme lu",
+        "Voulez-vous marquer toutes les notifications comme lues ?",
+        [
+          {
+            text: "Annuler",
+            style: "cancel",
+            onPress: () => reject(new Error("Annulé par l'utilisateur")),
+          },
+          {
+            text: "Confirmer",
+            onPress: async () => {
+              try {
+                await notificationService.markAllAsRead();
+
+                // Mise à jour optimiste
+                setInbox((prev) =>
+                  prev.map((notif) => ({
+                    ...notif,
+                    read: true,
+                    readAt: new Date().toISOString(),
+                  })),
+                );
+                setUnreadCount(0);
+
+                await refresh(false);
+                resolve();
+              } catch (err: any) {
+                setError(err?.message || "Erreur lors du marquage");
+                await refresh(false);
+                reject(err);
+              }
+            },
+          },
+        ],
+      );
+    });
+  }, [unreadCount, refresh]);
+
+  // ── Supprimer une notification ─────────────────────────────────────────
   const deleteNotification = useCallback(
     async (id: string) => {
-      await notificationService.deleteFromInbox(id);
-      await refresh();
+      if (!id) return;
+
+      try {
+        // Mise à jour optimiste
+        const deletedNotif = inbox.find((n) => n.id === id);
+        setInbox((prev) => prev.filter((notif) => notif.id !== id));
+
+        if (deletedNotif && !deletedNotif.read) {
+          setUnreadCount((prev) => Math.max(0, prev - 1));
+        }
+
+        await notificationService.deleteFromInbox(id);
+        await refresh(false);
+      } catch (err: any) {
+        setError(err?.message || "Erreur lors de la suppression");
+        // Revenir à l'état précédent en cas d'erreur
+        await refresh(false);
+      }
     },
-    [refresh],
+    [inbox, refresh],
   );
 
-  return {
-    inbox,
-    unreadCount,
-    isLoading,
-    pushToken,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    refresh,
-  };
+  // ── Effacer l'erreur ────────────────────────────────────────────────────
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  // ── Nettoyage automatique ─────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      setIsMounted(false);
+      cleanup();
+    };
+  }, [cleanup]);
+
+  // ── Valeurs retournées ────────────────────────────────────────────────
+  return useMemo(
+    () => ({
+      inbox,
+      unreadCount,
+      isLoading,
+      isRefreshing,
+      isLoadingMore,
+      hasMore,
+      error,
+      pushToken,
+      markAsRead,
+      markAllAsRead,
+      deleteNotification,
+      refresh: () => refresh(true),
+      loadMore,
+      clearError,
+    }),
+    [
+      inbox,
+      unreadCount,
+      isLoading,
+      isRefreshing,
+      isLoadingMore,
+      hasMore,
+      error,
+      pushToken,
+      markAsRead,
+      markAllAsRead,
+      deleteNotification,
+      refresh,
+      loadMore,
+      clearError,
+    ],
+  );
 }

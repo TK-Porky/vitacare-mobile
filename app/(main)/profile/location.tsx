@@ -85,26 +85,13 @@ try {
     Platform.OS !== "web" &&
     (!!NativeModules.MLRNModule || !!NativeModules.MLRNCameraModule);
 
-  console.log(
-    "[MapLibre] NativeModules disponibles:",
-    Object.keys(NativeModules),
-  );
-  console.log("[MapLibre] MLRNModule:", !!NativeModules.MLRNModule);
-  console.log("[MapLibre] MLRNCameraModule:", !!NativeModules.MLRNCameraModule);
-  console.log("[MapLibre] isMapLibreAvailable:", isMapLibreAvailable);
-
   if (isMapLibreAvailable) {
     const MapLibre = require("@maplibre/maplibre-react-native");
-    console.log("[MapLibre] Exports disponibles:", Object.keys(MapLibre));
 
     MapComponent = MapLibre.MapView || MapLibre.Map;
     CameraComponent = MapLibre.Camera;
     PointAnnotationComponent = MapLibre.PointAnnotation;
     mapLibreLoaded = !!MapComponent && !!CameraComponent;
-
-    console.log("[MapLibre] MapComponent:", !!MapComponent);
-    console.log("[MapLibre] CameraComponent:", !!CameraComponent);
-    console.log("[MapLibre] mapLibreLoaded:", mapLibreLoaded);
   }
 } catch (e) {
   console.warn("[MapLibre] Erreur:", e);
@@ -262,20 +249,7 @@ export default function LocationScreen() {
 
   useEffect(() => {
     if (!mapLoaded) return;
-    setTimeout(() => {
-      if (cameraRef.current) {
-        console.log(
-          "[CameraRef] prototype méthodes:",
-          Object.getOwnPropertyNames(Object.getPrototypeOf(cameraRef.current)),
-        );
-        console.log("[CameraRef] keys:", Object.keys(cameraRef.current));
-        console.log("[CameraRef] _nativeRef:", cameraRef.current._nativeRef);
-        console.log(
-          "[CameraRef] nativeCommandName:",
-          cameraRef.current.nativeCommandName,
-        );
-      }
-    }, 500);
+    setTimeout(() => {}, 500);
   }, [mapLoaded]);
 
   // ================================================================================== //
@@ -396,9 +370,6 @@ export default function LocationScreen() {
         const execute = () => {
           if (!cameraRef.current) return;
 
-          console.log("[Camera] setStop appelé:", coords, "zoom:", zoomLevel);
-
-          // setStop accepte centerCoordinate + zoom ensemble
           cameraRef.current.setStop({
             centerCoordinate: [coords.longitude, coords.latitude],
             zoomLevel,
@@ -590,8 +561,6 @@ export default function LocationScreen() {
     if (!userMarker) return null;
 
     if (isUsingMapLibre && PointAnnotationComponent) {
-      console.log("[Render] Camera re-render:", JSON.stringify(cameraSettings));
-      console.log("[Render] Camera props:", cameraSettings);
       return (
         <PointAnnotationComponent
           id={userMarker.id}
@@ -709,15 +678,7 @@ export default function LocationScreen() {
   // ================================================================================== //
 
   const renderMap = () => {
-    console.log(
-      "[Render] isUsingMapLibre:",
-      isUsingMapLibre,
-      "cameraSettings:",
-      JSON.stringify(cameraSettings),
-    );
-
     if (isUsingMapLibre && MapComponent && CameraComponent) {
-      console.log("[Render] → branche MapLibre");
       return (
         <MapComponent
           ref={mapRef}
@@ -730,7 +691,6 @@ export default function LocationScreen() {
             }
           }}
           onDidFinishLoadingMap={() => {
-            console.log("[Map] onDidFinishLoadingMap ✅");
             setIsMapReady(true);
             setMapLoaded(true);
             mapReadyForCamera.current = true;
@@ -739,7 +699,6 @@ export default function LocationScreen() {
             setTimeout(() => {
               if (pendingCamera.current && cameraRef.current?.setStop) {
                 const { coords, zoomLevel } = pendingCamera.current;
-                console.log("[Camera] setStop différé:", coords);
                 cameraRef.current.setStop({
                   centerCoordinate: [coords.longitude, coords.latitude],
                   zoomLevel,
@@ -770,10 +729,8 @@ export default function LocationScreen() {
         </MapComponent>
       );
     } else {
-      console.log("[Render] → branche fallback react-native-maps");
     }
 
-    console.log("[Camera] cameraSettings au render:", cameraSettings);
     // Fallback: react-native-maps
     return (
       <LegacyMapView

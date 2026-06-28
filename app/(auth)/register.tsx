@@ -17,12 +17,11 @@ import {
   PhoneInput,
   NameInput,
   EmailInput,
-} from "../../src/components";
-import { colors, fontFamily, fontSize } from "../../src/themes";
-import { isValidCMPhone } from "@vitacare/utils";
-import { useAuth } from "../../src/hooks/useAuth";
-import { useAuthStore } from "../../src/store";
-import { firebaseAuth } from "../../src/lib/firebase";
+} from "@/components";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { isValidCMPhone } from "@/utils";
+import { useAuth } from "@/hooks";
+import { useAuthStore } from "@/store";
 
 // ================================================================================== //
 // Types

@@ -9,65 +9,404 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Bell, Plus, ShoppingBag, Pill, Info } from "lucide-react-native";
-import { AppHeader, PrimaryButton } from "../../../src/components";
-import { colors, fontFamily, fontSize } from "../../../src/themes";
+import { useRouter } from "expo-router";
+import {
+  Bell,
+  Plus,
+  ShoppingBag,
+  Pill,
+  Info,
+  Filter,
+} from "lucide-react-native";
+import { AppHeader, PrimaryButton } from "@/components";
+import { colors, fontFamily, fontSize } from "@/themes";
 import {
   AddReminderBottomSheet,
   AddReminderBottomSheetRef,
   ReminderData,
-} from "../../../src/components/modals";
-import { useReminders } from "../../../src/hooks";
-import { useAuthStore } from "../../../src/store/auth.store";
-import { ReminderResponse } from "../../../src/types/api-responses";
-import { CreateReminderRequest } from "../../../src/types/api-requests";
+} from "@/components/modals";
+import { useReminders } from "@/hooks";
+import { useAuthStore } from "@/store/auth.store";
+import { ReminderResponse } from "@/types/api-responses";
+import { CreateReminderRequest } from "@/types/api-requests";
+import { useNotificationStore } from "@/store";
 
 // ================================================================================== //
 // Types
 // ================================================================================== //
 type Reminder = ReminderResponse;
+type FilterStatus = "all" | "PENDING" | "TAKEN" | "MISSED" | "SNOOZED";
 
 type Props = {
   onStore?: () => void;
 };
 
 const FREE_LIMIT = 5;
-type FilterStatus = "all" | "PENDING" | "TAKEN" | "MISSED";
+const STATUS_LABELS: Record<FilterStatus, string> = {
+  all: "Tous",
+  PENDING: "En attente",
+  TAKEN: "Pris",
+  MISSED: "Manqué",
+  SNOOZED: "Reporté",
+};
 
 // ================================================================================== //
 // Helper Functions
 // ================================================================================== //
 
 /**
+ * Validate reminder data
+ */
+const validateReminderData = (data: ReminderData): string | null => {
+  // Vérifier le nom du médicament
+  if (!data.drugName?.trim()) {
+    return "Le nom du médicament est requis";
+  }
+
+  // Vérifier la forme
+  if (!data.form?.trim()) {
+    return "La forme du médicament est requise";
+  }
+
+  // Vérifier le dosage - conversion en nombre
+  const dosageValue = parseFloat(data.dosageValue);
+  if (!data.dosageValue || isNaN(dosageValue) || dosageValue <= 0) {
+    return "Le dosage doit être un nombre supérieur à 0";
+  }
+
+  // Vérifier l'unité de dosage
+  if (!data.dosageUnit?.trim()) {
+    return "L'unité de dosage est requise";
+  }
+
+  // Vérifier la fréquence - conversion en nombre
+  const frequencyCount = parseFloat(data.frequencyCount);
+  if (!data.frequencyCount || isNaN(frequencyCount) || frequencyCount <= 0) {
+    return "La fréquence doit être un nombre supérieur à 0";
+  }
+
+  // Vérifier l'unité de fréquence
+  if (!data.frequencyUnit?.trim()) {
+    return "L'unité de fréquence est requise";
+  }
+
+  // Vérifier l'heure
+  if (!data.time?.trim()) {
+    return "L'heure est requise";
+  }
+
+  // Vérifier le format de l'heure (HH:MM)
+  const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+  if (!timeRegex.test(data.time)) {
+    return "L'heure doit être au format HH:MM (ex: 14:30)";
+  }
+
+  return null;
+};
+
+/**
  * Map ReminderData to CreateReminderRequest
  */
-const mapReminderDataToRequest = (data: ReminderData): CreateReminderRequest => {
-  const dosage = data.dosageValue ? `${data.dosageValue}${data.dosageUnit}` : undefined;
-  const freq = data.frequencyCount ? `${data.frequencyCount}x/${data.frequencyUnit.toLowerCase()}` : undefined;
+const mapReminderDataToRequest = (
+  data: ReminderData,
+  patientId: string,
+  medicationId?: string,
+): CreateReminderRequest => {
+  // Convertir la forme en format backend
+  const formMap: Record<string, string> = {
+    Gelule: "GELULE",
+    Comprimé: "COMPRIME",
+    Sirop: "SIROP",
+    Injectable: "INJECTABLE",
+    Pommade: "POMMADE",
+    Sachet: "SACHET",
+  };
+
+  // Convertir la fréquence en format backend
+  const frequencyMap: Record<string, string> = {
+    Jour: "QUOTIDIEN",
+    Semaine: "HEBDOMADAIRE",
+    Mois: "MENSUEL",
+  };
+
+  // Construire le dosage
+  const dosage = `${data.dosageValue}${data.dosageUnit}`;
+
+  // Construire les heures (tableau)
+  const times = [data.time];
+
+  // Construire les notes
+  const notes = [
+    `Fréquence: ${data.frequencyCount}x/${data.frequencyUnit.toLowerCase()}`,
+    data.notes ? `Notes: ${data.notes}` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
 
   return {
-    name: data.drugName,
-    dosage,
-    frequency: freq,
-    times: [data.time],
+    medicationId: Number(medicationId) || 0, // ✅ Convertir en nombre
+    form: formMap[data.form] || data.form.toUpperCase(),
+    dosage: dosage,
+    frequency:
+      frequencyMap[data.frequencyUnit] || data.frequencyUnit.toUpperCase(),
+    times: times,
+    patientId: Number(patientId), // ✅ Convertir en nombre
+    scheduledDate: new Date().toISOString().split("T")[0],
+    scheduledTime: data.time,
+    notes: notes,
   };
+};
+// ================================================================================== //
+// Sub-components
+// ================================================================================== //
+
+/**
+ * Filter tabs component
+ */
+const FilterTabs = ({
+  value,
+  onChange,
+}: {
+  value: FilterStatus;
+  onChange: (v: FilterStatus) => void;
+}) => {
+  const statuses: FilterStatus[] = [
+    "all",
+    "PENDING",
+    "TAKEN",
+    "MISSED",
+    "SNOOZED",
+  ];
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.filterContainer}
+      contentContainerStyle={styles.filterContent}
+    >
+      {statuses.map((status) => (
+        <TouchableOpacity
+          key={status}
+          style={[styles.filterTab, value === status && styles.filterTabActive]}
+          onPress={() => onChange(status)}
+          accessibilityLabel={`Filtrer par ${STATUS_LABELS[status]}`}
+          accessibilityRole="button"
+        >
+          <Text
+            style={[
+              styles.filterText,
+              value === status && styles.filterTextActive,
+            ]}
+          >
+            {STATUS_LABELS[status]}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
+};
+
+/**
+ * Empty state component
+ */
+const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
+  <View style={styles.empty}>
+    <View style={styles.emptyIcon}>
+      <Bell size={40} color={colors.inkLight} />
+    </View>
+    <Text style={styles.emptyText}>Aucun rappel actif</Text>
+    <Text style={styles.emptySubtext}>
+      Ajoutez vos médicaments pour ne plus jamais oublier une prise.
+    </Text>
+  </View>
+);
+
+/**
+ * Limit banner component
+ */
+const LimitBanner = ({ onUpgrade }: { onUpgrade?: () => void }) => (
+  <TouchableOpacity
+    style={styles.banner}
+    activeOpacity={0.85}
+    onPress={onUpgrade}
+    accessibilityLabel="Voir les offres premium"
+    accessibilityRole="button"
+  >
+    <View style={styles.bannerIcon}>
+      <Info size={18} color={colors.primary} />
+    </View>
+    <View style={styles.bannerText}>
+      <Text style={styles.bannerTitle}>Limite de rappels gratuits</Text>
+      <Text style={styles.bannerSubtitle}>
+        Passez à VitaCare Premium pour ajouter un nombre illimité de
+        médicaments.
+      </Text>
+    </View>
+  </TouchableOpacity>
+);
+
+/**
+ * Reminder card component
+ */
+const ReminderCard = ({
+  item,
+  onView,
+  onMarkAsTaken,
+  onSnooze,
+  onDelete,
+  isMarkingAsTaken,
+  isSnoozing,
+  isDeleting,
+}: {
+  item: Reminder;
+  onView?: (id: string) => void;
+  onMarkAsTaken?: (id: string) => void;
+  onSnooze?: (id: string, minutes: number) => void;
+  onDelete?: (id: string) => void;
+  isMarkingAsTaken?: boolean;
+  isSnoozing?: boolean;
+  isDeleting?: boolean;
+}) => {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "#f39c12";
+      case "TAKEN":
+        return "#2ecc71";
+      case "MISSED":
+        return "#e74c3c";
+      case "SNOOZED":
+        return "#3498db";
+      default:
+        return "#95a5a6";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "En attente";
+      case "TAKEN":
+        return "✓ Pris";
+      case "MISSED":
+        return "✗ Manqué";
+      case "SNOOZED":
+        return "⏰ Reporté";
+      default:
+        return status;
+    }
+  };
+
+  const isActionable = item.status === "PENDING" || item.status === "SNOOZED";
+
+  return (
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.7}
+      onPress={() => onView?.(item.id)}
+      accessibilityLabel={`Rappel pour ${item.medicationName}`}
+      accessibilityRole="button"
+    >
+      {/* Icon */}
+      <View style={styles.cardIcon}>
+        <Pill size={20} color={colors.primary} />
+      </View>
+
+      {/* Info */}
+      <View style={styles.cardInfo}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardName} numberOfLines={1}>
+            {item.medicationName}
+          </Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(item.status) },
+            ]}
+          >
+            <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
+          </View>
+        </View>
+        <Text style={styles.cardDetails}>
+          {item.medicationDosage} • {item.scheduledHour}
+        </Text>
+        {item.snoozedUntil && (
+          <Text style={styles.snoozedText}>
+            Reporté jusqu'à: {new Date(item.snoozedUntil).toLocaleTimeString()}
+          </Text>
+        )}
+      </View>
+
+      {/* Actions */}
+      {isActionable && (
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.takenButton]}
+            onPress={() => onMarkAsTaken?.(item.id)}
+            disabled={isMarkingAsTaken}
+            accessibilityLabel="Marquer comme pris"
+            accessibilityRole="button"
+          >
+            {isMarkingAsTaken ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text style={styles.actionButtonText}>Prendre</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.snoozeButton]}
+            onPress={() => onSnooze?.(item.id, 15)}
+            disabled={isSnoozing}
+            accessibilityLabel="Reporter le rappel"
+            accessibilityRole="button"
+          >
+            {isSnoozing ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text style={styles.actionButtonText}>⏰</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={() => onDelete?.(item.id)}
+            disabled={isDeleting}
+            accessibilityLabel="Supprimer le rappel"
+            accessibilityRole="button"
+          >
+            {isDeleting ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text style={styles.actionButtonText}>🗑</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 };
 
 // ================================================================================== //
 // Main Component
 // ================================================================================== //
+
 export default function RemindersScreen({ onStore }: Props) {
+  const router = useRouter();
+
   // ================================================================================== //
   // Hooks & Store
   // ================================================================================== //
   const addSheetRef = useRef<AddReminderBottomSheetRef>(null);
 
-  // Get user and auth state from the store
   const user = useAuthStore((state) => state.user);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const isLoadingAuth = useAuthStore((state) => state.isLoading);
+  const unreadNotificationCount = useNotificationStore(
+    (state) => state.unreadCount,
+  );
 
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
 
@@ -91,15 +430,40 @@ export default function RemindersScreen({ onStore }: Props) {
     status: filterStatus === "all" ? undefined : filterStatus,
   });
 
-  useEffect(() => {
-    refetch();
-  }, [filterStatus]);
-
-  const limitReached = reminders?.length >= FREE_LIMIT;
+  const reminderList = reminders ?? [];
+  const limitReached = reminderList.length >= FREE_LIMIT;
 
   // ================================================================================== //
   // Handlers
   // ================================================================================== //
+
+  /**
+   * Handle upgrading to premium
+   */
+  const handleUpgrade = useCallback(() => {
+    Alert.alert(
+      "VitaCare Premium",
+      "Profitez de rappels illimités avec VitaCare Premium !\n\n" +
+        "✨ Rappels illimités\n" +
+        "✨ Suivi avancé\n" +
+        "✨ Rapports détaillés",
+      [
+        { text: "Plus tard", style: "cancel" },
+        { text: "Voir les offres", onPress: () => router.push("/premium") },
+      ],
+    );
+  }, [router]);
+
+  /**
+   * Handle store navigation
+   */
+  const handleStorePress = useCallback(() => {
+    if (onStore) {
+      onStore();
+    } else {
+      router.push("/store");
+    }
+  }, [onStore, router]);
 
   /**
    * Handle adding a new reminder
@@ -107,13 +471,13 @@ export default function RemindersScreen({ onStore }: Props) {
   const handleAdd = useCallback(
     async (data: ReminderData) => {
       try {
-        // Validate required fields
-        if (!data.drugName) {
-          Alert.alert("Erreur", "Le nom du médicament est requis");
+        // Validation
+        const validationError = validateReminderData(data);
+        if (validationError) {
+          Alert.alert("Erreur", validationError);
           return;
         }
 
-        // Check if user is authenticated and loaded
         if (!isHydrated) {
           Alert.alert("Erreur", "Veuillez patienter, chargement du profil...");
           return;
@@ -127,10 +491,16 @@ export default function RemindersScreen({ onStore }: Props) {
           return;
         }
 
-        // Map the form data to API request
-        const requestData = mapReminderDataToRequest(data);
+        const medicationId = data.medicationId || "1";
 
-        // Create the reminder
+        const requestData = mapReminderDataToRequest(
+          data,
+          String(user.id),
+          medicationId,
+        );
+
+        console.log("[Reminders] Sending request:", requestData);
+
         await createReminder(requestData);
 
         Alert.alert(
@@ -206,11 +576,20 @@ export default function RemindersScreen({ onStore }: Props) {
   /**
    * Handle viewing reminder details
    */
-  const handleViewReminder = useCallback((id: string) => {
-    // Navigate to detail screen
-    // router.push(`/reminders/${id}`);
-    console.log("View reminder:", id);
-  }, []);
+  const handleViewReminder = useCallback(
+    (id: string) => {
+      // Navigate to detail screen
+      router.push(`/reminders/${id}`);
+    },
+    [router],
+  );
+
+  /**
+   * Handle notification press
+   */
+  const handleNotificationPress = useCallback(() => {
+    router.push("/notifications");
+  }, [router]);
 
   // ================================================================================== //
   // Render States
@@ -232,10 +611,15 @@ export default function RemindersScreen({ onStore }: Props) {
 
   // Show error if there's an error fetching reminders
   if (error) {
+    const errorMessage =
+      typeof error === "string"
+        ? error
+        : error?.message || "Une erreur est survenue";
+
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>Une erreur est survenue</Text>
-        <Text style={styles.errorSubtext}>{error.message}</Text>
+        <Text style={styles.errorSubtext}>{errorMessage}</Text>
         <PrimaryButton
           label="Réessayer"
           onPress={() => refetch()}
@@ -254,10 +638,12 @@ export default function RemindersScreen({ onStore }: Props) {
 
       <AppHeader
         title="Mes Rappels"
+        onNotification={handleNotificationPress}
+        notificationCount={unreadNotificationCount}
         rightActions={
           <PrimaryButton
             label="Magasin"
-            onPress={onStore}
+            onPress={handleStorePress}
             icon={<ShoppingBag size={16} color={colors.white} />}
             size="sm"
             style={{ width: 110 }}
@@ -270,20 +656,22 @@ export default function RemindersScreen({ onStore }: Props) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isFetching} onRefresh={refetch} />
+          <RefreshControl
+            refreshing={isFetching}
+            onRefresh={refetch}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
         }
       >
+        {/* ── Filters ── */}
+        <FilterTabs value={filterStatus} onChange={setFilterStatus} />
+
         {/* ── Limit banner ── */}
-        {limitReached && (
-          <LimitBanner
-            onUpgrade={() => {
-              /* navigate to premium */
-            }}
-          />
-        )}
+        {limitReached && <LimitBanner onUpgrade={handleUpgrade} />}
 
         {/* ── Summary Stats ── */}
-        {summary && reminders.length > 0 && (
+        {summary && reminderList.length > 0 && (
           <View style={styles.summaryContainer}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryNumber}>{summary.pending}</Text>
@@ -306,10 +694,10 @@ export default function RemindersScreen({ onStore }: Props) {
 
         {/* ── List ── */}
         <View style={styles.list}>
-          {reminders.length === 0 ? (
+          {reminderList.length === 0 ? (
             <EmptyState onAdd={() => addSheetRef.current?.open()} />
           ) : (
-            reminders.map((item) => (
+            reminderList.map((item) => (
               <ReminderCard
                 key={item.id}
                 item={item}
@@ -326,206 +714,40 @@ export default function RemindersScreen({ onStore }: Props) {
         </View>
 
         {/* ── Pagination Info ── */}
-        {pagination && reminders.length > 0 && (
+        {pagination && reminderList.length > 0 && (
           <Text style={styles.paginationText}>
-            Affichage {reminders.length} sur {pagination.total} rappels
+            Affichage {reminderList.length} sur {pagination.total} rappels
           </Text>
         )}
       </ScrollView>
 
       {/* ── FAB ── */}
-      {!limitReached && reminders.length > 0 && (
+      {!limitReached && (
         <TouchableOpacity
           style={styles.fab}
           onPress={() => addSheetRef.current?.open()}
+          disabled={isCreating}
           activeOpacity={0.85}
+          accessibilityLabel="Ajouter un rappel"
+          accessibilityRole="button"
         >
-          <Plus size={28} color={colors.white} />
+          {isCreating ? (
+            <ActivityIndicator size={24} color={colors.white} />
+          ) : (
+            <Plus size={28} color={colors.white} />
+          )}
         </TouchableOpacity>
       )}
 
       {/* ── Add reminder sheet ── */}
-      <AddReminderBottomSheet ref={addSheetRef} onAdd={handleAdd} />
+      <AddReminderBottomSheet
+        ref={addSheetRef}
+        onAdd={handleAdd}
+        isSubmitting={isCreating}
+      />
     </SafeAreaView>
   );
 }
-
-// ================================================================================== //
-// Sub-components
-// ================================================================================== //
-
-/**
- * Empty state component
- */
-const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
-  <View style={styles.empty}>
-    <View style={styles.emptyIcon}>
-      <Bell size={40} color={colors.inkLight} />
-    </View>
-    <Text style={styles.emptyText}>Aucun rappel actif</Text>
-    <Text style={styles.emptySubtext}>
-      Ajoutez vos médicaments pour ne plus jamais oublier une prise.
-    </Text>
-    <PrimaryButton
-      label="Ajouter un rappel"
-      onPress={onAdd}
-      style={{ marginTop: 16 }}
-      icon={<Plus size={18} color={colors.white} />}
-    />
-  </View>
-);
-
-/**
- * Limit banner component
- */
-const LimitBanner = ({ onUpgrade }: { onUpgrade?: () => void }) => (
-  <TouchableOpacity
-    style={styles.banner}
-    activeOpacity={0.85}
-    onPress={onUpgrade}
-  >
-    <View style={styles.bannerIcon}>
-      <Info size={18} color={colors.primary} />
-    </View>
-    <View style={styles.bannerText}>
-      <Text style={styles.bannerTitle}>Limite de rappels gratuits</Text>
-      <Text style={styles.bannerSubtitle}>
-        Passez à VitaCare Premium pour ajouter un nombre illimité de
-        médicaments.
-      </Text>
-    </View>
-  </TouchableOpacity>
-);
-
-/**
- * Reminder card component
- */
-const ReminderCard = ({
-  item,
-  onView,
-  onMarkAsTaken,
-  onSnooze,
-  onDelete,
-  isMarkingAsTaken,
-  isSnoozing,
-  isDeleting,
-}: {
-  item: Reminder;
-  onView?: (id: string) => void;
-  onMarkAsTaken?: (id: string) => void;
-  onSnooze?: (id: string, minutes: number) => void;
-  onDelete?: (id: string) => void;
-  isMarkingAsTaken?: boolean;
-  isSnoozing?: boolean;
-  isDeleting?: boolean;
-}) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "#f39c12";
-      case "TAKEN":
-        return "#2ecc71";
-      case "MISSED":
-        return "#e74c3c";
-      case "SNOOZED":
-        return "#3498db";
-      default:
-        return "#95a5a6";
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "En attente";
-      case "TAKEN":
-        return "✓ Pris";
-      case "MISSED":
-        return "✗ Manqué";
-      case "SNOOZED":
-        return "⏰ Reporté";
-      default:
-        return status;
-    }
-  };
-
-  const isActionable = item.status === "PENDING" || item.status === "SNOOZED";
-
-  return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.7}
-      onPress={() => onView?.(item.id)}
-    >
-      {/* Icon */}
-      <View style={styles.cardIcon}>
-        <Pill size={20} color={colors.primary} />
-      </View>
-
-      {/* Info */}
-      <View style={styles.cardInfo}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardName}>{item.medicationName}</Text>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: getStatusColor(item.status) },
-            ]}
-          >
-            <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
-          </View>
-        </View>
-        <Text style={styles.cardDetails}>
-          {item.medicationDosage} • {item.scheduledHour}
-        </Text>
-        {item.snoozedUntil && (
-          <Text style={styles.snoozedText}>
-            Reporté jusqu'à: {new Date(item.snoozedUntil).toLocaleTimeString()}
-          </Text>
-        )}
-      </View>
-
-      {/* Actions */}
-      {isActionable && (
-        <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.takenButton]}
-            onPress={() => onMarkAsTaken?.(item.id)}
-            disabled={isMarkingAsTaken}
-          >
-            {isMarkingAsTaken ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Text style={styles.actionButtonText}>Prendre</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.snoozeButton]}
-            onPress={() => onSnooze?.(item.id, 15)}
-            disabled={isSnoozing}
-          >
-            {isSnoozing ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Text style={styles.actionButtonText}>⏰</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => onDelete?.(item.id)}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Text style={styles.actionButtonText}>🗑</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-};
 
 // ================================================================================== //
 // Styles
@@ -568,10 +790,38 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   scrollContent: {
-    flexGrow: 1,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 8,
     paddingBottom: 100,
+  },
+
+  // Filter
+  filterContainer: {
+    marginBottom: 16,
+  },
+  filterContent: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  filterTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterTabActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+  },
+  filterTextActive: {
+    color: colors.white,
   },
 
   // Summary stats
@@ -704,12 +954,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.ink,
     flex: 1,
+    marginRight: 8,
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
-    marginLeft: 8,
+    flexShrink: 0,
   },
   statusText: {
     color: colors.white,

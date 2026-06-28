@@ -1,273 +1,94 @@
-import { useEffect, useState } from "react";
+// app/(main)/profile/index.tsx
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   StatusBar,
-  Image,
   Platform,
   Alert,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons, Feather } from "@expo/vector-icons";
-import { colors, fontFamily, fontSize } from "../../../src/themes";
-import { router } from "expo-router";
-import { useAuthStore } from "../../../src/store";
+import { useRouter } from "expo-router";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { useAuthStore } from "@/store";
 import { useProfile } from "@/hooks";
-import { profileService } from "../../../src/services/profile.service";
-
-// ================================================================================== //
-// Types
-// ================================================================================== //
-type MenuSection = {
-  title: string;
-  items: {
-    id: string;
-    icon: string;
-    label: string;
-    subText: string;
-  }[];
-};
-
-// ================================================================================== //
-// Constants
-// ================================================================================== //
-const MENU_SECTIONS: MenuSection[] = [
-  {
-    title: "Généraux",
-    items: [
-      {
-        id: "info",
-        icon: "person-outline",
-        label: "Mes Informations",
-        subText: "Modifier avatar, email, numéro de téléphone",
-      },
-      {
-        id: "activity",
-        icon: "time-outline",
-        label: "Mon activité",
-        subText: "Accéder à mes médicaments et rappels",
-      },
-      {
-        id: "location",
-        icon: "location-outline",
-        label: "Ma localisation",
-        subText: "Paramétrer ma position",
-      },
-      {
-        id: "downloads",
-        icon: "download-outline",
-        label: "Mes Téléchargements",
-        subText: "Accéder à mes ordonnances et résultats",
-      },
-    ],
-  },
-  {
-    title: "Accessibilité",
-    items: [
-      {
-        id: "lang",
-        icon: "globe-outline",
-        label: "Changer la langue",
-        subText: "Choisir votre langue",
-      },
-    ],
-  },
-  {
-    title: "Sécurité",
-    items: [
-      {
-        id: "password",
-        icon: "lock-closed-outline",
-        label: "Modifier son mot de passe",
-        subText: "Modifier son mot de passe",
-      },
-      {
-        id: "notifications",
-        icon: "notifications-outline",
-        label: "Notifications",
-        subText: "Paramétrer ses notifications",
-      },
-    ],
-  },
-  {
-    title: "Assistance",
-    items: [
-      {
-        id: "help",
-        icon: "help-circle-outline",
-        label: "Aide",
-        subText: "Contactez notre support",
-      },
-      {
-        id: "terms",
-        icon: "document-text-outline",
-        label: "Termes et Conditions d'utilisation",
-        subText: "Consulter les termes et conditions",
-      },
-    ],
-  },
-];
-
-// ================================================================================== //
-// Components
-// ================================================================================== //
-
-/**
- * Menu item component
- * @param icon - The icon to display
- * @param label - The label to display
- * @param subText - The sub text to display
- * @param danger - Whether the item is dangerous
- * @param onPress - The function to call when the item is pressed
- */
-function MenuItem({
-  icon,
-  label,
-  subText,
-  danger = false,
-  onPress,
-}: {
-  icon: string;
-  label: string;
-  subText?: string;
-  danger?: boolean;
-  onPress?: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      style={styles.menuItem}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.menuIconWrapper]}>
-        <Ionicons
-          name={icon as any}
-          size={18}
-          color={danger ? colors.error : colors.primaryDark}
-        />
-      </View>
-      <View style={styles.menuLabelWrapper}>
-        <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>
-          {label}
-        </Text>
-        <Text style={styles.menuSubText}>{subText}</Text>
-      </View>
-      {!danger && <Feather name="chevron-right" size={16} color={colors.ink} />}
-    </TouchableOpacity>
-  );
-}
-
-/**
- * Menu section component
- * @param title - The title of the section
- * @param items - The items in the section
- */
-function MenuSection({
-  title,
-  items,
-}: {
-  title: string;
-  items: (typeof MENU_SECTIONS)[0]["items"];
-}) {
-  const handlePress = (id: string) => {
-    switch (id) {
-      case "info":
-        router.push("/(main)/profile/edit-profile");
-        break;
-      case "activity":
-        router.push("/(main)/profile/activity");
-        break;
-      case "location":
-        router.push("/(main)/profile/location");
-        break;
-      case "downloads":
-        router.push("/(main)/profile/downloads");
-        break;
-      case "password":
-        router.push("/(main)/profile/change-password");
-        break;
-      case "notifications":
-        router.push("/(main)/profile/notifications-settings");
-        break;
-      case "lang":
-        router.push("/(main)/profile/language-settings");
-        break;
-      case "help":
-        router.push("/(main)/profile/help");
-        break;
-      case "terms":
-        router.push("/(main)/profile/terms");
-        break;
-    }
-  };
-
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionCard}>
-        {items.map((item, index) => (
-          <View key={item.id}>
-            <MenuItem
-              icon={item.icon}
-              label={item.label}
-              subText={item.subText}
-              onPress={() => handlePress(item.id)}
-            />
-            {index < items.length - 1 && <View style={styles.itemDivider} />}
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
+import { profileService } from "@/services/profile.service";
+import { ProfileHeader } from "@/components/display/ProfileHeader";
+import { MenuSection } from "@/components/display/MenuSection";
+import { MenuItem } from "@/components/display/MenuItem";
+import { MENU_SECTIONS, DANGER_SECTION } from "@/constants/profile.menu";
+import { PROFILE_ROUTES } from "@/constants/profile.routes";
 
 // ================================================================================== //
 // Main
 // ================================================================================== //
 export default function ProfileScreen() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const { isLoading, refetch } = useProfile();
-  const [address, setAddress] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user?.address) {
-      setAddress(user.address);
-    }
-  }, [user]);
-
-  // Safe check for the user's avatar URL
-  const avatarUri =
-    user?.avatarUrl || "https://randomuser.me/api/portraits/men/75.jpg";
+  const { isLoading: profileLoading, refetch } = useProfile();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // ================================================================================== //
   // Handlers
   // ================================================================================== //
-  const handleDisconnection = () => {
+
+  const handleMenuPress = useCallback(
+    (item: { id: string; route?: string }) => {
+      if (item.route) {
+        router.push(item.route as any);
+      }
+    },
+    [router],
+  );
+
+  const handleDisconnection = useCallback(() => {
     Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
       { text: "Annuler", style: "cancel" },
       {
         text: "Se déconnecter",
         style: "destructive",
         onPress: async () => {
+          setIsLoggingOut(true);
           try {
             await logout();
           } catch (err) {
             Alert.alert("Erreur", "Impossible de se déconnecter.");
+          } finally {
+            setIsLoggingOut(false);
           }
         },
       },
     ]);
-  };
+  }, [logout]);
 
-  const handleDeleteAccount = () => {
+  const confirmDeleteAccount = useCallback(
+    async (password?: string) => {
+      if (!password) {
+        Alert.alert("Erreur", "Mot de passe requis.");
+        return;
+      }
+      try {
+        await profileService.deleteAccount({
+          password,
+          confirmDeletion: true,
+        });
+        await logout();
+      } catch (err: any) {
+        Alert.alert("Erreur", err.message || "Échec de la suppression.");
+      }
+    },
+    [logout],
+  );
+
+  const handleDeleteAccount = useCallback(() => {
     Alert.alert(
       "Suppression de compte",
-      "ATTENTION : Cette action est définitive et toutes vos données seront supprimées. Êtes-vous sûr ?",
+      "⚠️ Attention : Cette action est définitive et toutes vos données seront supprimées.",
       [
         { text: "Annuler", style: "cancel" },
         {
@@ -277,47 +98,53 @@ export default function ProfileScreen() {
             if (Platform.OS === "ios") {
               Alert.prompt(
                 "Confirmer la suppression",
-                "Veuillez saisir votre mot de passe pour confirmer la suppression définitive de votre compte :",
+                "Veuillez saisir votre mot de passe pour confirmer :",
                 [
                   { text: "Annuler", style: "cancel" },
                   {
-                    text: "Confirmer la suppression",
+                    text: "Confirmer",
                     style: "destructive",
-                    onPress: async (password?: string) => {
-                      if (!password) {
-                        Alert.alert("Erreur", "Mot de passe requis.");
-                        return;
-                      }
-                      try {
-                        await profileService.deleteAccount({
-                          password,
-                          confirmDeletion: true,
-                        });
-                        await logout();
-                      } catch (err: any) {
-                        Alert.alert(
-                          "Erreur",
-                          err.message || "Échec de la suppression.",
-                        );
-                      }
-                    },
+                    onPress: (password: string | undefined) =>
+                      confirmDeleteAccount(password),
                   },
                 ],
                 "secure-text",
               );
             } else {
-              // Android fallback or redirect
-              Alert.alert(
-                "Validation requise",
-                "Pour confirmer la suppression de votre compte, veuillez modifier votre mot de passe ou contacter le support pour valider l'identité.",
-                [{ text: "Ok", style: "default" }],
-              );
+              // Android: rediriger vers une page de confirmation
+              router.push(PROFILE_ROUTES.CONFIRM_DELETE as any);
             }
           },
         },
       ],
     );
-  };
+  }, [confirmDeleteAccount, router]);
+
+  const handleDangerItemPress = useCallback(
+    (item: { id: string }) => {
+      if (item.id === "logout") {
+        handleDisconnection();
+      } else if (item.id === "delete") {
+        handleDeleteAccount();
+      }
+    },
+    [handleDisconnection, handleDeleteAccount],
+  );
+
+  // ================================================================================== //
+  // Render States
+  // ================================================================================== //
+
+  if (profileLoading && !user) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Chargement du profil...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // ================================================================================== //
   // Render
@@ -331,7 +158,7 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading}
+            refreshing={profileLoading}
             onRefresh={refetch}
             colors={[colors.primary]}
             tintColor={colors.primary}
@@ -339,29 +166,17 @@ export default function ProfileScreen() {
         }
       >
         {/* ── Page title ── */}
-        <Text style={styles.pageTitle}>Votre Profile</Text>
+        <Text style={styles.pageTitle}>Votre Profil</Text>
 
-        {/* ── Profile card ── */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatarWrapper}>
-            <Image source={{ uri: avatarUri }} style={styles.avatar} />
-          </View>
-          <Text style={styles.userName}>{user?.fullName ?? "Utilisateur"}</Text>
-          <Text style={styles.userPhone}>
-            {user?.phoneNumber ?? user?.email ?? "Utilisateur"}
-          </Text>
-
-          <TouchableOpacity
-            style={styles.locationBtn}
-            activeOpacity={0.85}
-            onPress={() => router.push("/(main)/profile/location")}
-          >
-            <Ionicons name="location-outline" size={16} color="#fff" />
-            <Text style={styles.locationBtnText}>
-              {user?.address ?? "Localisation non renseignée"}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* ── Profile header ── */}
+        <ProfileHeader
+          fullName={user?.fullName || "Utilisateur"}
+          phoneNumber={user?.phoneNumber}
+          email={user?.email}
+          avatarUrl={user?.avatarUrl}
+          address={user?.address}
+          onLocationPress={() => router.push(PROFILE_ROUTES.LOCATION as any)}
+        />
 
         {/* ── Menu sections ── */}
         {MENU_SECTIONS.map((section) => (
@@ -369,28 +184,39 @@ export default function ProfileScreen() {
             key={section.title}
             title={section.title}
             items={section.items}
+            onItemPress={handleMenuPress}
           />
         ))}
 
-        {/* ── Compte (danger zone) ── */}
+        {/* ── Danger section ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Compte</Text>
+          <Text style={styles.sectionTitle}>{DANGER_SECTION.title}</Text>
           <View style={styles.sectionCard}>
-            <MenuItem
-              icon="log-out-outline"
-              label="Se déconnecter"
-              onPress={handleDisconnection}
-              danger
-            />
-            <View style={styles.itemDivider} />
-            <MenuItem
-              icon="person-remove-outline"
-              label="Supprimer mon compte"
-              onPress={handleDeleteAccount}
-              danger
-            />
+            {DANGER_SECTION.items.map((item, index) => (
+              <View key={item.id}>
+                <MenuItem
+                  icon={item.icon}
+                  label={item.label}
+                  subText={item.subText}
+                  danger={item.danger}
+                  showChevron={item.showChevron}
+                  onPress={() => handleDangerItemPress(item)}
+                />
+                {index < DANGER_SECTION.items.length - 1 && (
+                  <View style={styles.itemDivider} />
+                )}
+              </View>
+            ))}
           </View>
         </View>
+
+        {/* ── Logging out overlay ── */}
+        {isLoggingOut && (
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color={colors.white} />
+            <Text style={styles.overlayText}>Déconnexion en cours...</Text>
+          </View>
+        )}
 
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -422,67 +248,6 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
 
-  // Profile card
-  profileCard: {
-    marginHorizontal: 16,
-    marginBottom: 28,
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    alignItems: "center",
-  },
-  avatarWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 1,
-    borderColor: "transparent",
-    overflow: "hidden",
-    marginBottom: 12,
-    shadowColor: "rgba(34,197,94,0.3)",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  avatar: {
-    width: "100%",
-    height: "100%",
-  },
-  userName: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.lg,
-    color: colors.ink,
-    marginBottom: 4,
-  },
-  userPhone: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.md,
-    color: colors.inkLight,
-    marginBottom: 16,
-  },
-  locationBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: colors.primaryMid,
-    paddingVertical: 12,
-    borderRadius: 30,
-    width: "100%",
-    justifyContent: "center",
-    shadowColor: "rgba(34,197,94,0.35)",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  locationBtnText: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: fontSize.md,
-    color: colors.white,
-  },
-
   // Sections
   section: {
     marginBottom: 24,
@@ -490,7 +255,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: fontFamily.semiBold,
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     color: colors.inkLight,
     letterSpacing: 0.3,
     marginBottom: 8,
@@ -499,46 +264,46 @@ const styles = StyleSheet.create({
   sectionCard: {
     borderRadius: 16,
     backgroundColor: colors.white,
-  },
-
-  // Menu items
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  menuIconWrapper: {
-    width: 24,
-    height: 24,
-    backgroundColor: `${colors.gray100}`,
-    borderRadius: 50,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  menuLabelWrapper: {
-    flex: 1,
-  },
-  menuSubText: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.regular,
-    color: colors.inkLight,
-  },
-
-  menuLabel: {
-    flex: 1,
-    fontSize: fontSize.md,
-    fontFamily: fontFamily.semiBold,
-    color: colors.ink,
-  },
-  menuLabelDanger: {
-    color: colors.error,
-    fontFamily: fontFamily.semiBold,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   itemDivider: {
-    height: 0,
+    height: 1,
     backgroundColor: colors.border,
     marginLeft: 66,
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    marginTop: 12,
+  },
+
+  // Overlay
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
+  },
+  overlayText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.md,
+    color: colors.white,
+    marginTop: 12,
   },
 });

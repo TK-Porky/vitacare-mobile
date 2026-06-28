@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
@@ -6,19 +6,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-} from 'react-native';
-import { router } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
-import { StepHeader, SelectOption, PrimaryButton } from '../../src/components';
-import { colors, fontFamily, fontSize } from '../../src/themes';
-import { useProfile } from '../../src/hooks';
-
-// ... (rest same)
+} from "react-native";
+import { router } from "expo-router";
+import { ChevronLeft } from "lucide-react-native";
+import { StepHeader, SelectOption, PrimaryButton } from "@/components";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { useProfile } from "@/hooks";
 
 // ================================================================================== //
 // Types
 // ================================================================================== //
-const LANGUAGES = ['Français', 'Anglais'];
+const LANGUAGES = ["Français", "Anglais"];
 
 // ================================================================================== //
 // Main
@@ -28,7 +26,7 @@ export default function OnboardingLanguageScreen() {
   // ================================================================================== //
   // States
   // ================================================================================== //
-  const [selected, setSelected] = useState<string>('Français'); // Selected language
+  const [selected, setSelected] = useState<string>("Français"); // Selected language
 
   /**
    * Finalize the onboarding
@@ -38,13 +36,13 @@ export default function OnboardingLanguageScreen() {
     try {
       // Save language preference to profile
       await updatePreferences({
-        language: selected === 'Français' ? 'fr' : 'en'
+        language: selected === "Français" ? "fr" : "en",
       });
-      
-      router.push('/(auth)/onboarding-success');
+
+      router.push("/(auth)/onboarding-success");
     } catch (e) {
       // UX: Navigate anyway if it fails, or show warning
-      router.push('/(auth)/onboarding-success');
+      router.push("/(auth)/onboarding-success");
     }
   };
 
@@ -53,11 +51,7 @@ export default function OnboardingLanguageScreen() {
   // ================================================================================== //
   return (
     <View style={styles.root}>
-      <StepHeader
-        current={3}
-        total={3}
-        showSkip={false}
-      />
+      <StepHeader current={3} total={3} showSkip={false} />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -112,23 +106,23 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontFamily.bold,
-    fontSize: fontSize['2xl'],
+    fontSize: fontSize["2xl"],
     color: colors.ink,
   },
   options: {
     gap: 12,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 32,
     paddingTop: 12,
   },
   backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   backText: {

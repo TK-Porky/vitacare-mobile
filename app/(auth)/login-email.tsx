@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,20 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
-} from 'react-native';
-import { router } from 'expo-router';
-import { TopBar, CustomInput, PasswordInput, PrimaryButton, HelperText, CheckboxField, EmailInput } from '../../src/components';
-import { colors, fontFamily, fontSize } from '../../src/themes';
-import { useAuth } from '../../src/hooks/useAuth';
-import { useAuthStore } from '../../src/store';
+} from "react-native";
+import { router } from "expo-router";
+import {
+  TopBar,
+  CustomInput,
+  PasswordInput,
+  PrimaryButton,
+  HelperText,
+  CheckboxField,
+  EmailInput,
+} from "@/components";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/store";
 
 // ================================================================================== //
 // Main
@@ -21,17 +29,17 @@ export default function LoginEmailScreen() {
   // ================================================================================== //
   // States
   // ================================================================================== //
-  const [email, setEmail] = useState('');  // Email input
-  const [password, setPassword] = useState('');  // Password input
-  const [rememberMe, setRememberMe] = useState(false);  // Remember me checkbox
-  const [localError, setLocalError] = useState('');  // Local validation error
-  
+  const [email, setEmail] = useState(""); // Email input
+  const [password, setPassword] = useState(""); // Password input
+  const [rememberMe, setRememberMe] = useState(false); // Remember me checkbox
+  const [localError, setLocalError] = useState(""); // Local validation error
+
   // ================================================================================== //
   // Hooks
   // ================================================================================== //
-  const { loginEmail, isLoggingInEmail } = useAuth();  // Auth hook
-  const storeError = useAuthStore(state => state.error);  // Store error
-  const clearStoreError = useAuthStore(state => state.clearError);  // Clear store error
+  const { loginEmail, isLoggingInEmail } = useAuth(); // Auth hook
+  const storeError = useAuthStore((state) => state.error); // Store error
+  const clearStoreError = useAuthStore((state) => state.clearError); // Clear store error
 
   // ================================================================================== //
   // Effects
@@ -44,18 +52,18 @@ export default function LoginEmailScreen() {
   // ================================================================================== //
   // Functions
   // ================================================================================== //
-  
+
   /**
    * Validate form inputs
-   * @returns 
+   * @returns
    */
   const validate = () => {
-    if (!email.trim() || !email.includes('@')) {
-      setLocalError('Adresse email invalide.');
+    if (!email.trim() || !email.includes("@")) {
+      setLocalError("Adresse email invalide.");
       return false;
     }
     if (password.length < 8) {
-      setLocalError('Le mot de passe doit contenir au moins 8 caractères.');
+      setLocalError("Le mot de passe doit contenir au moins 8 caractères.");
       return false;
     }
     return true;
@@ -63,19 +71,19 @@ export default function LoginEmailScreen() {
 
   /**
    * Handle form submission
-   * @returns 
+   * @returns
    */
   const handleSubmit = async () => {
     if (!validate()) return;
-    setLocalError('');
+    setLocalError("");
     clearStoreError();
-    
+
     loginEmail({ email, password, rememberMe });
   };
 
   /**
    * Handle Google login
-   * @returns 
+   * @returns
    */
   const handleGoogle = async () => {
     // TODO: Google OAuth
@@ -87,7 +95,7 @@ export default function LoginEmailScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <TopBar />
       <ScrollView
@@ -107,7 +115,7 @@ export default function LoginEmailScreen() {
             value={email}
             onChangeText={(text) => {
               setEmail(text);
-              if (localError) setLocalError('');
+              if (localError) setLocalError("");
               if (storeError) clearStoreError();
             }}
           />
@@ -116,7 +124,7 @@ export default function LoginEmailScreen() {
             value={password}
             onChangeText={(text) => {
               setPassword(text);
-              if (localError) setLocalError('');
+              if (localError) setLocalError("");
               if (storeError) clearStoreError();
             }}
           />
@@ -125,15 +133,21 @@ export default function LoginEmailScreen() {
             <CheckboxField
               label="Souviens-toi de moi"
               checked={rememberMe}
-              onToggle={() => setRememberMe(v => !v)}
+              onToggle={() => setRememberMe((v) => !v)}
             />
-            <TouchableOpacity activeOpacity={0.7} onPress={() => router.push("/(auth)/forgot-password")}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push("/(auth)/forgot-password")}
+            >
               <Text style={styles.forgotText}>Mot de passe oublié</Text>
             </TouchableOpacity>
           </View>
 
           {localError || storeError ? (
-            <HelperText message={localError || (storeError as string)} type="error" />
+            <HelperText
+              message={localError || (storeError as string)}
+              type="error"
+            />
           ) : null}
         </View>
 
@@ -158,9 +172,8 @@ export default function LoginEmailScreen() {
           </TouchableOpacity>
 
           <Text style={styles.terms}>
-            En continuant, vous acceptez nos{' '}
-            <Text style={styles.link}>conditions d'utilisation</Text>
-            {' '}et notre{' '}
+            En continuant, vous acceptez nos{" "}
+            <Text style={styles.link}>conditions d'utilisation</Text> et notre{" "}
             <Text style={styles.link}>politique de confidentialité</Text>
           </Text>
         </View>
@@ -199,9 +212,9 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   rememberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   forgotText: {
     fontFamily: fontFamily.medium,
@@ -210,7 +223,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     gap: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   or: {
     fontFamily: fontFamily.regular,
@@ -218,10 +231,10 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
   },
   googleButton: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -232,7 +245,7 @@ const styles = StyleSheet.create({
   googleIcon: {
     fontFamily: fontFamily.bold,
     fontSize: fontSize.base,
-    color: '#4285F4',
+    color: "#4285F4",
   },
   googleText: {
     fontFamily: fontFamily.medium,
@@ -243,7 +256,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
     color: colors.inkLight,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 18,
   },
   link: {

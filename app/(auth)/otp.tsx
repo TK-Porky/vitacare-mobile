@@ -9,11 +9,11 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
-import { OTPInput, TopBar, HelperText, PrimaryButton } from "../../src/components";
-import { colors, fontFamily, fontSize } from "../../src/themes";
-import { useAuth } from "../../src/hooks/useAuth";
-import { useAuthStore } from "../../src/store";
+import { useLocalSearchParams } from "expo-router";
+import { OTPInput, TopBar, HelperText, PrimaryButton } from "@/components";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { useAuth } from "@/hooks";
+import { useAuthStore } from "@/store";
 
 // ================================================================================== //
 // Types
@@ -28,7 +28,10 @@ export default function OTPScreen() {
   // ================================================================================== //
   // States
   // ================================================================================== //
-  const { phone, fullName } = useLocalSearchParams<{ phone: string; fullName: string }>();
+  const { phone, fullName } = useLocalSearchParams<{
+    phone: string;
+    fullName: string;
+  }>();
   const [code, setCode] = useState(""); // OTP code input
   const [localError, setLocalError] = useState(""); // Local validation error
   const [countdown, setCountdown] = useState(RESEND_DELAY); // Resend countdown timer
@@ -37,13 +40,13 @@ export default function OTPScreen() {
   // Hooks
   // ================================================================================== //
   const { verifyOtp, isVerifyingOtp } = useAuth(); // Authentication hook
-  const storeError = useAuthStore(state => state.error); // Store error state
-  const clearStoreError = useAuthStore(state => state.clearError); // Clear store error
+  const storeError = useAuthStore((state) => state.error); // Store error state
+  const clearStoreError = useAuthStore((state) => state.clearError); // Clear store error
 
   // ================================================================================== //
   // Effects
   // ================================================================================== //
-  
+
   // Clear store error on component mount
   useEffect(() => {
     clearStoreError();
@@ -63,18 +66,21 @@ export default function OTPScreen() {
    * Handle OTP verification
    * @param otpCode - The OTP code to verify
    */
-  const handleVerify = useCallback(async (otpCode: string) => {
-    if (otpCode.length !== OTP_LENGTH) return;
+  const handleVerify = useCallback(
+    async (otpCode: string) => {
+      if (otpCode.length !== OTP_LENGTH) return;
 
-    setLocalError("");
-    clearStoreError();
+      setLocalError("");
+      clearStoreError();
 
-    verifyOtp({ 
-      phone: phone || "",
-      code: otpCode,
-      fullName: fullName // Pass fullName if it exists (registration case)
-    });
-  }, [phone, fullName, verifyOtp, clearStoreError]);
+      verifyOtp({
+        phone: phone || "",
+        code: otpCode,
+        fullName: fullName, // Pass fullName if it exists (registration case)
+      });
+    },
+    [phone, fullName, verifyOtp, clearStoreError],
+  );
 
   /**
    * Handle resend OTP
@@ -82,7 +88,7 @@ export default function OTPScreen() {
    */
   const handleResend = async () => {
     if (countdown > 0 || !phone) return;
-    
+
     setCountdown(RESEND_DELAY);
     setCode("");
     setLocalError("");
@@ -122,7 +128,10 @@ export default function OTPScreen() {
 
           <View style={styles.helperRow}>
             {localError || storeError ? (
-              <HelperText message={localError || (storeError as string)} type="error" />
+              <HelperText
+                message={localError || (storeError as string)}
+                type="error"
+              />
             ) : (
               <View style={{ flex: 1 }} />
             )}

@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { colors, fontFamily, fontSize } from '../../themes';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { parseAppointmentDate } from "@/utils";
 
 type Props = {
   doctorName: string;
@@ -10,19 +11,42 @@ type Props = {
   onPress?: () => void;
 };
 
-const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  confirmed:   { label: 'Confirmé',   bg: colors.successLight, color: colors.success },
-  paid:        { label: 'Payé',       bg: colors.successLight, color: colors.success },
-  pending:     { label: 'En attente', bg: colors.warningLight, color: colors.warning },
-  cancelled:   { label: 'Annulé',     bg: colors.errorLight,   color: colors.error },
-  completed:   { label: 'Terminé',    bg: colors.infoLight,    color: colors.info },
-  in_progress: { label: 'En cours',   bg: colors.infoLight,    color: colors.info },
-  no_show:     { label: 'Absent',     bg: colors.errorLight,   color: colors.error },
-  rescheduled: { label: 'Reporté',    bg: colors.warningLight, color: colors.warning },
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; bg: string; color: string }
+> = {
+  confirmed: {
+    label: "Confirmé",
+    bg: colors.successLight,
+    color: colors.success,
+  },
+  paid: { label: "Payé", bg: colors.successLight, color: colors.success },
+  pending: {
+    label: "En attente",
+    bg: colors.warningLight,
+    color: colors.warning,
+  },
+  cancelled: { label: "Annulé", bg: colors.errorLight, color: colors.error },
+  completed: { label: "Terminé", bg: colors.infoLight, color: colors.info },
+  in_progress: { label: "En cours", bg: colors.infoLight, color: colors.info },
+  no_show: { label: "Absent", bg: colors.errorLight, color: colors.error },
+  rescheduled: {
+    label: "Reporté",
+    bg: colors.warningLight,
+    color: colors.warning,
+  },
 };
 
-export function AppointmentItem({ doctorName, date, time, status, avatarUrl, onPress }: Props) {
+export function AppointmentItem({
+  doctorName,
+  date,
+  time,
+  status,
+  avatarUrl,
+  onPress,
+}: Props) {
   const config = STATUS_CONFIG[status.toLowerCase()] ?? STATUS_CONFIG.pending;
+  const { day, month, year } = parseAppointmentDate(date);
 
   return (
     <TouchableOpacity
@@ -36,16 +60,16 @@ export function AppointmentItem({ doctorName, date, time, status, avatarUrl, onP
           <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarInitial}>
-              {doctorName.charAt(0)}
-            </Text>
+            <Text style={styles.avatarInitial}>{doctorName.charAt(0)}</Text>
           </View>
         )}
       </View>
 
       <View style={styles.info}>
         <Text style={styles.name}>{doctorName}</Text>
-        <Text style={styles.date}>{date}</Text>
+        <Text style={styles.date}>
+          {day} {month} {year}
+        </Text>
       </View>
 
       <View style={styles.right}>
@@ -62,8 +86,8 @@ export function AppointmentItem({ doctorName, date, time, status, avatarUrl, onP
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     borderWidth: 1,
     borderColor: colors.border,
@@ -75,18 +99,18 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   avatarImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   avatarPlaceholder: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarInitial: {
     fontFamily: fontFamily.bold,
@@ -108,7 +132,7 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
   },
   right: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     gap: 6,
   },
   time: {

@@ -19,9 +19,9 @@ import {
   MedicationItem,
   AppointmentItem,
   HelperText,
-} from "../../../src/components";
-import { colors, fontFamily, fontSize } from "../../../src/themes";
-import { useDashboardStore, useAuthStore } from "../../../src/store";
+} from "@/components";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { useDashboardStore, useAuthStore } from "@/store";
 
 // ================================================================================== //
 // Types
@@ -69,6 +69,10 @@ export default function DashboardScreen({
 
   const handleSearch = () => {
     router.push("/(main)/(tabs)/explore" as any);
+  };
+
+  const handleNotifications = () => {
+    router.push("/(modals)/notifications" as any);
   };
 
   /**
@@ -165,6 +169,7 @@ export default function DashboardScreen({
         onSearch={handleSearch}
         onMap={onMap}
         notificationBell={notificationBell}
+        onNotification={handleNotifications}
       />
 
       <ScrollView
@@ -297,6 +302,7 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     flex: 1,
+    flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,

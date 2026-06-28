@@ -7,19 +7,11 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { router } from "expo-router";
-import {
-  PhoneInput,
-  TopBar,
-  HelperText,
-  PrimaryButton,
-} from "../../src/components";
-import { isValidCMPhone } from "@vitacare/utils";
-import { colors, fontFamily, fontSize } from "../../src/themes";
-
-import { useAuth } from "../../src/hooks/useAuth";
-import { useAuthStore } from "../../src/store";
-import { firebaseAuth } from "../../src/lib/firebase";
+import { PhoneInput, TopBar, HelperText, PrimaryButton } from "@/components";
+import { isValidCMPhone } from "@/utils";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { useAuth } from "@/hooks";
+import { useAuthStore } from "@/store";
 
 // ================================================================================== //
 // Main

@@ -18,7 +18,7 @@ export interface RegisterRequest {
   fullname: string;
   phone?: string;
   dateOfBirth?: string;
-  gender?: 'male' | 'female' | 'other';
+  gender?: "male" | "female" | "other";
 }
 
 export interface ForgotPasswordRequest {
@@ -48,8 +48,8 @@ export interface ClinicsListQuery {
   maxPrice?: number;
   rating?: number;
   search?: string;
-  sortBy?: 'name' | 'price' | 'rating' | 'distance';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "name" | "price" | "rating" | "distance";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface ClinicSearchRequest {
@@ -77,8 +77,8 @@ export interface CreateBookingRequest {
   date: string; // ISO date string
   time: string; // HH:mm format
   reason: string;
-  paymentMethod: 'now' | 'later';
-  paymentProvider?: 'mobile_money' | 'orange_money' | 'card';
+  paymentMethod: "now" | "later";
+  paymentProvider?: "mobile_money" | "orange_money" | "card";
   notes?: string;
 }
 
@@ -86,8 +86,8 @@ export interface UpdateBookingRequest {
   date?: string;
   time?: string;
   reason?: string;
-  paymentMethod?: 'now' | 'later';
-  paymentProvider?: 'mobile_money' | 'orange_money' | 'card';
+  paymentMethod?: "now" | "later";
+  paymentProvider?: "mobile_money" | "orange_money" | "card";
   notes?: string;
 }
 
@@ -114,7 +114,7 @@ export interface GetAvailableSlotsRequest {
 export interface AppointmentsListQuery {
   page?: number;
   limit?: number;
-  status?: 'confirmed' | 'pending' | 'paid' | 'cancelled' | 'all';
+  status?: "confirmed" | "pending" | "paid" | "cancelled" | "all";
   startDate?: string;
   endDate?: string;
   providerId?: string;
@@ -160,7 +160,7 @@ export interface DashboardQuery {
 
 export interface UpdateMedicationStatusRequest {
   medicationId: number;
-  status: 'taken' | 'missed';
+  status: "taken" | "missed";
   takenAt?: string; // ISO datetime string
 }
 
@@ -188,7 +188,11 @@ export interface UpdateObservanceRequest {
 export interface InitiatePaymentRequest {
   appointmentId: number;
   amount: number;
-  paymentMethod: 'MTN_MOMO_CM' | 'ORANGE_MONEY_CM' | 'CARD_VISA' | 'CARD_MASTERCARD';
+  paymentMethod:
+    | "MTN_MOMO_CM"
+    | "ORANGE_MONEY_CM"
+    | "CARD_VISA"
+    | "CARD_MASTERCARD";
   phoneNumber: string;
 }
 
@@ -215,12 +219,14 @@ export interface UpdateNotificationPreferencesRequest {
 // ---------------------------------------------------------------------------
 
 export interface CreateReminderRequest {
-  name: string;
-  dosage?: string;
-  frequency?: string;
-  startDate?: string;
-  endDate?: string;
+  medicationId: number;
+  form: string;
+  dosage: string;
+  frequency: string;
   times: string[];
+  patientId?: number;
+  scheduledDate?: string;
+  scheduledTime?: string;
   notes?: string;
 }
 
@@ -228,7 +234,7 @@ export interface UpdateReminderRequest {
   medicationId?: string;
   scheduledDate?: string; // ISO date string
   scheduledTime?: string; // HH:mm format
-  status?: 'PENDING' | 'TAKEN' | 'SNOOZED' | 'MISSED' | 'CANCELLED';
+  status?: "PENDING" | "TAKEN" | "SNOOZED" | "MISSED" | "CANCELLED";
   notes?: string;
 }
 
@@ -245,7 +251,7 @@ export interface SnoozeReminderRequest {
 export interface RemindersListQuery {
   page?: number;
   limit?: number;
-  status?: ReminderStatus | 'all';
+  status?: ReminderStatus | "all";
   startDate?: string; // ISO date string
   endDate?: string; // ISO date string
   patientId?: string;
@@ -253,7 +259,7 @@ export interface RemindersListQuery {
 }
 
 export interface BulkCreateRemindersRequest {
-  reminders: CreateReminderRequest[];
+  reminders: Omit<CreateReminderRequest, "patientId">[];
   patientId: string;
 }
 
@@ -262,7 +268,12 @@ export interface MarkReminderReadRequest {
 }
 
 // Re-export status type for convenience
-export type ReminderStatus = 'PENDING' | 'TAKEN' | 'SNOOZED' | 'MISSED' | 'CANCELLED';
+export type ReminderStatus =
+  | "PENDING"
+  | "TAKEN"
+  | "SNOOZED"
+  | "MISSED"
+  | "CANCELLED";
 
 // ---------------------------------------------------------------------------
 // Profil utilisateur
@@ -286,7 +297,7 @@ export interface UpdatePreferencesRequest {
   notifications?: boolean;
   emailNotifications?: boolean;
   smsNotifications?: boolean;
-  theme?: 'light' | 'dark' | 'auto';
+  theme?: "light" | "dark" | "auto";
   currency?: string;
   timezone?: string;
 }
@@ -308,7 +319,7 @@ export interface DeleteAccountRequest {
 
 export interface SearchRequest {
   query: string;
-  type: 'clinics' | 'doctors' | 'specialties' | 'all';
+  type: "clinics" | "doctors" | "specialties" | "all";
   filters?: SearchFilters;
   pagination?: {
     page: number;
@@ -316,7 +327,7 @@ export interface SearchRequest {
   };
   sort?: {
     field: string;
-    order: 'asc' | 'desc';
+    order: "asc" | "desc";
   };
 }
 
@@ -355,8 +366,8 @@ export interface ReviewsListQuery {
   page?: number;
   limit?: number;
   rating?: number;
-  sortBy?: 'date' | 'rating';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "date" | "rating";
+  sortOrder?: "asc" | "desc";
 }
 
 // ---------------------------------------------------------------------------
@@ -364,7 +375,7 @@ export interface ReviewsListQuery {
 // ---------------------------------------------------------------------------
 
 export interface ReportRequest {
-  type: 'provider' | 'appointment' | 'payment' | 'technical';
+  type: "provider" | "appointment" | "payment" | "technical";
   targetId: string;
   reason: string;
   description: string;
@@ -374,8 +385,8 @@ export interface ReportRequest {
 export interface ContactSupportRequest {
   subject: string;
   message: string;
-  category: 'technical' | 'billing' | 'appointment' | 'general';
-  priority?: 'low' | 'medium' | 'high';
+  category: "technical" | "billing" | "appointment" | "general";
+  priority?: "low" | "medium" | "high";
   attachments?: string[];
 }
 
