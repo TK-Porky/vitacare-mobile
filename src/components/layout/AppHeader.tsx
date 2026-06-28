@@ -19,10 +19,13 @@ type Props = {
   onSearch?: () => void;
   onSearchChange?: (value: string) => void;
   onSearchFocus?: () => void;
+  onSearchClose?: () => void;
+  isSearching?: boolean;
   onMap?: () => void;
   onReminders?: () => void;
   onFilter?: () => void;
   onNotification?: () => void;
+  notificationCount?: number;
   rightActions?: React.ReactNode;
   notificationBell?: React.ReactNode;
 };
@@ -30,13 +33,17 @@ type Props = {
 export function AppHeader({
   title,
   searchBar,
-  searchValue,
+  searchValue = "",
   onSearch,
+  onSearchChange,
   onSearchFocus,
+  onSearchClose,
+  isSearching = false,
   onMap,
   onReminders,
   onFilter,
   onNotification,
+  notificationCount = 0,
   rightActions,
   notificationBell,
 }: Props) {
@@ -66,6 +73,9 @@ export function AppHeader({
                 onPress={onSearch}
                 activeOpacity={0.7}
                 style={styles.iconButton}
+                accessibilityLabel="Rechercher"
+                accessibilityRole="button"
+                accessibilityHint="Ouvrir la recherche"
               >
                 <Search size={20} color={colors.ink} />
               </TouchableOpacity>
@@ -75,6 +85,9 @@ export function AppHeader({
                 onPress={onFilter}
                 activeOpacity={0.7}
                 style={styles.iconButton}
+                accessibilityLabel="Filtrer"
+                accessibilityRole="button"
+                accessibilityHint="Filtrer les éléments affichés"
               >
                 <Filter size={20} color={colors.ink} />
               </TouchableOpacity>
@@ -84,12 +97,24 @@ export function AppHeader({
                 onPress={onNotification}
                 activeOpacity={0.7}
                 style={styles.iconButton}
+                accessibilityLabel="Notifications"
+                accessibilityRole="button"
+                accessibilityHint="Voir vos notifications"
               >
-                <Ionicons
-                  name="notifications-outline"
-                  size={20}
-                  color={colors.ink}
-                />
+                <View style={styles.notificationContainer}>
+                  <Ionicons
+                    name="notifications-outline"
+                    size={20}
+                    color={colors.ink}
+                  />
+                  {notificationCount > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>
+                        {notificationCount > 99 ? "99+" : notificationCount}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
             )}
             {onMap && (
@@ -126,18 +151,23 @@ export function AppHeader({
           {title && <Text style={styles.title}>{title}</Text>}
           {searchBar && (
             <View style={styles.searchWrap}>
-              <View pointerEvents={onSearchFocus ? "none" : "auto"}>
-                <SearchInput
-                  value={searchValue || ""}
-                  onChangeText={() => {}}
-                />
-              </View>
-              {onSearchFocus && (
+              <SearchInput
+                value={searchValue}
+                onChangeText={onSearchChange || (() => {})}
+                onFocus={onSearchFocus}
+                accessibilityLabel="Rechercher"
+                accessibilityHint="Saisissez votre recherche"
+              />
+              {isSearching && onSearchClose && (
                 <TouchableOpacity
-                  style={StyleSheet.absoluteFill}
-                  onPress={onSearchFocus}
+                  style={styles.searchCloseButton}
+                  onPress={onSearchClose}
                   activeOpacity={0.7}
-                />
+                  accessibilityLabel="Fermer la recherche"
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="close" size={20} color={colors.ink} />
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -181,6 +211,26 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 4,
   },
+  notificationContainer: {
+    position: "relative",
+  },
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: colors.error || "#DC2626",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontFamily: fontFamily.bold,
+  },
   mapButton: {
     width: 100,
     gap: 1,
@@ -191,6 +241,17 @@ const styles = StyleSheet.create({
   },
   searchWrap: {
     position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  searchCloseButton: {
+    position: "absolute",
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    padding: 4,
+    zIndex: 10,
   },
   title: {
     fontFamily: fontFamily.bold,
