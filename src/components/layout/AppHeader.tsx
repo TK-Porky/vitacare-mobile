@@ -22,6 +22,7 @@ type Props = {
   onMap?: () => void;
   onReminders?: () => void;
   onFilter?: () => void;
+  onNotification?: () => void;
   rightActions?: React.ReactNode;
   notificationBell?: React.ReactNode;
 };
@@ -35,6 +36,7 @@ export function AppHeader({
   onMap,
   onReminders,
   onFilter,
+  onNotification,
   rightActions,
   notificationBell,
 }: Props) {
@@ -75,6 +77,19 @@ export function AppHeader({
                 style={styles.iconButton}
               >
                 <Filter size={20} color={colors.ink} />
+              </TouchableOpacity>
+            )}
+            {onNotification && (
+              <TouchableOpacity
+                onPress={onNotification}
+                activeOpacity={0.7}
+                style={styles.iconButton}
+              >
+                <Ionicons
+                  name="notifications-outline"
+                  size={20}
+                  color={colors.ink}
+                />
               </TouchableOpacity>
             )}
             {onMap && (

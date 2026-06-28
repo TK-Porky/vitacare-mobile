@@ -1,10 +1,10 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChevronDown, Phone } from 'lucide-react-native';
-import { BaseInput, BaseInputProps } from '../generics/BaseInput';
-import { colors, fontFamily, fontSize } from '../../themes';
-import { formatCMPhone } from "@vitacare/utils";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { ChevronDown, Phone } from "lucide-react-native";
+import { BaseInput, BaseInputProps } from "@/components/generics/BaseInput";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { formatCMPhone } from "@/utils";
 
-type Props = Omit<BaseInputProps, 'leftSlot' | 'keyboardType'> & {
+type Props = Omit<BaseInputProps, "leftSlot" | "keyboardType"> & {
   countryCode?: string;
   onCountryPress?: () => void;
 };
@@ -14,13 +14,12 @@ type Props = Omit<BaseInputProps, 'leftSlot' | 'keyboardType'> & {
  * Étend BaseInput via composition (pas d'héritage, pas de duplication).
  */
 export function PhoneInput({
-  countryCode = '+237',
+  countryCode = "+237",
   onCountryPress,
   onChangeText,
   value,
   ...baseProps
 }: Props) {
-
   const handleTextChange = (text: string) => {
     if (onChangeText) {
       const formatted = formatCMPhone(text);
@@ -56,13 +55,13 @@ export function PhoneInput({
 
 const styles = StyleSheet.create({
   leftSlot: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   countryCode: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   countryText: {

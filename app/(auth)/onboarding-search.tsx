@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
@@ -6,23 +6,21 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-} from 'react-native';
-import { router } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
-import { StepHeader, SelectOption, PrimaryButton } from '../../src/components';
-import { colors, fontFamily, fontSize } from '../../src/themes';
-import { useProfile } from '../../src/hooks';
-
-// ... (rest same)
+} from "react-native";
+import { router } from "expo-router";
+import { ChevronLeft } from "lucide-react-native";
+import { StepHeader, SelectOption, PrimaryButton } from "@/components";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { useProfile } from "@/hooks";
 
 // ================================================================================== //
 // Types
 // ================================================================================== //
 const OPTIONS = [
-  'Un médecin en urgence',
-  'Un suivi de traitements réguliers',
-  'Des informations sur un médicaments',
-  'Rien en particulier',
+  "Un médecin en urgence",
+  "Un suivi de traitements réguliers",
+  "Des informations sur un médicaments",
+  "Rien en particulier",
 ];
 
 // ================================================================================== //
@@ -41,7 +39,7 @@ export default function OnboardingSearchScreen() {
    */
   const handleContinue = async () => {
     if (!selected) {
-      router.push('/(auth)/onboarding-language');
+      router.push("/(auth)/onboarding-language");
       return;
     }
 
@@ -49,12 +47,12 @@ export default function OnboardingSearchScreen() {
       // Save preference to profile via API
       await updatePreferences({
         // We use a generic way to store this or map to a specific field if backend supports it
-      } as any); 
-      
-      router.push('/(auth)/onboarding-language');
+      } as any);
+
+      router.push("/(auth)/onboarding-language");
     } catch (e) {
       // Fallback to next screen even if save fails for better UX, or show error
-      router.push('/(auth)/onboarding-language');
+      router.push("/(auth)/onboarding-language");
     }
   };
 
@@ -66,7 +64,7 @@ export default function OnboardingSearchScreen() {
       <StepHeader
         current={2}
         total={3}
-        onSkip={() => router.push('/(auth)/onboarding-language')}
+        onSkip={() => router.push("/(auth)/onboarding-language")}
       />
 
       <ScrollView
@@ -122,23 +120,23 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontFamily.bold,
-    fontSize: fontSize['2xl'],
+    fontSize: fontSize["2xl"],
     color: colors.ink,
   },
   options: {
     gap: 12,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 32,
     paddingTop: 12,
   },
   backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   backText: {

@@ -36,11 +36,12 @@ function RootNavigator() {
 
     const inAuthGroup   = segments[0] === '(auth)';
     const inMainGroup   = segments[0] === '(main)';
+    const inModalsGroup = segments[0] === '(modals)';
     const isOnboarding  = (segments as string[])[1]?.startsWith('onboarding');
 
     if (!accessToken && !inAuthGroup) {
       router.replace('/(auth)');
-    } else if (accessToken && !inMainGroup && !isOnboarding) {
+    } else if (accessToken && !inMainGroup && !inModalsGroup && !isOnboarding) {
       router.replace('/(main)');
     }
   }, [isHydrated, accessToken, segments]);

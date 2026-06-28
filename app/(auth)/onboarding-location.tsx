@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,14 +8,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-} from 'react-native';
-import { router } from 'expo-router';
-import { MapPin } from 'lucide-react-native';
-import MapView, { UrlTile, Marker, PROVIDER_DEFAULT } from 'react-native-maps';
-import * as Location from 'expo-location';
-import { StepHeader, SearchInput, PrimaryButton } from '../../src/components';
-import { colors, fontFamily, fontSize } from '../../src/themes';
-import { useProfile } from '../../src/hooks';
+} from "react-native";
+import { router } from "expo-router";
+import { MapPin } from "lucide-react-native";
+import MapView, { UrlTile, Marker, PROVIDER_DEFAULT } from "react-native-maps";
+import * as Location from "expo-location";
+import { StepHeader, SearchInput, PrimaryButton } from "@/components";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { useProfile } from "@/hooks";
 
 // ================================================================================== //
 // Types
@@ -35,13 +35,13 @@ export default function OnboardingLocationScreen() {
   // ================================================================================== //
   // States
   // ================================================================================== //
-  const [location, setLocation] = useState('Recherche de votre position...'); // Location status
+  const [location, setLocation] = useState("Recherche de votre position..."); // Location status
   const [region, setRegion] = useState(INITIAL_REGION); // Map region
   const [markerCoords, setMarkerCoords] = useState({
     latitude: INITIAL_REGION.latitude,
     longitude: INITIAL_REGION.longitude,
   }); // Marker coordinates
-  const [searchQuery, setSearchQuery] = useState(''); // Search query
+  const [searchQuery, setSearchQuery] = useState(""); // Search query
   const [isMapReady, setIsMapReady] = useState(false); // Map ready state
 
   // ================================================================================== //
@@ -50,8 +50,8 @@ export default function OnboardingLocationScreen() {
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocation('Permission de localisation refusée');
+      if (status !== "granted") {
+        setLocation("Permission de localisation refusée");
         return;
       }
 
@@ -75,7 +75,9 @@ export default function OnboardingLocationScreen() {
       });
       if (reverse.length > 0) {
         const item = reverse[0];
-        setLocation(`${item.street || ''} ${item.name || ''}, ${item.city || ''}`);
+        setLocation(
+          `${item.street || ""} ${item.name || ""}, ${item.city || ""}`,
+        );
       }
     })();
   }, []);
@@ -89,9 +91,9 @@ export default function OnboardingLocationScreen() {
       // Save location to profile via API
       await updateProfile({
         address: location,
-      } as any); 
-      
-      router.push('/(auth)/onboarding-search');
+      } as any);
+
+      router.push("/(auth)/onboarding-search");
     } catch (e) {
       Alert.alert("Erreur", "Impossible de sauvegarder votre position.");
     }
@@ -113,14 +115,15 @@ export default function OnboardingLocationScreen() {
       <StepHeader
         current={1}
         total={2}
-        onSkip={() => router.push('/(auth)/onboarding-search')}
+        onSkip={() => router.push("/(auth)/onboarding-search")}
       />
 
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Indiquer votre position</Text>
           <Text style={styles.subtitle}>
-            Les recherches s'effectueront dans un périmètre de 15km, ajustable plus tard
+            Les recherches s'effectueront dans un périmètre de 15km, ajustable
+            plus tard
           </Text>
         </View>
 
@@ -161,7 +164,9 @@ export default function OnboardingLocationScreen() {
 
         <TouchableOpacity style={styles.locationRow} activeOpacity={0.7}>
           <MapPin size={16} color={colors.inkMuted} />
-          <Text style={styles.locationText} numberOfLines={1}>{location}</Text>
+          <Text style={styles.locationText} numberOfLines={1}>
+            {location}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -192,7 +197,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontFamily.bold,
-    fontSize: fontSize['2xl'],
+    fontSize: fontSize["2xl"],
     color: colors.ink,
   },
   subtitle: {
@@ -204,9 +209,9 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
     backgroundColor: colors.surface,
-    position: 'relative',
+    position: "relative",
   },
   map: {
     ...StyleSheet.absoluteFill,
@@ -214,25 +219,25 @@ const styles = StyleSheet.create({
   loaderOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   customMarker: {
     width: 40,
     height: 40,
     backgroundColor: colors.white,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     backgroundColor: colors.surface,
     padding: 14,

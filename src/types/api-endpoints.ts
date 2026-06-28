@@ -1,6 +1,6 @@
 /**
  * API Endpoints Configuration for VitaCare Mobile App
- * 
+ *
  * This file contains all API endpoints used by the mobile application.
  * Endpoints are organized by feature areas for better maintainability.
  */
@@ -10,7 +10,7 @@
 // ================================================================================== //
 
 export const API_CONFIG = {
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.1.100:8080',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || "http://192.168.1.100:8080",
   TIMEOUT: 30000,
 } as const;
 
@@ -19,40 +19,40 @@ export const API_ENDPOINTS = {
   // Authentication
   // ================================================================================== //
   AUTH: {
-    LOGIN_PHONE: '/auth/patient/login/phone',
-    LOGIN_EMAIL: '/auth/patient/login/email',
-    REGISTER_PHONE: '/auth/patient/register/phone',
-    REGISTER_EMAIL: '/auth/patient/register/email',
-    LOGOUT: '/auth/patient/logout',
-    REFRESH: '/auth/refresh-token',
-    FORGOT_PASSWORD: '/auth/patient/forgot-password',
-    RESET_PASSWORD: '/auth/patient/reset-password',
-    RESET_PASSWORD_VERIFY: '/auth/patient/reset-password-verify',
-    CHANGE_PASSWORD: '/auth/patient/change-password',
-    VERIFY_EMAIL: '/auth/patient/verify-email',
-    RESEND_VERIFICATION: '/auth/patient/resend-verification',
+    LOGIN_PHONE: "/auth/patient/login/phone",
+    LOGIN_EMAIL: "/auth/patient/login/email",
+    REGISTER_PHONE: "/auth/patient/register/phone",
+    REGISTER_EMAIL: "/auth/patient/register/email",
+    LOGOUT: "/auth/patient/logout",
+    REFRESH: "/auth/refresh-token",
+    FORGOT_PASSWORD: "/auth/patient/forgot-password",
+    RESET_PASSWORD: "/auth/patient/reset-password",
+    RESET_PASSWORD_VERIFY: "/auth/patient/reset-password-verify",
+    CHANGE_PASSWORD: "/auth/patient/change-password",
+    VERIFY_EMAIL: "/auth/patient/verify-email",
+    RESEND_VERIFICATION: "/auth/patient/resend-verification",
   },
 
   // ---------------------------------------------------------------------------
   // Users
   // ---------------------------------------------------------------------------
   USERS: {
-    PROFILE: '/users/patients/profile',
-    UPDATE_PROFILE: '/users/patients/profile',
-    UPDATE_LOCATION: '/users/patients/location',
-    PREFERENCES: '/users/patients/preferences',
-    UPDATE_PREFERENCES: '/users/patients/preferences',
-    AVATAR: '/users/patients/avatar',
-    DELETE_ACCOUNT: '/users/patients/account',
+    PROFILE: "/users/patients/profile",
+    UPDATE_PROFILE: "/users/patients/profile",
+    UPDATE_LOCATION: "/users/patients/location",
+    PREFERENCES: "/users/patients/preferences",
+    UPDATE_PREFERENCES: "/users/patients/preferences",
+    AVATAR: "/users/patients/avatar",
+    DELETE_ACCOUNT: "/users/patients/account",
   },
 
   // ---------------------------------------------------------------------------
   // Cliniques et professionnels (Mapped to Doctors in backend)
   // ---------------------------------------------------------------------------
   CLINICS: {
-    LIST: '/doctors',
+    LIST: "/doctors",
     DETAIL: (id: string | number) => `/doctors/${id}`,
-    SEARCH: '/doctors/search',
+    SEARCH: "/doctors/search",
     AVAILABILITY: (id: string | number) => `/doctors/${id}/availabilities`,
     REVIEWS: (id: string | number) => `/doctors/${id}/reviews`,
     CREATE_REVIEW: (id: string | number) => `/doctors/${id}/reviews`,
@@ -63,21 +63,21 @@ export const API_ENDPOINTS = {
   // Réservations
   // ---------------------------------------------------------------------------
   BOOKINGS: {
-    LIST: '/bookings',
-    CREATE: '/bookings',
+    LIST: "/bookings",
+    CREATE: "/bookings",
     DETAIL: (id: string) => `/bookings/${id}`,
     UPDATE: (id: string) => `/bookings/${id}`,
     CANCEL: (id: string) => `/bookings/${id}/cancel`,
     RESCHEDULE: (id: string) => `/bookings/${id}/reschedule`,
-    AVAILABLE_SLOTS: '/bookings/available-slots',
+    AVAILABLE_SLOTS: "/bookings/available-slots",
   },
 
   // ---------------------------------------------------------------------------
   // Rendez-vous (backend réel)
   // ---------------------------------------------------------------------------
   APPOINTMENTS: {
-    LIST: '/appointments/mine',
-    CREATE: '/appointments',
+    LIST: "/appointments/mine",
+    CREATE: "/appointments",
     DETAIL: (id: string | number) => `/appointments/${id}`,
     CANCEL: (id: string | number) => `/appointments/${id}/cancel`,
     RESCHEDULE: (id: string | number) => `/appointments/${id}/reschedule`,
@@ -87,36 +87,35 @@ export const API_ENDPOINTS = {
   // Dashboard
   // ---------------------------------------------------------------------------
   DASHBOARD: {
-    OVERVIEW: '/dashboard',
-    STATS: '/dashboard/stats',
-    MEDICATIONS: '/dashboard/medications',
-    APPOINTMENTS: '/dashboard/appointments',
-    OBSERVANCES: '/dashboard/observances',
+    OVERVIEW: "/dashboard",
+    STATS: "/dashboard/stats",
+    MEDICATIONS: "/dashboard/medications",
+    APPOINTMENTS: "/dashboard/appointments",
+    OBSERVANCES: "/dashboard/observances",
     UPDATE_MEDICATION: (id: number) => `/dashboard/medications/${id}`,
-    ADD_MEDICATION: '/dashboard/medications',
+    ADD_MEDICATION: "/dashboard/medications",
     DELETE_MEDICATION: (id: number) => `/dashboard/medications/${id}`,
     UPDATE_OBSERVANCE: (id: string) => `/dashboard/observances/${id}`,
   },
-
 
   // ---------------------------------------------------------------------------
   // Medicaments
   // ---------------------------------------------------------------------------
   MEDICATIONS: {
-    LIST: '/medipedia',
+    LIST: "/medipedia",
     GET: (id: string) => `/medipedia/${id}`,
     FORMS: (id: string) => `/medipedia/${id}`,
-    SEARCH: '/medipedia/search',
+    SEARCH: "/medipedia/search",
   },
 
   // ---------------------------------------------------------------------------
   // Paiements
   // ---------------------------------------------------------------------------
   PAYMENTS: {
-    INITIATE: '/payments/initiate',
+    INITIATE: "/payments/initiate",
     DETAIL: (id: string | number) => `/payments/${id}`,
     APPOINTMENT: (id: string | number) => `/payments/appointment/${id}`,
-    WEBHOOK: '/payments/webhook',
+    WEBHOOK: "/payments/webhook",
     REFUND: (id: string | number) => `/payments/appointment/${id}/refund`,
   },
 
@@ -124,101 +123,98 @@ export const API_ENDPOINTS = {
   // Notifications
   // ---------------------------------------------------------------------------
   NOTIFICATIONS: {
-    LIST: '/notifications',
-    MARK_READ: '/notifications/mark-read',
-    MARK_ALL_READ: '/notifications/mark-all-read',
-    PREFERENCES: '/notifications/preferences',
-    UPDATE_PREFERENCES: '/notifications/preferences',
-    REGISTER_DEVICE: '/notifications/register-device',
-    UNREGISTER_DEVICE: '/notifications/unregister-device',
+    LIST: "/notifications",
+    MARK_READ: (id: string) => `/notifications/${id}/read`,
+    MARK_ALL_READ: "/notifications/read-all",
+    DELETE: (id: string) => `/notifications/${id}`,
+    DELETE_ALL: "/notifications",
   },
 
   // ---------------------------------------------------------------------------
   // Reminders
   // ---------------------------------------------------------------------------
   REMINDERS: {
-    LIST: '/reminders',
-    CREATE: '/reminders',
+    LIST: "/reminders",
+    CREATE: "/reminders",
     GET: (id: string) => `/reminders/${id}`,
     UPDATE: (id: string) => `/reminders/${id}`,
     DELETE: (id: string) => `/reminders/${id}`,
-    MARK_TAKEN: '/reminders/mark-taken',
-    SNOOZE: '/reminders/snooze',
-    UPCOMING: '/reminders/upcoming',
-    TODAY: '/reminders/today',
-    BULK_CREATE: '/reminders/bulk',
-    MARK_READ: '/reminders/mark-read',
-    MARK_ALL_READ: '/reminders/mark-all-read',
-    SUMMARY: '/reminders/summary',
+    MARK_TAKEN: "/reminders/mark-taken",
+    SNOOZE: "/reminders/snooze",
+    UPCOMING: "/reminders/upcoming",
+    TODAY: "/reminders/today",
+    BULK_CREATE: "/reminders/bulk",
+    MARK_READ: "/reminders/mark-read",
+    MARK_ALL_READ: "/reminders/mark-all-read",
+    SUMMARY: "/reminders/summary",
     PATIENT: (patientId: string) => `/reminders/patient/${patientId}`,
-    MEDICATION: (medicationId: string) => `/reminders/medication/${medicationId}`,
+    MEDICATION: (medicationId: string) =>
+      `/reminders/medication/${medicationId}`,
   },
 
   // ---------------------------------------------------------------------------
   // Recherche
   // ---------------------------------------------------------------------------
   SEARCH: {
-    GLOBAL: '/search',
-    CLINICS: '/search/clinics',
-    DOCTORS: '/search/doctors',
-    SPECIALTIES: '/search/specialties',
-    SUGGESTIONS: '/search/suggestions',
+    GLOBAL: "/search",
+    CLINICS: "/search/clinics",
+    DOCTORS: "/search/doctors",
+    SPECIALTIES: "/search/specialties",
+    SUGGESTIONS: "/search/suggestions",
   },
 
   // ---------------------------------------------------------------------------
   // Reviews et ratings
   // ---------------------------------------------------------------------------
   REVIEWS: {
-    LIST: '/reviews',
-    CREATE: '/reviews',
+    LIST: "/reviews",
+    CREATE: "/reviews",
     DETAIL: (id: string) => `/reviews/${id}`,
     UPDATE: (id: string) => `/reviews/${id}`,
     DELETE: (id: string) => `/reviews/${id}`,
-    USER_REVIEWS: '/reviews/user',
+    USER_REVIEWS: "/reviews/user",
   },
 
   // ---------------------------------------------------------------------------
   // Support et signalements
   // ---------------------------------------------------------------------------
   SUPPORT: {
-    CONTACT: '/support/contact',
-    REPORT: '/support/report',
-    TICKETS: '/support/tickets',
+    CONTACT: "/support/contact",
+    REPORT: "/support/report",
+    TICKETS: "/support/tickets",
     TICKET_DETAIL: (id: string) => `/support/tickets/${id}`,
-    FAQ: '/support/faq',
+    FAQ: "/support/faq",
   },
 
   // ---------------------------------------------------------------------------
   // Fichiers et uploads
   // ---------------------------------------------------------------------------
   UPLOADS: {
-    AVATAR: '/uploads/avatar',
-    DOCUMENT: '/uploads/document',
-    IMAGE: '/uploads/image',
-    MULTIPLE: '/uploads/multiple',
+    AVATAR: "/uploads/avatar",
+    DOCUMENT: "/uploads/document",
+    IMAGE: "/uploads/image",
+    MULTIPLE: "/uploads/multiple",
   },
 
   // ---------------------------------------------------------------------------
   // Configuration et références
   // ---------------------------------------------------------------------------
   CONFIG: {
-    SPECIALTIES: '/config/specialties',
-    LOCATIONS: '/config/locations',
-    PAYMENT_METHODS: '/config/payment-methods',
-    REASONS: '/config/reasons',
-    LANGUAGES: '/config/languages',
-    CURRENCIES: '/config/currencies',
+    SPECIALTIES: "/config/specialties",
+    LOCATIONS: "/config/locations",
+    PAYMENT_METHODS: "/config/payment-methods",
+    REASONS: "/config/reasons",
+    LANGUAGES: "/config/languages",
+    CURRENCIES: "/config/currencies",
   },
-
 } as const;
 
 // ---------------------------------------------------------------------------
 // Types pour les endpoints dynamiques
 // ---------------------------------------------------------------------------
 
-export type DynamicEndpoint<T extends string> = T extends `${infer _}/${infer _}`
-  ? T
-  : never;
+export type DynamicEndpoint<T extends string> =
+  T extends `${infer _}/${infer _}` ? T : never;
 
 export type EndpointParams = {
   clinicId: string;
@@ -242,7 +238,7 @@ export type EndpointParams = {
 export const buildUrl = (
   endpoint: string,
   params?: Partial<EndpointParams>,
-  queryParams?: Record<string, string | number | boolean>
+  queryParams?: Record<string, string | number | boolean>,
 ): string => {
   let url = endpoint;
 
@@ -275,14 +271,14 @@ export const buildUrl = (
 // ---------------------------------------------------------------------------
 
 export const HTTP_METHODS = {
-  GET: 'GET',
-  POST: 'POST',
-  PUT: 'PUT',
-  PATCH: 'PATCH',
-  DELETE: 'DELETE',
+  GET: "GET",
+  POST: "POST",
+  PUT: "PUT",
+  PATCH: "PATCH",
+  DELETE: "DELETE",
 } as const;
 
-export type HttpMethod = typeof HTTP_METHODS[keyof typeof HTTP_METHODS];
+export type HttpMethod = (typeof HTTP_METHODS)[keyof typeof HTTP_METHODS];
 
 // ---------------------------------------------------------------------------
 // Configuration des requêtes
@@ -294,7 +290,7 @@ export interface RequestConfig {
   body?: any;
   timeout?: number;
   retries?: number;
-  cache?: 'default' | 'no-cache' | 'reload' | 'force-cache' | 'only-if-cached';
+  cache?: "default" | "no-cache" | "reload" | "force-cache" | "only-if-cached";
 }
 
 // ---------------------------------------------------------------------------
@@ -319,4 +315,5 @@ export const HTTP_STATUS_CODES = {
   GATEWAY_TIMEOUT: 504,
 } as const;
 
-export type HttpStatus = typeof HTTP_STATUS_CODES[keyof typeof HTTP_STATUS_CODES];
+export type HttpStatus =
+  (typeof HTTP_STATUS_CODES)[keyof typeof HTTP_STATUS_CODES];

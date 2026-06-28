@@ -16,11 +16,11 @@ import {
   HelperText,
   OTPInput,
   EmailInput,
-} from "../../src/components";
-import { colors, fontFamily, fontSize } from "../../src/themes";
+} from "@/components";
+import { colors, fontFamily, fontSize } from "@/themes";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../../src/hooks/useAuth";
-import { useAuthStore } from "../../src/store";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/store";
 
 // ================================================================================== //
 // Types
@@ -41,7 +41,7 @@ const STEP_INDEX: Record<Step, number> = {
 /**
  * Step dots component
  * @param step - Current step
- * @returns 
+ * @returns
  */
 function StepDots({ step }: { step: Step }) {
   const active = STEP_INDEX[step];
@@ -59,7 +59,7 @@ function StepDots({ step }: { step: Step }) {
 
 /**
  * Dots component
- * @returns 
+ * @returns
  */
 const dots = StyleSheet.create({
   row: { flexDirection: "row", gap: 5 },
@@ -71,7 +71,7 @@ const dots = StyleSheet.create({
 /**
  * Password strength component
  * @param password - Password to check
- * @returns 
+ * @returns
  */
 function PasswordStrength({ password }: { password: string }) {
   const score = [
@@ -141,13 +141,16 @@ export default function ForgotPasswordScreen() {
   // ================================================================================== //
   // Hooks
   // ================================================================================== //
-  const { 
-    forgotPassword, isSendingReset, 
-    verifyPasswordResetOtp, isVerifyingResetOtp,
-    resetPassword, isResettingPassword
+  const {
+    forgotPassword,
+    isSendingReset,
+    verifyPasswordResetOtp,
+    isVerifyingResetOtp,
+    resetPassword,
+    isResettingPassword,
   } = useAuth();
-  const storeError = useAuthStore(state => state.error);
-  const clearStoreError = useAuthStore(state => state.clearError);
+  const storeError = useAuthStore((state) => state.error);
+  const clearStoreError = useAuthStore((state) => state.clearError);
 
   // ================================================================================== //
   // Effects
@@ -170,7 +173,7 @@ export default function ForgotPasswordScreen() {
 
   /**
    * Handle back button
-   * @returns 
+   * @returns
    */
   const handleBack = () => {
     const prev: Partial<Record<Step, Step>> = {
@@ -184,7 +187,7 @@ export default function ForgotPasswordScreen() {
 
   /**
    * Handle email submit
-   * @returns 
+   * @returns
    */
   const handleEmailSubmit = async () => {
     const newErrors: Record<string, string> = {};
@@ -204,7 +207,7 @@ export default function ForgotPasswordScreen() {
 
   /**
    * Handle OTP submit
-   * @returns 
+   * @returns
    */
   const handleOtpSubmit = async () => {
     if (otp.length < 6) {
@@ -212,7 +215,7 @@ export default function ForgotPasswordScreen() {
       return;
     }
     setLocalErrors({});
-    
+
     try {
       await verifyPasswordResetOtp({ email, otp });
       setStep("reset");
@@ -223,7 +226,7 @@ export default function ForgotPasswordScreen() {
 
   /**
    * Handle reset submit
-   * @returns 
+   * @returns
    */
   const handleResetSubmit = async () => {
     const newErrors: Record<string, string> = {};
@@ -279,7 +282,10 @@ export default function ForgotPasswordScreen() {
                   error={!!localErrors.email || !!storeError}
                 />
                 {localErrors.email || storeError ? (
-                  <HelperText message={localErrors.email || (storeError as string)} type="error" />
+                  <HelperText
+                    message={localErrors.email || (storeError as string)}
+                    type="error"
+                  />
                 ) : (
                   <HelperText
                     message="Un code de vérification sera envoyé à cette adresse"
@@ -320,12 +326,18 @@ export default function ForgotPasswordScreen() {
                   error={!!localErrors.otp || !!storeError}
                 />
                 {localErrors.otp || storeError ? (
-                  <HelperText message={localErrors.otp || (storeError as string)} type="error" />
+                  <HelperText
+                    message={localErrors.otp || (storeError as string)}
+                    type="error"
+                  />
                 ) : null}
               </View>
               <Text style={styles.resend}>
                 Pas reçu ?{" "}
-                <TouchableOpacity onPress={handleEmailSubmit} disabled={isSendingReset}>
+                <TouchableOpacity
+                  onPress={handleEmailSubmit}
+                  disabled={isSendingReset}
+                >
                   <Text style={styles.resendLink}>Renvoyer le code</Text>
                 </TouchableOpacity>
               </Text>
@@ -375,7 +387,10 @@ export default function ForgotPasswordScreen() {
                   error={!!localErrors.confirmPassword}
                 />
                 {localErrors.confirmPassword && (
-                  <HelperText message={localErrors.confirmPassword} type="error" />
+                  <HelperText
+                    message={localErrors.confirmPassword}
+                    type="error"
+                  />
                 )}
               </View>
               {storeError && (
