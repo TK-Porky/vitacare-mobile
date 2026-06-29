@@ -1,5 +1,5 @@
 import { MenuSectionItem } from "@/components/display/MenuSection";
-import { PROFILE_ROUTES } from "./profile.routes";
+import { PROFILE_ROUTES } from "@/constants/routes";
 
 export const MENU_SECTIONS: { title: string; items: MenuSectionItem[] }[] = [
   {

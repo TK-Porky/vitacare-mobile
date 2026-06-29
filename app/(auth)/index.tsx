@@ -1,144 +1,384 @@
-import { View, Text, StyleSheet } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+// app/(auth)/index.tsx
+import React, { useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  Platform,
+  ActivityIndicator,
+} from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { PrimaryButton } from "@/components";
+import * as Haptics from "expo-haptics";
+import LottieView from "lottie-react-native";
 import { colors, fontFamily, fontSize } from "@/themes";
+import { AuthButton } from "@/components/auth/AuthButton";
+import { OnboardingCarousel } from "@/components/auth/OnboardingCarousel";
+import { useAuthStore } from "@/store/auth.store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ANIMATIONS } from "@/constants/animations";
 
-// ================================================================================== //
-// Main
-// ================================================================================== //
+const { width } = Dimensions.get("window");
+const ONBOARDING_KEY = "@onboarding_completed";
+
 export default function LandingScreen() {
-  // ================================================================================== //
-  // Render
-  // ================================================================================== //
+  const { user, isLoading } = useAuthStore();
+  const [showCarousel, setShowCarousel] = React.useState(false);
+
+  // Vérifier si l'onboarding a déjà été vu
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const onboarded = await AsyncStorage.getItem(ONBOARDING_KEY);
+        setShowCarousel(onboarded !== "true");
+      } catch (error) {
+        console.error("Error checking onboarding:", error);
+        setShowCarousel(true);
+      }
+    };
+    checkOnboarding();
+  }, []);
+
+  // Rediriger si déjà connecté
+  useEffect(() => {
+    if (user && !isLoading) {
+      router.replace("/(main)");
+    }
+  }, [user, isLoading]);
+
+  const handleNavigate = (route: string) => {
+    if (Platform.OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push(route);
+  };
+
+  const handleCarouselComplete = async () => {
+    await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+    setShowCarousel(false);
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  // Afficher le carousel si jamais vu
+  if (showCarousel) {
+    const slides = [
+      {
+        id: "1",
+        title: "Bienvenue sur VitaCare",
+        description:
+          "Gérez votre santé en toute simplicité avec notre application.\nPrenez soin de vous et vos proches.",
+        animation: ANIMATIONS.welcome,
+      },
+      {
+        id: "2",
+        title: "Suivez vos traitements",
+        description:
+          "Ne manquez plus jamais une prise avec nos rappels intelligents.\nVotre santé, en mains.",
+        animation: ANIMATIONS.health,
+      },
+      {
+        id: "3",
+        title: "Commencez dès maintenant",
+        description:
+          "Créez votre compte et prenez le contrôle de votre santé.\nNous sommes là pour vous accompagner.",
+        animation: ANIMATIONS.care,
+      },
+    ];
+
+    return (
+      <OnboardingCarousel
+        slides={slides}
+        onComplete={handleCarouselComplete}
+        onSkip={handleCarouselComplete}
+      />
+    );
+  }
+
+  // Écran d'accueil normal
   return (
-    <LinearGradient
-      colors={[
-        colors.gradientStart,
-        colors.gradientMid1,
-        colors.gradientMid2,
-        colors.gradientEnd,
-      ]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.container}
-    >
-      <View style={styles.iconArea}></View>
+    <View style={styles.container}>
+      {/* Bouton passer */}
+      <TouchableOpacity
+        style={styles.skipBtn}
+        onPress={() => handleNavigate("/(auth)/login-phone")}
+        accessibilityLabel="Passer l'introduction"
+        accessibilityRole="button"
+      >
+        <Text style={styles.skipText}>Passer</Text>
+      </TouchableOpacity>
 
-      <View style={styles.sheet}>
-        <Text style={styles.title}>Bienvenue !</Text>
+      {/* ── Illustration avec Lottie ── */}
+      <View style={styles.illustrationArea}>
+        {/* Animation Lottie principale */}
+        <View style={styles.lottieWrapper}>
+          <LottieView
+            source={ANIMATIONS.welcome}
+            style={styles.lottieAnimation}
+            autoPlay
+            loop
+            speed={0.8}
+            resizeMode="contain"
+          />
+        </View>
+      </View>
 
-        <View style={styles.info}>
-          <Text style={styles.subtitle}>Vous revoilà !</Text>
-          <Text style={styles.desc}>
-            Votre service de santé numérique à portée de mains.{"\n"}
-            Prenez soin de vous et vos proches mieux qu'avant !
+      {/* ── Bas de page ── */}
+      <View style={styles.bottom}>
+        {/* Copy */}
+        <View style={styles.copy}>
+          <Text style={styles.copyTitle}>
+            {"Votre ecosystème de santé, simplifié."}
+          </Text>
+          <Text style={styles.copyBody}>
+            Prenez rendez-vous, suivez vos traitements et restez en contact avec
+            vos médecins en un seul endroit.
           </Text>
         </View>
 
-        <View style={styles.cta}>
-          <PrimaryButton
-            label="Se connecter par Téléphone"
-            onPress={() => router.push("/(auth)/login-phone")}
-            fullWidth={true}
-            icon={
-              <Ionicons name="phone-portrait" size={18} color={colors.white} />
-            }
-          />
+        {/* CTA principal */}
+        <AuthButton
+          label="Continuer avec le mail"
+          onPress={() => handleNavigate("/(auth)/login-email")}
+          variant="primary"
+          fullWidth
+          icon={<Ionicons name="mail-outline" size={19} color={colors.white} />}
+          size="lg"
+        />
 
-          <PrimaryButton
-            label="Se connecter par Email"
-            onPress={() => router.push("/(auth)/login-email")}
-            variant="outline"
-            fullWidth={true}
-            icon={<Ionicons name="mail" size={18} color={colors.inkLight} />}
-          />
-
-          <Text style={styles.or}>OU</Text>
-
-          <PrimaryButton
-            label="Créer un compte"
-            onPress={() => router.push("/(auth)/register")}
-            variant="outline"
-            fullWidth={true}
-            icon={<Ionicons name="person" size={18} color={colors.inkLight} />}
-          />
+        {/* Séparateur */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>ou</Text>
+          <View style={styles.dividerLine} />
         </View>
 
+        {/* Secondaires côte à côte */}
+        <View style={styles.secondaryRow}>
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => handleNavigate("/(auth)/login-phone")}
+            activeOpacity={0.7}
+            accessibilityLabel="Se connecter par téléphone"
+            accessibilityRole="button"
+          >
+            <Ionicons name="call-outline" size={17} color={colors.primary} />
+            <Text style={styles.secondaryText}>Par téléphone</Text>
+          </TouchableOpacity>
+
+          <View style={styles.secondaryDivider} />
+
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => handleNavigate("/(auth)/register")}
+            activeOpacity={0.7}
+            accessibilityLabel="Créer un compte"
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name="person-add-outline"
+              size={17}
+              color={colors.primary}
+            />
+            <Text style={styles.secondaryText}>Créer un compte</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Légal */}
         <Text style={styles.legal}>
-          L'utilisation de l'application marque l'accord avec nos{" "}
-          <Text style={styles.legalBold}>conditions d'utilisation</Text> et
-          notre{" "}
-          <Text style={styles.legalBold}>politique de confidentialité</Text>
+          En continuant, vous acceptez nos{" "}
+          <Text
+            style={styles.legalLink}
+            onPress={() => handleNavigate("/terms")}
+          >
+            Conditions d'utilisation
+          </Text>{" "}
+          et notre{" "}
+          <Text
+            style={styles.legalLink}
+            onPress={() => handleNavigate("/privacy")}
+          >
+            Politique de confidentialité
+          </Text>
+          .
         </Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  iconArea: { flex: 1, alignItems: "center", justifyContent: "center" },
-  sheet: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 24,
+  container: {
+    flex: 1,
     backgroundColor: colors.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 16,
-    paddingVertical: 32,
+    alignItems: "center",
   },
-  title: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize["2xl"],
-    textAlign: "center",
-    color: colors.ink,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.white,
   },
-  info: {
-    margin: 0,
-    padding: 0,
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
+
+  // Skip
+  skipBtn: {
+    alignSelf: "flex-end",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+    zIndex: 10,
   },
-  subtitle: {
-    opacity: 0.6,
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.md,
-    color: colors.ink,
-    textAlign: "center",
+  skipText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.semiBold,
+    color: colors.primary,
   },
-  desc: {
-    opacity: 0.6,
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.md,
-    color: colors.ink,
-    textAlign: "center",
-    lineHeight: 20,
+
+  // Illustration
+  illustrationArea: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    position: "relative",
+    paddingTop: 20,
   },
-  cta: {
-    margin: 0,
-    padding: 0,
-    display: "flex",
-    flexDirection: "column",
+  pulseRing1: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    borderWidth: 1.5,
+    borderColor: "rgba(29,158,117,0.12)",
+  },
+  pulseRing2: {
+    position: "absolute",
+    width: 340,
+    height: 340,
+    borderRadius: 170,
+    borderWidth: 1,
+    borderColor: "rgba(29,158,117,0.06)",
+  },
+  lottieWrapper: {
+    width: width * 0.6,
+    height: width * 0.6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lottieAnimation: {
+    width: "150%",
+    height: "150%",
+  },
+
+  // Pagination
+  paginationRow: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  pageIndicator: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+  },
+  pageIndicatorActive: {
+    width: 20,
+    backgroundColor: colors.primary,
+  },
+
+  // Bas
+  bottom: {
+    width: "100%",
+    paddingHorizontal: 24,
+    paddingBottom: Platform.OS === "ios" ? 32 : 24,
+    paddingTop: 16,
     gap: 16,
   },
-  legal: {
-    fontSize: fontSize.sm,
-    color: colors.inkMuted,
-    textAlign: "center",
-    lineHeight: 18,
+  copy: {
+    alignItems: "center",
+    gap: 8,
   },
-  legalBold: {
+  copyTitle: {
+    fontSize: fontSize["2xl"],
+    fontFamily: fontFamily.bold,
     color: colors.ink,
-    fontFamily: fontFamily.semiBold,
+    textAlign: "center",
+    letterSpacing: -0.3,
+    lineHeight: 30,
   },
-  or: {
+  copyBody: {
+    fontSize: fontSize.md,
     fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
     color: colors.inkLight,
     textAlign: "center",
+    lineHeight: 20,
+    maxWidth: 300,
+  },
+
+  // Séparateur
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 0.5,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.regular,
+    color: colors.inkLight,
+  },
+
+  // Secondaires
+  secondaryRow: {
+    flexDirection: "row",
+    borderRadius: 50,
+    overflow: "hidden",
+    backgroundColor: colors.ltsurface,
+  },
+  secondaryBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+  },
+  secondaryDivider: {
+    width: 0.5,
+    alignSelf: "stretch",
+    backgroundColor: colors.border,
+  },
+  secondaryText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.semiBold,
+    color: colors.ink,
+  },
+
+  // Légal
+  legal: {
+    fontSize: 11,
+    fontFamily: fontFamily.regular,
+    color: colors.inkLight,
+    textAlign: "center",
+    lineHeight: 17,
+  },
+  legalLink: {
+    color: colors.primary,
+    fontFamily: fontFamily.semiBold,
   },
 });

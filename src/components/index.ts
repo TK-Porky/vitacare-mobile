@@ -1,40 +1,40 @@
 // Labels
-export * from './labels';
+export * from "./utils";
 
 // Inputs
-export * from './inputs';
+export * from "./inputs";
 
 // Buttons
-export * from './buttons';
+export * from "./buttons";
 
 // Layout
-export * from './layout';
+export * from "./layout";
 
 // Generics
-export * from './generics';
+export * from "./generics";
 
 // Display (SectionHeader, StatCard)
-export * from './display';
+export * from "./display";
 
 // ── Domain folders ──────────────────────────────────────────────────────────
 
 // Appointments (display + modals)
-export * from './appointments';
+export * from "./appointments";
 
 // Medications (display + modals)
-export * from './medications';
+export * from "./medications";
 
 // Providers (clinic cards, map, professional sheets)
-export * from './providers';
+export * from "./providers";
 
 // Search & filters
-export * from './search';
+export * from "./search";
 
 // Booking flow
-export * from './booking';
+export * from "./booking";
 
 // Payment sheets
-export * from './payment';
+export * from "./payment";
 
 // Notifications
-export * from './notifications';
+export * from "./notifications";

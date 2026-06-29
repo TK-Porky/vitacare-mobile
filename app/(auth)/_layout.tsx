@@ -1,42 +1,42 @@
-import { Stack } from 'expo-router';
+// app/(auth)/_layout.tsx
+import { Stack } from "expo-router";
+import {
+  AUTH_SCREEN_OPTIONS,
+  AUTH_SCREEN_OPTIONS_RIGHT,
+  getAuthScreenOptionsWithHeader,
+} from "@/constants/navigation";
 
 export default function AuthLayout() {
   return (
     <Stack>
+      {/* Écran principal */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="login-phone" options={{     
-        headerShown: false,
-        animation: "slide_from_bottom"
-       }} />
-      <Stack.Screen name="login-email" options={{ 
-        headerShown: false,
-        animation: "slide_from_bottom"
-      }} />
-      <Stack.Screen name="forgot-password" options={{ 
-        headerShown: false, 
-        animation: "slide_from_bottom"
-      }} />
-      <Stack.Screen name="otp" options={{ 
-        headerShown: false,
-        animation: "slide_from_right"
-      }} />
-      <Stack.Screen name="register" options={{ 
-        headerShown: false, 
-        animation: "slide_from_bottom"
-      }} />
-      <Stack.Screen name="onboarding-location" options={{ 
-        headerShown: false, 
-        animation: "slide_from_right"
-      }} />
-      <Stack.Screen name="onboarding-search" options={{ 
-        headerShown: false, 
-        animation: "slide_from_right"
-      }} />
-      <Stack.Screen name="onboarding-language" options={{ 
-        headerShown: false, 
-        animation: "slide_from_right"
-      }} />
-      <Stack.Screen name="onboarding-success" options={{ headerShown: false }} />
+
+      {/* Écrans de connexion */}
+      <Stack.Screen name="login-phone" options={AUTH_SCREEN_OPTIONS} />
+
+      <Stack.Screen name="login-email" options={AUTH_SCREEN_OPTIONS} />
+
+      {/* Écran mot de passe oublié */}
+      <Stack.Screen name="forgot-password" options={AUTH_SCREEN_OPTIONS} />
+
+      {/* Écran OTP avec animation personnalisée */}
+      <Stack.Screen
+        name="otp"
+        options={{
+          ...AUTH_SCREEN_OPTIONS_RIGHT,
+          gestureDirection: "vertical",
+        }}
+      />
+
+      {/* Écran d'inscription avec header */}
+      <Stack.Screen
+        name="register"
+        options={getAuthScreenOptionsWithHeader("Créer un compte")}
+      />
+
+      {/* Onboarding groupé */}
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
     </Stack>
   );
 }

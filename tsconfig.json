@@ -5,6 +5,7 @@
     "module": "ESNext",
     "paths": {
       "@/*": ["./src/*"],
+      "@assets/*": ["./assets/*"],
       "@vitacare/shared-types": ["../../packages/shared-types/src/index.ts"],
       "@vitacare/utils": ["../../packages/utils/src/index.ts"]
     }

@@ -2,7 +2,7 @@
   "expo": {
     "name": "VitaCare",
     "slug": "vitacare",
-    "version": "0.0.1",
+    "version": "0.9.0",
     "scheme": "vitacare",
     "platforms": [
       "ios",
@@ -12,7 +12,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },

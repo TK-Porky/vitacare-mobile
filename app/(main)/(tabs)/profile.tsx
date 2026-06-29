@@ -21,7 +21,7 @@ import { ProfileHeader } from "@/components/display/ProfileHeader";
 import { MenuSection } from "@/components/display/MenuSection";
 import { MenuItem } from "@/components/display/MenuItem";
 import { MENU_SECTIONS, DANGER_SECTION } from "@/constants/profile.menu";
-import { PROFILE_ROUTES } from "@/constants/profile.routes";
+import { PROFILE_ROUTES } from "@/constants/routes";
 
 // ================================================================================== //
 // Main
