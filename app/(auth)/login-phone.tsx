@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+// app/(auth)/login-phone.tsx
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,8 +7,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
 } from "react-native";
-import { PhoneInput, TopBar, HelperText, PrimaryButton } from "@/components";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { PhoneInput, HelperText, PrimaryButton } from "@/components";
+import { AuthHeader } from "@/components/auth/AuthHeader";
+import { AuthButton } from "@/components/auth/AuthButton";
 import { isValidCMPhone } from "@/utils";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useAuth } from "@/hooks";
@@ -20,15 +27,16 @@ export default function LoginPhoneScreen() {
   // ================================================================================== //
   // States
   // ================================================================================== //
-  const [phone, setPhone] = useState(""); // Phone input
-  const [localError, setLocalError] = useState(""); // Local validation error
+  const [phone, setPhone] = useState("");
+  const [localError, setLocalError] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
 
   // ================================================================================== //
   // Hooks
   // ================================================================================== //
-  const { loginPhone, isLoggingInPhone } = useAuth(); // Auth hook
-  const storeError = useAuthStore((state) => state.error); // Store error
-  const clearStoreError = useAuthStore((state) => state.clearError); // Clear store error
+  const { loginPhone, isLoggingInPhone } = useAuth();
+  const storeError = useAuthStore((state) => state.error);
+  const clearStoreError = useAuthStore((state) => state.clearError);
 
   // ================================================================================== //
   // Effects
@@ -41,104 +49,197 @@ export default function LoginPhoneScreen() {
   // Functions
   // ================================================================================== //
 
-  /**
-   * Handle form submission
-   * @returns
-   */
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!isValidCMPhone(phone)) {
       setLocalError("Numéro de téléphone invalide.");
+      if (Platform.OS === "ios") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
       return;
     }
     setLocalError("");
     clearStoreError();
 
-    loginPhone({
-      phone,
-    });
-  };
+    if (Platform.OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+
+    loginPhone({ phone });
+  }, [phone, clearStoreError, loginPhone]);
+
+  const handleBack = useCallback(() => {
+    router.back();
+  }, []);
+
+  const handleSignUp = useCallback(() => {
+    if (Platform.OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push("/(auth)/register");
+  }, []);
+
+  const handleTerms = useCallback(() => {
+    router.push("/terms");
+  }, []);
+
+  const handlePrivacy = useCallback(() => {
+    router.push("/privacy");
+  }, []);
 
   // ================================================================================== //
   // Render
   // ================================================================================== //
+
+  const errorMessage = localError || storeError;
+
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "height" : "padding"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <TopBar />
-
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <Text style={styles.title}>Connexion par Téléphone</Text>
-        <Text style={styles.subtitle}>
-          Entrez votre numéro pour recevoir le code de confirmation.
-        </Text>
+        {/* ── Header ── */}
+        <AuthHeader
+          title="Connexion par Téléphone"
+          subtitle="Entrez votre numéro pour recevoir le code de confirmation"
+          showBack
+          onBack={handleBack}
+        />
 
-        <View style={styles.inputWrapper}>
-          <PhoneInput
-            value={phone}
-            onChangeText={(text) => {
-              setPhone(text);
-              if (localError) setLocalError("");
-              if (storeError) clearStoreError();
-            }}
-            error={!!localError || !!storeError}
-          />
-          {localError || storeError ? (
-            <HelperText
-              message={localError || (storeError as string)}
-              type="error"
+        {/* ── Form ── */}
+        <View style={styles.form}>
+          <View style={styles.phoneWrapper}>
+            <PhoneInput
+              value={phone}
+              onChangeText={(text) => {
+                setPhone(text);
+                if (localError) setLocalError("");
+                if (storeError) clearStoreError();
+              }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              error={!!errorMessage}
+              placeholder="6 XX XX XX XX"
+              autoFocus
             />
+          </View>
+
+          {errorMessage ? (
+            <HelperText message={errorMessage as string} type="error" />
           ) : (
             <HelperText
-              message="En continuant, vous acceptez nos conditions d'utilisation et notre politique de confidentialité."
+              message="Un code de confirmation vous sera envoyé par SMS"
               type="info"
             />
           )}
         </View>
 
-        <PrimaryButton
-          label="Recevoir le code par SMS"
-          fullWidth
-          isLoading={isLoggingInPhone}
-          loadingText="Envoi en cours..."
-          onPress={handleSubmit}
-        />
+        {/* ── Actions ── */}
+        <View style={styles.actions}>
+          <AuthButton
+            label="Recevoir le code par SMS"
+            onPress={handleSubmit}
+            variant="primary"
+            fullWidth
+            loading={isLoggingInPhone}
+            size="lg"
+            icon={
+              <Ionicons name="send-outline" size={18} color={colors.white} />
+            }
+          />
+        </View>
+
+        {/* ── Footer ── */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Vous n'avez pas de compte ?{" "}
+            <TouchableOpacity
+              onPress={handleSignUp}
+              accessibilityLabel="Créer un compte"
+              accessibilityRole="button"
+            >
+              <Text style={styles.footerLink}>S'inscrire</Text>
+            </TouchableOpacity>
+          </Text>
+
+          <Text style={styles.legal}>
+            En continuant, vous acceptez nos{" "}
+            <TouchableOpacity onPress={handleTerms}>
+              <Text style={styles.legalLink}>conditions d'utilisation</Text>
+            </TouchableOpacity>
+            <Text style={styles.legal}> et notre </Text>
+            <TouchableOpacity onPress={handlePrivacy}>
+              <Text style={styles.legalLink}>politique de confidentialité</Text>
+            </TouchableOpacity>
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+// ================================================================================== //
+// Styles
+// ================================================================================== //
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.white,
   },
-  content: {
+  scrollContent: {
     flexGrow: 1,
-    display: "flex",
-    flexDirection: "column",
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 32,
-    gap: 24,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === "ios" ? 32 : 24,
   },
-  title: {
-    fontSize: fontSize.xl,
-    fontFamily: fontFamily.bold,
-    color: colors.ink,
+
+  // Form
+  form: {
+    marginTop: 24,
+    gap: 12,
   },
-  subtitle: {
-    fontSize: fontSize.md,
+  phoneWrapper: {
+    marginTop: 4,
+  },
+
+  // Actions
+  actions: {
+    marginTop: 32,
+  },
+
+  // Footer
+  footer: {
+    marginTop: 24,
+    gap: 16,
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  footerText: {
     fontFamily: fontFamily.regular,
-    color: colors.inkMuted,
-    lineHeight: 20,
-    marginTop: -12,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
   },
-  inputWrapper: {
-    gap: 8,
+  footerLink: {
+    fontFamily: fontFamily.semiBold,
+    color: colors.primary,
+  },
+  legal: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    textAlign: "center",
+  },
+  legalLink: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.semiBold,
+    color: colors.primary,
   },
 });

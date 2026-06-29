@@ -30,10 +30,7 @@ export default function AuthLayout() {
       />
 
       {/* Écran d'inscription avec header */}
-      <Stack.Screen
-        name="register"
-        options={getAuthScreenOptionsWithHeader("Créer un compte")}
-      />
+      <Stack.Screen name="register" options={{ headerShown: false }} />
 
       {/* Onboarding groupé */}
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />

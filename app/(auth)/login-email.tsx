@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+// app/(auth)/login-email.tsx
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,10 +8,12 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import {
-  TopBar,
   CustomInput,
   PasswordInput,
   PrimaryButton,
@@ -18,6 +21,8 @@ import {
   CheckboxField,
   EmailInput,
 } from "@/components";
+import { AuthHeader } from "@/components/auth/AuthHeader";
+import { AuthButton } from "@/components/auth/AuthButton";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store";
@@ -29,23 +34,23 @@ export default function LoginEmailScreen() {
   // ================================================================================== //
   // States
   // ================================================================================== //
-  const [email, setEmail] = useState(""); // Email input
-  const [password, setPassword] = useState(""); // Password input
-  const [rememberMe, setRememberMe] = useState(false); // Remember me checkbox
-  const [localError, setLocalError] = useState(""); // Local validation error
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [localError, setLocalError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // ================================================================================== //
   // Hooks
   // ================================================================================== //
-  const { loginEmail, isLoggingInEmail } = useAuth(); // Auth hook
-  const storeError = useAuthStore((state) => state.error); // Store error
-  const clearStoreError = useAuthStore((state) => state.clearError); // Clear store error
+  const { loginEmail, isLoggingInEmail } = useAuth();
+  const storeError = useAuthStore((state) => state.error);
+  const clearStoreError = useAuthStore((state) => state.clearError);
 
   // ================================================================================== //
   // Effects
   // ================================================================================== //
   useEffect(() => {
-    // Clear any previous global errors when entering screen
     clearStoreError();
   }, []);
 
@@ -53,11 +58,7 @@ export default function LoginEmailScreen() {
   // Functions
   // ================================================================================== //
 
-  /**
-   * Validate form inputs
-   * @returns
-   */
-  const validate = () => {
+  const validate = useCallback(() => {
     if (!email.trim() || !email.includes("@")) {
       setLocalError("Adresse email invalide.");
       return false;
@@ -67,27 +68,52 @@ export default function LoginEmailScreen() {
       return false;
     }
     return true;
-  };
+  }, [email, password]);
 
-  /**
-   * Handle form submission
-   * @returns
-   */
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!validate()) return;
     setLocalError("");
     clearStoreError();
 
-    loginEmail({ email, password, rememberMe });
-  };
+    if (Platform.OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
 
-  /**
-   * Handle Google login
-   * @returns
-   */
-  const handleGoogle = async () => {
+    loginEmail({ email, password, rememberMe });
+  }, [email, password, rememberMe, validate, clearStoreError, loginEmail]);
+
+  const handleGoogle = useCallback(async () => {
+    if (Platform.OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     // TODO: Google OAuth
-  };
+  }, []);
+
+  const handleBack = useCallback(() => {
+    router.back();
+  }, []);
+
+  const handleForgotPassword = useCallback(() => {
+    if (Platform.OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push("/(auth)/forgot-password");
+  }, []);
+
+  const handleSignUp = useCallback(() => {
+    if (Platform.OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push("/(auth)/register");
+  }, []);
+
+  const handleTerms = useCallback(() => {
+    router.push("/terms");
+  }, []);
+
+  const handlePrivacy = useCallback(() => {
+    router.push("/privacy");
+  }, []);
 
   // ================================================================================== //
   // Render
@@ -96,20 +122,23 @@ export default function LoginEmailScreen() {
     <KeyboardAvoidingView
       style={styles.root}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <TopBar />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Connexion par Email</Text>
-          <Text style={styles.subtitle}>
-            Entrer votre numéro pour recevoir un code de confirmation
-          </Text>
-        </View>
+        {/* ── Header ── */}
+        <AuthHeader
+          title="Connexion par Email"
+          subtitle="Entrez votre email et mot de passe pour vous connecter"
+          showBack
+          onBack={handleBack}
+        />
 
+        {/* ── Form ── */}
         <View style={styles.form}>
           <EmailInput
             value={email}
@@ -118,63 +147,98 @@ export default function LoginEmailScreen() {
               if (localError) setLocalError("");
               if (storeError) clearStoreError();
             }}
+            placeholder="exemple@email.com"
+            autoFocus
           />
 
-          <PasswordInput
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              if (localError) setLocalError("");
-              if (storeError) clearStoreError();
-            }}
-          />
+          <View style={styles.passwordWrapper}>
+            <PasswordInput
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (localError) setLocalError("");
+                if (storeError) clearStoreError();
+              }}
+              placeholder="Mot de passe"
+            />
+          </View>
 
           <View style={styles.rememberRow}>
             <CheckboxField
-              label="Souviens-toi de moi"
+              label="Se souvenir de moi"
               checked={rememberMe}
               onToggle={() => setRememberMe((v) => !v)}
             />
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => router.push("/(auth)/forgot-password")}
+              onPress={handleForgotPassword}
+              accessibilityLabel="Mot de passe oublié"
+              accessibilityRole="button"
             >
               <Text style={styles.forgotText}>Mot de passe oublié</Text>
             </TouchableOpacity>
           </View>
 
-          {localError || storeError ? (
+          {(localError || storeError) && (
             <HelperText
               message={localError || (storeError as string)}
               type="error"
             />
-          ) : null}
+          )}
         </View>
 
-        <View style={styles.footer}>
-          <PrimaryButton
+        {/* ── Actions ── */}
+        <View style={styles.actions}>
+          <AuthButton
             label="Se connecter"
-            fullWidth
-            isLoading={isLoggingInEmail}
             onPress={handleSubmit}
+            variant="primary"
+            fullWidth
+            loading={isLoggingInEmail}
+            size="lg"
           />
 
-          <Text style={styles.or}>OR</Text>
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>ou</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
           <TouchableOpacity
             style={styles.googleButton}
             onPress={handleGoogle}
             activeOpacity={0.7}
             disabled={isLoggingInEmail}
+            accessibilityLabel="Se connecter avec Google"
+            accessibilityRole="button"
           >
-            <Text style={styles.googleIcon}>G</Text>
-            <Text style={styles.googleText}>Se connecter via Google</Text>
+            <Ionicons name="logo-google" size={20} color="#4285F4" />
+            <Text style={styles.googleText}>Continuer avec Google</Text>
           </TouchableOpacity>
+        </View>
 
-          <Text style={styles.terms}>
+        {/* ── Footer ── */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Vous n'avez pas de compte ?{" "}
+            <TouchableOpacity
+              onPress={handleSignUp}
+              accessibilityLabel="Créer un compte"
+              accessibilityRole="button"
+            >
+              <Text style={styles.footerLink}>S'inscrire</Text>
+            </TouchableOpacity>
+          </Text>
+
+          <Text style={styles.legal}>
             En continuant, vous acceptez nos{" "}
-            <Text style={styles.link}>conditions d'utilisation</Text> et notre{" "}
-            <Text style={styles.link}>politique de confidentialité</Text>
+            <TouchableOpacity onPress={handleTerms}>
+              <Text style={styles.legalLink}>conditions d'utilisation</Text>
+            </TouchableOpacity>{" "}
+            et notre{" "}
+            <TouchableOpacity onPress={handlePrivacy}>
+              <Text style={styles.legalLink}>politique de confidentialité</Text>
+            </TouchableOpacity>
           </Text>
         </View>
       </ScrollView>
@@ -182,85 +246,106 @@ export default function LoginEmailScreen() {
   );
 }
 
+// ================================================================================== //
+// Styles
+// ================================================================================== //
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.white,
   },
-  content: {
+  scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 32,
-    gap: 32,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === "ios" ? 32 : 24,
   },
-  header: {
-    gap: 6,
-  },
-  title: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.xl,
-    color: colors.ink,
-  },
-  subtitle: {
-    fontSize: fontSize.md,
-    fontFamily: fontFamily.regular,
-    color: colors.inkMuted,
-    lineHeight: 20,
-  },
+
+  // Form
   form: {
+    marginTop: 24,
     gap: 20,
+  },
+  passwordWrapper: {
+    marginTop: 4,
   },
   rememberRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginTop: 4,
   },
   forgotText: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.sm,
     color: colors.primary,
   },
-  footer: {
+
+  // Actions
+  actions: {
+    marginTop: 32,
     gap: 16,
-    alignItems: "center",
   },
-  or: {
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 0.5,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
     fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.inkLight,
   },
   googleButton: {
-    width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: 999,
+    borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
-  },
-  googleIcon: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.base,
-    color: "#4285F4",
+    backgroundColor: colors.surface,
   },
   googleText: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.md,
     color: colors.ink,
   },
-  terms: {
+
+  // Footer
+  footer: {
+    marginTop: 24,
+    gap: 16,
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  footerText: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
     color: colors.inkLight,
-    textAlign: "center",
-    lineHeight: 18,
   },
-  link: {
+  footerLink: {
     fontFamily: fontFamily.semiBold,
-    color: colors.ink,
+    color: colors.primary,
+  },
+  legal: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textAlign: "center",
+    lineHeight: 17,
+  },
+  legalLink: {
+    fontFamily: fontFamily.semiBold,
+    color: colors.primary,
   },
 });

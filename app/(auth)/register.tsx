@@ -1,5 +1,5 @@
 // app/(auth)/register.tsx
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,15 +9,18 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import {
-  TopBar,
   PasswordInput,
-  PrimaryButton,
   HelperText,
   PhoneInput,
   NameInput,
   EmailInput,
 } from "@/components";
+import { AuthHeader } from "@/components/auth/AuthHeader";
+import { AuthButton } from "@/components/auth/AuthButton";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { isValidCMPhone } from "@/utils";
 import { useAuth } from "@/hooks";
@@ -35,23 +38,25 @@ export default function RegisterScreen() {
   // ================================================================================== //
   // States
   // ================================================================================== //
-  const [mode, setMode] = useState<RegisterMode>("phone"); // Registration mode: phone or email
-  const [fullName, setFullName] = useState(""); // User's full name
-  const [phone, setPhone] = useState(""); // User's phone number
-  const [email, setEmail] = useState(""); // User's email address
-  const [password, setPassword] = useState(""); // User's password
-  const [confirmPassword, setConfirmPassword] = useState(""); // User's confirm password
-  const [localErrors, setLocalErrors] = useState<Record<string, string>>({}); // Local validation errors
+  const [mode, setMode] = useState<RegisterMode>("phone");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // ================================================================================== //
-  // Refs
+  // Hooks
   // ================================================================================== //
   const { register, isRegistering } = useAuth();
   const storeError = useAuthStore((state) => state.error);
   const clearStoreError = useAuthStore((state) => state.clearError);
 
   // ================================================================================== //
-  // Effecs
+  // Effects
   // ================================================================================== //
   useEffect(() => {
     clearStoreError();
@@ -60,36 +65,36 @@ export default function RegisterScreen() {
   // ================================================================================== //
   // Functions
   // ================================================================================== //
-  /**
-   * Clear local and store errors
-   * @param key - Error key to clear
-   */
-  const clearError = (key: string) => {
-    setLocalErrors((e) => ({ ...e, [key]: "" }));
-    if (storeError) clearStoreError();
-  };
 
-  /**
-   * Handle mode change
-   * @param next - Next mode
-   */
-  const handleModeChange = (next: RegisterMode) => {
-    setMode(next);
-    setPhone("");
-    setEmail("");
-    setLocalErrors({});
-    clearStoreError();
-  };
+  const clearError = useCallback(
+    (key: string) => {
+      setLocalErrors((e) => ({ ...e, [key]: "" }));
+      if (storeError) clearStoreError();
+    },
+    [storeError, clearStoreError],
+  );
 
-  /**
-   * Validate form
-   * @returns True if valid, false otherwise
-   */
-  const validate = () => {
+  const handleModeChange = useCallback(
+    (next: RegisterMode) => {
+      if (Platform.OS === "ios") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      setMode(next);
+      setPhone("");
+      setEmail("");
+      setLocalErrors({});
+      clearStoreError();
+    },
+    [clearStoreError],
+  );
+
+  const validate = useCallback(() => {
     const newErrors: Record<string, string> = {};
 
     if (!fullName.trim()) {
       newErrors.fullName = "Le nom complet est requis.";
+    } else if (fullName.trim().split(" ").length < 2) {
+      newErrors.fullName = "Veuillez entrer votre nom et prénom.";
     }
 
     if (mode === "phone") {
@@ -101,25 +106,36 @@ export default function RegisterScreen() {
         newErrors.contact = "Adresse email invalide.";
       }
 
-      if (password.length < 8 || password.includes(" ")) {
-        newErrors.password = "Minimum 8 caractères, sans espace.";
+      if (password.length < 8) {
+        newErrors.password = "Minimum 8 caractères.";
+      } else if (password.includes(" ")) {
+        newErrors.password = "Le mot de passe ne doit pas contenir d'espaces.";
       }
 
-      if (password !== confirmPassword || confirmPassword.includes(" ")) {
+      if (password !== confirmPassword) {
         newErrors.confirmPassword = "Les mots de passe ne correspondent pas.";
+      } else if (confirmPassword && confirmPassword.includes(" ")) {
+        newErrors.confirmPassword =
+          "Le mot de passe ne doit pas contenir d'espaces.";
       }
     }
 
     setLocalErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [fullName, mode, phone, email, password, confirmPassword]);
 
-  /**
-   * Handle form submission
-   * @returns
-   */
-  const handleSubmit = async () => {
-    if (!validate()) return;
+  const handleSubmit = useCallback(async () => {
+    if (!validate()) {
+      if (Platform.OS === "ios") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      return;
+    }
+
+    if (Platform.OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+
     clearStoreError();
 
     register({
@@ -132,220 +148,319 @@ export default function RegisterScreen() {
         confirmPassword: mode === "email" ? confirmPassword : undefined,
       },
     });
-  };
+  }, [
+    validate,
+    clearStoreError,
+    register,
+    fullName,
+    mode,
+    phone,
+    email,
+    password,
+    confirmPassword,
+  ]);
+
+  const handleBack = useCallback(() => {
+    router.back();
+  }, []);
+
+  const handleLogin = useCallback(() => {
+    if (Platform.OS === "ios") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    router.push("/(auth)/login-email");
+  }, []);
+
+  const handleTerms = useCallback(() => {
+    router.push("/terms");
+  }, []);
+
+  const handlePrivacy = useCallback(() => {
+    router.push("/privacy");
+  }, []);
 
   // ================================================================================== //
   // Render
   // ================================================================================== //
+
+  const errorMessage = storeError;
+  const isEmailMode = mode === "email";
+
   return (
-    <View style={styles.root}>
-      <TopBar />
-
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Rejoignez notre service !</Text>
-            <Text style={styles.subtitle}>
-              Créez votre profil dès maintenant
+        {/* ── Header ── */}
+        <AuthHeader
+          title="Créer un compte"
+          subtitle="Rejoignez VitaCare et prenez soin de votre santé"
+          showBack
+          onBack={handleBack}
+        />
+
+        {/* ── Form ── */}
+        <View style={styles.form}>
+          {/* Nom complet */}
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.label}>
+              Nom complet <Text style={styles.required}>*</Text>
             </Text>
-          </View>
-
-          <View style={styles.form}>
-            {/* Nom complet */}
-            <View style={styles.fieldWrapper}>
-              <Text style={styles.label}>Nom complet</Text>
-              <NameInput
-                value={fullName}
-                onChangeText={(text) => {
-                  setFullName(text);
-                  clearError("fullName");
-                }}
-                placeholder="Ex: Jean Ateba Mbarga"
-                error={!!localErrors.fullName}
-              />
-              {localErrors.fullName && (
-                <HelperText message={localErrors.fullName} type="error" />
-              )}
-            </View>
-
-            {/* Toggle mode */}
-            <View style={styles.fieldWrapper}>
-              <Text style={styles.label}>Mode d'inscription</Text>
-              <View style={styles.toggle}>
-                {(["phone", "email"] as RegisterMode[]).map((m) => (
-                  <TouchableOpacity
-                    key={m}
-                    style={[
-                      styles.toggleBtn,
-                      mode === m && styles.toggleBtnActive,
-                    ]}
-                    onPress={() => handleModeChange(m)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.toggleLabel,
-                        mode === m && styles.toggleLabelActive,
-                      ]}
-                    >
-                      {m === "phone" ? "Téléphone" : "Email"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Champ dynamique : téléphone ou email */}
-            <View style={styles.fieldWrapper}>
-              <Text style={styles.label}>
-                {mode === "phone" ? "Numéro de téléphone" : "Adresse email"}
-              </Text>
-              {mode === "phone" ? (
-                <View style={styles.fieldWrapper}>
-                  <PhoneInput
-                    value={phone}
-                    onChangeText={(text) => {
-                      setPhone(text);
-                      clearError("contact");
-                    }}
-                    error={!!localErrors.contact}
-                  />
-                  {localErrors.contact && (
-                    <HelperText message={localErrors.contact} type="error" />
-                  )}
-                </View>
-              ) : (
-                <>
-                  <View style={styles.fieldWrapper}>
-                    <EmailInput
-                      value={email}
-                      onChangeText={(text) => {
-                        setEmail(text);
-                        clearError("contact");
-                      }}
-                      error={!!localErrors.contact}
-                    />
-                    {localErrors.contact && (
-                      <HelperText message={localErrors.contact} type="error" />
-                    )}
-                  </View>
-
-                  {/* Mot de passe */}
-                  <View style={styles.fieldWrapper}>
-                    <Text style={styles.label}>Mot de passe</Text>
-                    <PasswordInput
-                      value={password}
-                      onChangeText={(text) => {
-                        setPassword(text);
-                        clearError("password");
-                      }}
-                      error={!!localErrors.password}
-                    />
-                    {localErrors.password && (
-                      <HelperText message={localErrors.password} type="error" />
-                    )}
-                  </View>
-
-                  {/* Confirmation */}
-                  <View style={styles.fieldWrapper}>
-                    <Text style={styles.label}>Confirmer le mot de passe</Text>
-                    <PasswordInput
-                      value={confirmPassword}
-                      onChangeText={(text) => {
-                        setConfirmPassword(text);
-                        clearError("confirmPassword");
-                      }}
-                      error={!!localErrors.confirmPassword}
-                    />
-                    {localErrors.confirmPassword && (
-                      <HelperText
-                        message={localErrors.confirmPassword}
-                        type="error"
-                      />
-                    )}
-                  </View>
-                </>
-              )}
-            </View>
-
-            {storeError && (
-              <HelperText message={storeError as string} type="error" />
+            <NameInput
+              value={fullName}
+              onChangeText={(text) => {
+                setFullName(text);
+                clearError("fullName");
+              }}
+              placeholder="Jean Ateba Mbarga"
+              error={!!localErrors.fullName}
+            />
+            {localErrors.fullName && (
+              <HelperText message={localErrors.fullName} type="error" />
             )}
           </View>
 
-          <View style={styles.footer}>
-            <PrimaryButton
-              label="Continuer"
-              fullWidth
-              isLoading={isRegistering}
-              onPress={handleSubmit}
-            />
-            <Text style={styles.terms}>
-              En continuant, vous acceptez nos{" "}
-              <Text style={styles.link}>conditions d'utilisation</Text> et notre{" "}
-              <Text style={styles.link}>politique de confidentialité</Text>
+          {/* Mode d'inscription */}
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.label}>
+              Mode d'inscription <Text style={styles.required}>*</Text>
             </Text>
+            <View style={styles.toggle}>
+              {(["phone", "email"] as RegisterMode[]).map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[
+                    styles.toggleBtn,
+                    mode === m && styles.toggleBtnActive,
+                  ]}
+                  onPress={() => handleModeChange(m)}
+                  activeOpacity={0.7}
+                  accessibilityLabel={`S'inscrire par ${m === "phone" ? "téléphone" : "email"}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: mode === m }}
+                >
+                  <Ionicons
+                    name={m === "phone" ? "call-outline" : "mail-outline"}
+                    size={16}
+                    color={mode === m ? colors.primary : colors.inkLight}
+                  />
+                  <Text
+                    style={[
+                      styles.toggleLabel,
+                      mode === m && styles.toggleLabelActive,
+                    ]}
+                  >
+                    {m === "phone" ? "Téléphone" : "Email"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+
+          {/* Contact (Phone ou Email) */}
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.label}>
+              {mode === "phone" ? "Numéro de téléphone" : "Adresse email"}
+              <Text style={styles.required}> *</Text>
+            </Text>
+            {mode === "phone" ? (
+              <PhoneInput
+                value={phone}
+                onChangeText={(text) => {
+                  setPhone(text);
+                  clearError("contact");
+                }}
+                placeholder="6 XX XX XX XX"
+                error={!!localErrors.contact}
+              />
+            ) : (
+              <EmailInput
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  clearError("contact");
+                }}
+                placeholder="exemple@email.com"
+                error={!!localErrors.contact}
+              />
+            )}
+            {localErrors.contact && (
+              <HelperText message={localErrors.contact} type="error" />
+            )}
+          </View>
+
+          {/* Champs Email uniquement */}
+          {isEmailMode && (
+            <>
+              <View style={styles.fieldWrapper}>
+                <Text style={styles.label}>
+                  Mot de passe <Text style={styles.required}>*</Text>
+                </Text>
+                <PasswordInput
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    clearError("password");
+                  }}
+                  placeholder="Minimum 8 caractères"
+                  error={!!localErrors.password}
+                />
+                {localErrors.password && (
+                  <HelperText message={localErrors.password} type="error" />
+                )}
+                <Text style={styles.hint}>
+                  • Minimum 8 caractères
+                  {"\n"}• Sans espaces
+                </Text>
+              </View>
+
+              <View style={styles.fieldWrapper}>
+                <Text style={styles.label}>
+                  Confirmer le mot de passe{" "}
+                  <Text style={styles.required}>*</Text>
+                </Text>
+                <PasswordInput
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    clearError("confirmPassword");
+                  }}
+                  placeholder="Confirmez votre mot de passe"
+                  error={!!localErrors.confirmPassword}
+                />
+                {localErrors.confirmPassword && (
+                  <HelperText
+                    message={localErrors.confirmPassword}
+                    type="error"
+                  />
+                )}
+              </View>
+            </>
+          )}
+        </View>
+
+        {/* ── Actions ── */}
+        <View style={styles.actions}>
+          <AuthButton
+            label={isEmailMode ? "Créer mon compte" : "Continuer"}
+            onPress={handleSubmit}
+            variant="primary"
+            fullWidth
+            loading={isRegistering}
+            size="lg"
+            icon={
+              <Ionicons
+                name={
+                  isEmailMode ? "person-add-outline" : "arrow-forward-outline"
+                }
+                size={18}
+                color={colors.white}
+              />
+            }
+          />
+
+          {errorMessage && (
+            <HelperText message={errorMessage as string} type="error" />
+          )}
+        </View>
+
+        {/* ── Footer ── */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            Vous avez déjà un compte ?{" "}
+            <TouchableOpacity
+              onPress={handleLogin}
+              accessibilityLabel="Se connecter"
+              accessibilityRole="button"
+            >
+              <Text style={styles.footerLink}>Se connecter</Text>
+            </TouchableOpacity>
+          </Text>
+
+          <Text style={styles.legal}>
+            En continuant, vous acceptez nos{" "}
+            <TouchableOpacity onPress={handleTerms}>
+              <Text style={styles.legalLink}>conditions d'utilisation</Text>
+            </TouchableOpacity>{" "}
+            et notre{" "}
+            <TouchableOpacity onPress={handlePrivacy}>
+              <Text style={styles.legalLink}>politique de confidentialité</Text>
+            </TouchableOpacity>
+          </Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
+// ================================================================================== //
+// Styles
+// ================================================================================== //
+
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.white },
-  content: {
+  root: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+  scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 48, // Added more bottom padding for better visibility
-    gap: 32,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === "ios" ? 32 : 24,
   },
-  header: { gap: 4 },
-  title: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize["2xl"],
-    color: colors.ink,
+
+  // Form
+  form: {
+    marginTop: 24,
+    gap: 20,
   },
-  subtitle: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.md,
-    color: colors.inkLight,
+  fieldWrapper: {
+    gap: 6,
   },
-  form: { gap: 24 },
-  fieldWrapper: { gap: 6 },
   label: {
     fontFamily: fontFamily.medium,
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     color: colors.ink,
   },
+  required: {
+    color: colors.error || "#E53935",
+  },
+  hint: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 16,
+    marginTop: 2,
+  },
+
   // Toggle
   toggle: {
     flexDirection: "row",
     backgroundColor: colors.surface,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 3,
     gap: 3,
   },
   toggleBtn: {
     flex: 1,
-    paddingVertical: 9,
-    borderRadius: 8,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   toggleBtnActive: {
     backgroundColor: colors.white,
-    borderWidth: 0.5,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   toggleLabel: {
     fontFamily: fontFamily.medium,
@@ -353,19 +468,41 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
   },
   toggleLabelActive: {
-    color: colors.ink,
+    color: colors.primary,
   },
+
+  // Actions
+  actions: {
+    marginTop: 24,
+    gap: 12,
+  },
+
   // Footer
-  footer: { gap: 16 },
-  terms: {
+  footer: {
+    marginTop: 24,
+    gap: 16,
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  footerText: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
     color: colors.inkLight,
-    textAlign: "center",
-    lineHeight: 18,
   },
-  link: {
+  footerLink: {
     fontFamily: fontFamily.semiBold,
-    color: colors.ink,
+    color: colors.primary,
+  },
+  legal: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textAlign: "center",
+    lineHeight: 17,
+  },
+  legalLink: {
+    fontFamily: fontFamily.semiBold,
+    color: colors.primary,
   },
 });
