@@ -4,13 +4,13 @@ import { apiClient } from "../lib/api.client";
 import { API_ENDPOINTS } from "../types/api-endpoints";
 import { 
   CreateReminderRequest, 
+  CreateSimpleReminderRequest,
   UpdateReminderRequest,
   RemindersListQuery
 } from "../types/api-requests";
 import { 
   ReminderResponse, 
-  RemindersListResponse,
-  ReminderDetailResponse
+  RemindersListResponse
 } from "../types/api-responses";
 
 /**
@@ -54,35 +54,49 @@ export const reminderService = {
    * Get a specific reminder by ID
    */
   async getReminder(reminderId: string): Promise<ReminderResponse> {
-    const res = await apiClient.get<ReminderDetailResponse>(
+    const res = await apiClient.get<ReminderResponse>(
       API_ENDPOINTS.REMINDERS.GET(reminderId)
     );
     if (!res.success) throw new Error(res.error ?? "Failed to fetch reminder");
-    return res.data!.data!;
+    return res.data!;
   },
 
   /**
-   * Create a new reminder via dashboard endpoint (lookup or create medication by name)
+   * Create a new reminder linked to an existing medication (by medicationId)
+   * POST /api/reminders
    */
   async createReminder(data: CreateReminderRequest): Promise<ReminderResponse> {
-    const res = await apiClient.post<ReminderDetailResponse>(
-      API_ENDPOINTS.DASHBOARD.ADD_MEDICATION, 
+    const res = await apiClient.post<ReminderResponse>(
+      API_ENDPOINTS.REMINDERS.CREATE,
       data
     );
     if (!res.success) throw new Error(res.error ?? "Failed to create reminder");
-    return res.data!.data!;
+    return res.data!;
+  },
+
+  /**
+   * Create a simple reminder by medication name (auto-resolve or create medication)
+   * POST /api/dashboard/medications
+   */
+  async createSimpleReminder(data: CreateSimpleReminderRequest): Promise<ReminderResponse> {
+    const res = await apiClient.post<ReminderResponse>(
+      API_ENDPOINTS.DASHBOARD.ADD_MEDICATION,
+      data
+    );
+    if (!res.success) throw new Error(res.error ?? "Failed to create simple reminder");
+    return res.data!;
   },
 
   /**
    * Update an existing reminder
    */
   async updateReminder(reminderId: string, data: UpdateReminderRequest): Promise<ReminderResponse> {
-    const res = await apiClient.put<ReminderDetailResponse>(
+    const res = await apiClient.put<ReminderResponse>(
       API_ENDPOINTS.REMINDERS.UPDATE(reminderId), 
       data
     );
     if (!res.success) throw new Error(res.error ?? "Failed to update reminder");
-    return res.data!.data!;
+    return res.data!;
   },
 
   /**
@@ -97,24 +111,24 @@ export const reminderService = {
    * Mark a reminder as taken (acknowledge intake)
    */
   async markAsTaken(reminderId: string, takenAt?: string): Promise<ReminderResponse> {
-    const res = await apiClient.post<ReminderDetailResponse>(
+    const res = await apiClient.post<ReminderResponse>(
       API_ENDPOINTS.REMINDERS.MARK_TAKEN,
       { reminderId, takenAt }
     );
     if (!res.success) throw new Error(res.error ?? "Failed to mark reminder as taken");
-    return res.data!.data!;
+    return res.data!;
   },
 
   /**
    * Snooze a reminder for a specified duration (minutes)
    */
   async snoozeReminder(reminderId: string, minutes: number): Promise<ReminderResponse> {
-    const res = await apiClient.post<ReminderDetailResponse>(
+    const res = await apiClient.post<ReminderResponse>(
       API_ENDPOINTS.REMINDERS.SNOOZE,
       { reminderId, minutes }
     );
     if (!res.success) throw new Error(res.error ?? "Failed to snooze reminder");
-    return res.data!.data!;
+    return res.data!;
   },
 
   /**

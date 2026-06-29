@@ -359,30 +359,33 @@ export interface MedicationDetailResponse extends StoreMedicationResponse {
 // Reminders
 // ---------------------------------------------------------------------------
 
-export type ReminderStatus =
-  | "PENDING"
-  | "TAKEN"
-  | "SNOOZED"
-  | "MISSED"
-  | "CANCELLED";
+export type ReminderStatus = "PENDING" | "TAKEN" | "MISSED";
 
 export interface ReminderResponse {
-  id: string;
-  medicationId: string;
+  id: number;
+  patientId: number;
+  medicationId: number;
   medicationName: string;
-  medicationDosage: string;
-  patientId: string;
+  dosage: string;
   patientName: string;
-  scheduledTime: string; // ISO datetime string
-  scheduledDate: string; // ISO date string
-  scheduledHour: string; // HH:mm format
   status: ReminderStatus;
-  takenAt?: string; // ISO datetime string
-  snoozedUntil?: string; // ISO datetime string
-  snoozeCount: number;
+  form: string;
+  frequency: string;
+  times: string[];
+  active: boolean;
+  medicationDosage: string;
+  scheduledHour: string;
+  name: string;
+  time: string;
+
+  scheduledDate?: string;
+  scheduledTime?: string;
+  takenAt?: string;
+  snoozedUntil?: string;
+  snoozeCount?: number;
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RemindersListResponse {

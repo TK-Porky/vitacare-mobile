@@ -126,7 +126,7 @@ export const useReminders = (query?: RemindersListQuery) => {
         reminderTime.setDate(reminderTime.getDate() + 1);
       }
       notificationService.scheduleTreatmentReminder({
-        treatmentId: created.id,
+        treatmentId: String(created.id),
         treatmentName: created.medicationName,
         reminderTime,
       });
@@ -193,7 +193,7 @@ export const useReminders = (query?: RemindersListQuery) => {
       const reminderTime = new Date();
       reminderTime.setHours(hours + Math.floor(variables.minutes / 60), mins + variables.minutes % 60, 0, 0);
       notificationService.scheduleTreatmentReminder({
-        treatmentId: data.id,
+        treatmentId: String(data.id),
         treatmentName: data.medicationName,
         reminderTime,
       });

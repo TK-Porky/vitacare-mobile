@@ -238,6 +238,16 @@ export interface UpdateReminderRequest {
   notes?: string;
 }
 
+export interface CreateSimpleReminderRequest {
+  name: string;
+  dosage: string;
+  frequency: string;
+  startDate?: string;
+  endDate?: string;
+  times?: string[];
+  notes?: string;
+}
+
 export interface MarkReminderTakenRequest {
   reminderId: string;
   takenAt?: string; // ISO datetime string, defaults to now
@@ -268,12 +278,7 @@ export interface MarkReminderReadRequest {
 }
 
 // Re-export status type for convenience
-export type ReminderStatus =
-  | "PENDING"
-  | "TAKEN"
-  | "SNOOZED"
-  | "MISSED"
-  | "CANCELLED";
+export type ReminderStatus = "PENDING" | "TAKEN" | "MISSED";
 
 // ---------------------------------------------------------------------------
 // Profil utilisateur
