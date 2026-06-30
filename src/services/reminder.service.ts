@@ -1,35 +1,32 @@
 // services/reminder.service.ts
 
-import { apiClient } from "../lib/api.client";
-import { API_ENDPOINTS } from "../types/api-endpoints";
-import { 
-  CreateReminderRequest, 
+import { apiClient } from "@/lib/api.client";
+import { API_ENDPOINTS } from "@/types/api-endpoints";
+import {
+  CreateReminderRequest,
   CreateSimpleReminderRequest,
   UpdateReminderRequest,
-  RemindersListQuery
-} from "../types/api-requests";
-import { 
-  ReminderResponse, 
-  RemindersListResponse
-} from "../types/api-responses";
+  RemindersListQuery,
+} from "@/types/api-requests";
+import { ReminderResponse, RemindersListResponse } from "@/types/api-responses";
 
 /**
  * Helper to build query string
  * This matches how other services (dashboard, appointments) work
  */
 const buildQueryString = (params?: Record<string, any>): string => {
-  if (!params) return '';
-  
+  if (!params) return "";
+
   const searchParams = new URLSearchParams();
-  
+
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
+    if (value !== undefined && value !== null && value !== "") {
       searchParams.append(key, String(value));
     }
   });
-  
+
   const queryString = searchParams.toString();
-  return queryString ? `?${queryString}` : '';
+  return queryString ? `?${queryString}` : "";
 };
 
 /**
@@ -40,14 +37,71 @@ export const reminderService = {
   /**
    * Get all reminders for the user with pagination and filtering
    */
-  async getReminders(query?: RemindersListQuery): Promise<RemindersListResponse> {
-    // Build the URL with query string
-    const queryString = buildQueryString(query);
-    const url = `${API_ENDPOINTS.REMINDERS.LIST}${queryString}`;
-    
-    const res = await apiClient.get<RemindersListResponse>(url);
-    if (!res.success) throw new Error(res.error ?? "Failed to fetch reminders");
-    return res.data!;
+  async getReminders(query?: RemindersListQuery) {
+    const params = new URLSearchParams();
+    if (query?.status) params.append("status", query.status);
+    if (query?.page) params.append("page", String(query.page));
+    if (query?.limit) params.append("limit", String(query.limit));
+    if (query?.patientId) params.append("patientId", String(query.patientId));
+    if (query?.medicationId)
+      params.append("medicationId", String(query.medicationId));
+
+    const url = params.toString()
+      ? `${API_ENDPOINTS.REMINDERS.LIST}?${params.toString()}`
+      : API_ENDPOINTS.REMINDERS.LIST;
+
+    const response = await apiClient.get(url);
+
+    console.log("[reminderService] Raw response:", response);
+
+    const data = response.data;
+
+    if (Array.isArray(data)) {
+      return {
+        items: data,
+        pagination: {
+          total: data.length,
+          page: 1,
+          limit: data.length || 20,
+          totalPages: 1,
+        },
+        summary: {
+          pending: data.filter((r) => r.status === "PENDING").length,
+          taken: data.filter((r) => r.status === "TAKEN").length,
+          missed: data.filter((r) => r.status === "MISSED").length,
+        },
+      };
+    }
+
+    // Si data a une propriété data qui est un tableau
+    if (data?.data && Array.isArray(data.data)) {
+      const items = data.data;
+      return {
+        items: items,
+        pagination: {
+          total: data.total || items.length,
+          page: data.page || 1,
+          limit: data.limit || 20,
+          totalPages: data.totalPages || 1,
+        },
+        summary: {
+          pending: items.filter(
+            (r: { status: string }) => r.status === "PENDING",
+          ).length,
+          taken: items.filter((r: { status: string }) => r.status === "TAKEN")
+            .length,
+          missed: items.filter((r: { status: string }) => r.status === "MISSED")
+            .length,
+        },
+      };
+    }
+
+    // Fallback: retourner un tableau vide
+    return {
+      items: [],
+      pagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
+      summary: { pending: 0, taken: 0, missed: 0 },
+    };
   },
 
   /**
@@ -55,7 +109,7 @@ export const reminderService = {
    */
   async getReminder(reminderId: string): Promise<ReminderResponse> {
     const res = await apiClient.get<ReminderResponse>(
-      API_ENDPOINTS.REMINDERS.GET(reminderId)
+      API_ENDPOINTS.REMINDERS.GET(reminderId),
     );
     if (!res.success) throw new Error(res.error ?? "Failed to fetch reminder");
     return res.data!;
@@ -68,7 +122,7 @@ export const reminderService = {
   async createReminder(data: CreateReminderRequest): Promise<ReminderResponse> {
     const res = await apiClient.post<ReminderResponse>(
       API_ENDPOINTS.REMINDERS.CREATE,
-      data
+      data,
     );
     if (!res.success) throw new Error(res.error ?? "Failed to create reminder");
     return res.data!;
@@ -78,22 +132,28 @@ export const reminderService = {
    * Create a simple reminder by medication name (auto-resolve or create medication)
    * POST /api/dashboard/medications
    */
-  async createSimpleReminder(data: CreateSimpleReminderRequest): Promise<ReminderResponse> {
+  async createSimpleReminder(
+    data: CreateSimpleReminderRequest,
+  ): Promise<ReminderResponse> {
     const res = await apiClient.post<ReminderResponse>(
       API_ENDPOINTS.DASHBOARD.ADD_MEDICATION,
-      data
+      data,
     );
-    if (!res.success) throw new Error(res.error ?? "Failed to create simple reminder");
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to create simple reminder");
     return res.data!;
   },
 
   /**
    * Update an existing reminder
    */
-  async updateReminder(reminderId: string, data: UpdateReminderRequest): Promise<ReminderResponse> {
+  async updateReminder(
+    reminderId: string,
+    data: UpdateReminderRequest,
+  ): Promise<ReminderResponse> {
     const res = await apiClient.put<ReminderResponse>(
-      API_ENDPOINTS.REMINDERS.UPDATE(reminderId), 
-      data
+      API_ENDPOINTS.REMINDERS.UPDATE(reminderId),
+      data,
     );
     if (!res.success) throw new Error(res.error ?? "Failed to update reminder");
     return res.data!;
@@ -103,29 +163,38 @@ export const reminderService = {
    * Delete a reminder
    */
   async deleteReminder(reminderId: string): Promise<void> {
-    const res = await apiClient.delete(API_ENDPOINTS.REMINDERS.DELETE(reminderId));
+    const res = await apiClient.delete(
+      API_ENDPOINTS.REMINDERS.DELETE(reminderId),
+    );
     if (!res.success) throw new Error(res.error ?? "Failed to delete reminder");
   },
 
   /**
    * Mark a reminder as taken (acknowledge intake)
    */
-  async markAsTaken(reminderId: string, takenAt?: string): Promise<ReminderResponse> {
+  async markAsTaken(
+    reminderId: string,
+    takenAt?: string,
+  ): Promise<ReminderResponse> {
     const res = await apiClient.post<ReminderResponse>(
       API_ENDPOINTS.REMINDERS.MARK_TAKEN,
-      { reminderId, takenAt }
+      { reminderId, takenAt },
     );
-    if (!res.success) throw new Error(res.error ?? "Failed to mark reminder as taken");
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to mark reminder as taken");
     return res.data!;
   },
 
   /**
    * Snooze a reminder for a specified duration (minutes)
    */
-  async snoozeReminder(reminderId: string, minutes: number): Promise<ReminderResponse> {
+  async snoozeReminder(
+    reminderId: string,
+    minutes: number,
+  ): Promise<ReminderResponse> {
     const res = await apiClient.post<ReminderResponse>(
       API_ENDPOINTS.REMINDERS.SNOOZE,
-      { reminderId, minutes }
+      { reminderId, minutes },
     );
     if (!res.success) throw new Error(res.error ?? "Failed to snooze reminder");
     return res.data!;
@@ -136,9 +205,10 @@ export const reminderService = {
    */
   async getUpcomingReminders(): Promise<RemindersListResponse> {
     const res = await apiClient.get<RemindersListResponse>(
-      API_ENDPOINTS.REMINDERS.UPCOMING
+      API_ENDPOINTS.REMINDERS.UPCOMING,
     );
-    if (!res.success) throw new Error(res.error ?? "Failed to fetch upcoming reminders");
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to fetch upcoming reminders");
     return res.data!;
   },
 
@@ -147,9 +217,10 @@ export const reminderService = {
    */
   async getTodaySchedule(): Promise<RemindersListResponse> {
     const res = await apiClient.get<RemindersListResponse>(
-      API_ENDPOINTS.REMINDERS.TODAY
+      API_ENDPOINTS.REMINDERS.TODAY,
     );
-    if (!res.success) throw new Error(res.error ?? "Failed to fetch today's schedule");
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to fetch today's schedule");
     return res.data!;
   },
 
@@ -168,43 +239,56 @@ export const reminderService = {
       missed: number;
       total: number;
     }>(API_ENDPOINTS.REMINDERS.SUMMARY);
-    if (!res.success) throw new Error(res.error ?? "Failed to fetch reminder summary");
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to fetch reminder summary");
     return res.data!;
   },
 
   /**
    * Get reminders for a specific patient
    */
-  async getPatientReminders(patientId: string, query?: RemindersListQuery): Promise<RemindersListResponse> {
+  async getPatientReminders(
+    patientId: string,
+    query?: RemindersListQuery,
+  ): Promise<RemindersListResponse> {
     const queryString = buildQueryString(query);
     const url = `${API_ENDPOINTS.REMINDERS.PATIENT(patientId)}${queryString}`;
-    
+
     const res = await apiClient.get<RemindersListResponse>(url);
-    if (!res.success) throw new Error(res.error ?? "Failed to fetch patient reminders");
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to fetch patient reminders");
     return res.data!;
   },
 
   /**
    * Get reminders for a specific medication
    */
-  async getMedicationReminders(medicationId: string, query?: RemindersListQuery): Promise<RemindersListResponse> {
+  async getMedicationReminders(
+    medicationId: string,
+    query?: RemindersListQuery,
+  ): Promise<RemindersListResponse> {
     const queryString = buildQueryString(query);
     const url = `${API_ENDPOINTS.REMINDERS.MEDICATION(medicationId)}${queryString}`;
-    
+
     const res = await apiClient.get<RemindersListResponse>(url);
-    if (!res.success) throw new Error(res.error ?? "Failed to fetch medication reminders");
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to fetch medication reminders");
     return res.data!;
   },
 
   /**
    * Create multiple reminders at once
    */
-  async createBulkReminders(patientId: string, reminders: Omit<CreateReminderRequest, 'patientId'>[]): Promise<ReminderResponse[]> {
+  async createBulkReminders(
+    patientId: string,
+    reminders: Omit<CreateReminderRequest, "patientId">[],
+  ): Promise<ReminderResponse[]> {
     const res = await apiClient.post<{ reminders: ReminderResponse[] }>(
       API_ENDPOINTS.REMINDERS.BULK_CREATE,
-      { patientId, reminders }
+      { patientId, reminders },
     );
-    if (!res.success) throw new Error(res.error ?? "Failed to create bulk reminders");
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to create bulk reminders");
     return res.data!.reminders;
   },
 
@@ -212,11 +296,11 @@ export const reminderService = {
    * Mark specific reminders as read
    */
   async markAsRead(reminderIds: string[]): Promise<void> {
-    const res = await apiClient.post(
-      API_ENDPOINTS.REMINDERS.MARK_READ,
-      { reminderIds }
-    );
-    if (!res.success) throw new Error(res.error ?? "Failed to mark reminders as read");
+    const res = await apiClient.post(API_ENDPOINTS.REMINDERS.MARK_READ, {
+      reminderIds,
+    });
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to mark reminders as read");
   },
 
   /**
@@ -224,6 +308,7 @@ export const reminderService = {
    */
   async markAllAsRead(): Promise<void> {
     const res = await apiClient.post(API_ENDPOINTS.REMINDERS.MARK_ALL_READ);
-    if (!res.success) throw new Error(res.error ?? "Failed to mark all reminders as read");
-  }
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to mark all reminders as read");
+  },
 };

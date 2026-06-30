@@ -22,4 +22,7 @@ export interface ClinicProvider {
     date: string;
     slots: string[];
   }[];
+  phone: number;
+  email: string;
+  website: string;
 }

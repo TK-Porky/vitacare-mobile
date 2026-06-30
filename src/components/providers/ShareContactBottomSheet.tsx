@@ -191,7 +191,6 @@ export const ShareContactBottomSheet = forwardRef<
       containerStyle={styles.sheet}
     >
       <View style={styles.header}>
-        <View style={styles.handle} />
         <Text style={styles.title}>Partager le contact</Text>
         <Text style={styles.subtitle}>
           Choisissez comment partager les coordonnées de {provider.doctorName}

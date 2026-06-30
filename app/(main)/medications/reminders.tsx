@@ -61,61 +61,44 @@ const STATUS_LABELS: Record<FilterStatus, string> = {
  * Validate reminder data
  */
 const validateReminderData = (data: ReminderData): string | null => {
-  // Vérifier le nom du médicament
   if (!data.drugName?.trim()) {
     return "Le nom du médicament est requis";
   }
-
-  // Vérifier la forme
   if (!data.form?.trim()) {
     return "La forme du médicament est requise";
   }
-
-  // Vérifier le dosage - conversion en nombre
   const dosageValue = parseFloat(data.dosageValue);
   if (!data.dosageValue || isNaN(dosageValue) || dosageValue <= 0) {
     return "Le dosage doit être un nombre supérieur à 0";
   }
-
-  // Vérifier l'unité de dosage
   if (!data.dosageUnit?.trim()) {
     return "L'unité de dosage est requise";
   }
-
-  // Vérifier la fréquence - conversion en nombre
   const frequencyCount = parseFloat(data.frequencyCount);
   if (!data.frequencyCount || isNaN(frequencyCount) || frequencyCount <= 0) {
     return "La fréquence doit être un nombre supérieur à 0";
   }
-
-  // Vérifier l'unité de fréquence
   if (!data.frequencyUnit?.trim()) {
     return "L'unité de fréquence est requise";
   }
-
-  // Vérifier l'heure
   if (!data.time?.trim()) {
     return "L'heure est requise";
   }
-
-  // Vérifier le format de l'heure (HH:MM)
   const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
   if (!timeRegex.test(data.time)) {
     return "L'heure doit être au format HH:MM (ex: 14:30)";
   }
-
   return null;
 };
 
 /**
- * Map ReminderData to CreateReminderRequest
+ * Map ReminderData to CreateReminderRequest - ✅ Format corrigé
  */
 const mapReminderDataToRequest = (
   data: ReminderData,
   patientId: string,
   medicationId?: string,
 ): CreateReminderRequest => {
-  // Convertir la forme en format backend
   const formMap: Record<string, string> = {
     Gelule: "GELULE",
     Comprimé: "COMPRIME",
@@ -125,40 +108,30 @@ const mapReminderDataToRequest = (
     Sachet: "SACHET",
   };
 
-  // Convertir la fréquence en format backend
   const frequencyMap: Record<string, string> = {
     Jour: "QUOTIDIEN",
     Semaine: "HEBDOMADAIRE",
     Mois: "MENSUEL",
   };
 
-  // Construire le dosage
   const dosage = `${data.dosageValue}${data.dosageUnit}`;
-
-  // Construire les heures (tableau)
   const times = [data.time];
 
-  // Construire les notes
-  const notes = [
-    `Fréquence: ${data.frequencyCount}x/${data.frequencyUnit.toLowerCase()}`,
-    data.notes ? `Notes: ${data.notes}` : "",
-  ]
-    .filter(Boolean)
-    .join(" | ");
-
   return {
-    medicationId: Number(medicationId) || 0, // ✅ Convertir en nombre
+    medicationId: Number(medicationId) || 0,
+    medicationName: data.drugName,
     form: formMap[data.form] || data.form.toUpperCase(),
     dosage: dosage,
     frequency:
       frequencyMap[data.frequencyUnit] || data.frequencyUnit.toUpperCase(),
     times: times,
-    patientId: Number(patientId), // ✅ Convertir en nombre
+    patientId: Number(patientId),
     scheduledDate: new Date().toISOString().split("T")[0],
     scheduledTime: data.time,
-    notes: notes,
+    notes: `Forme: ${data.form} | Dosage: ${dosage} | Fréquence: ${data.frequencyCount}x/${data.frequencyUnit.toLowerCase()}`,
   };
 };
+
 // ================================================================================== //
 // Sub-components
 // ================================================================================== //
@@ -222,6 +195,12 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
     <Text style={styles.emptySubtext}>
       Ajoutez vos médicaments pour ne plus jamais oublier une prise.
     </Text>
+    <PrimaryButton
+      label="Ajouter un rappel"
+      onPress={onAdd}
+      style={{ marginTop: 16 }}
+      icon={<Plus size={18} color={colors.white} />}
+    />
   </View>
 );
 
@@ -250,7 +229,7 @@ const LimitBanner = ({ onUpgrade }: { onUpgrade?: () => void }) => (
 );
 
 /**
- * Reminder card component
+ * Reminder card component - ✅ Adapté à la structure API
  */
 const ReminderCard = ({
   item,
@@ -303,12 +282,17 @@ const ReminderCard = ({
 
   const isActionable = item.status === "PENDING" || item.status === "SNOOZED";
 
+  // ✅ Utiliser les bonnes propriétés de l'API
+  const medicationName = item.medicationName || item.name || "Médicament";
+  const dosage = item.medicationDosage || item.dosage || "";
+  const time = item.scheduledHour || item.time || "Heure non définie";
+
   return (
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.7}
-      onPress={() => onView?.(item.id)}
-      accessibilityLabel={`Rappel pour ${item.medicationName}`}
+      onPress={() => onView?.(String(item.id))}
+      accessibilityLabel={`Rappel pour ${medicationName}`}
       accessibilityRole="button"
     >
       {/* Icon */}
@@ -320,7 +304,7 @@ const ReminderCard = ({
       <View style={styles.cardInfo}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardName} numberOfLines={1}>
-            {item.medicationName}
+            {medicationName}
           </Text>
           <View
             style={[
@@ -332,7 +316,8 @@ const ReminderCard = ({
           </View>
         </View>
         <Text style={styles.cardDetails}>
-          {item.medicationDosage} • {item.scheduledHour}
+          {dosage && `${dosage} • `}
+          {time}
         </Text>
         {item.snoozedUntil && (
           <Text style={styles.snoozedText}>
@@ -346,7 +331,7 @@ const ReminderCard = ({
         <View style={styles.cardActions}>
           <TouchableOpacity
             style={[styles.actionButton, styles.takenButton]}
-            onPress={() => onMarkAsTaken?.(item.id)}
+            onPress={() => onMarkAsTaken?.(String(item.id))}
             disabled={isMarkingAsTaken}
             accessibilityLabel="Marquer comme pris"
             accessibilityRole="button"
@@ -359,7 +344,7 @@ const ReminderCard = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.snoozeButton]}
-            onPress={() => onSnooze?.(item.id, 15)}
+            onPress={() => onSnooze?.(String(item.id), 15)}
             disabled={isSnoozing}
             accessibilityLabel="Reporter le rappel"
             accessibilityRole="button"
@@ -372,7 +357,7 @@ const ReminderCard = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => onDelete?.(item.id)}
+            onPress={() => onDelete?.(String(item.id))}
             disabled={isDeleting}
             accessibilityLabel="Supprimer le rappel"
             accessibilityRole="button"
@@ -403,7 +388,6 @@ export default function RemindersScreen({ onStore }: Props) {
 
   const user = useAuthStore((state) => state.user);
   const isHydrated = useAuthStore((state) => state.isHydrated);
-  const isLoadingAuth = useAuthStore((state) => state.isLoading);
   const unreadNotificationCount = useNotificationStore(
     (state) => state.unreadCount,
   );
@@ -437,9 +421,6 @@ export default function RemindersScreen({ onStore }: Props) {
   // Handlers
   // ================================================================================== //
 
-  /**
-   * Handle upgrading to premium
-   */
   const handleUpgrade = useCallback(() => {
     Alert.alert(
       "VitaCare Premium",
@@ -454,9 +435,6 @@ export default function RemindersScreen({ onStore }: Props) {
     );
   }, [router]);
 
-  /**
-   * Handle store navigation
-   */
   const handleStorePress = useCallback(() => {
     if (onStore) {
       onStore();
@@ -465,13 +443,9 @@ export default function RemindersScreen({ onStore }: Props) {
     }
   }, [onStore, router]);
 
-  /**
-   * Handle adding a new reminder
-   */
   const handleAdd = useCallback(
     async (data: ReminderData) => {
       try {
-        // Validation
         const validationError = validateReminderData(data);
         if (validationError) {
           Alert.alert("Erreur", validationError);
@@ -492,7 +466,6 @@ export default function RemindersScreen({ onStore }: Props) {
         }
 
         const medicationId = data.medicationId || "1";
-
         const requestData = mapReminderDataToRequest(
           data,
           String(user.id),
@@ -523,9 +496,6 @@ export default function RemindersScreen({ onStore }: Props) {
     [createReminder, user, isHydrated],
   );
 
-  /**
-   * Handle marking reminder as taken
-   */
   const handleMarkAsTaken = useCallback(
     async (id: string) => {
       try {
@@ -537,9 +507,6 @@ export default function RemindersScreen({ onStore }: Props) {
     [markAsTaken],
   );
 
-  /**
-   * Handle snoozing a reminder
-   */
   const handleSnooze = useCallback(
     (id: string) => {
       Alert.alert("Reporter le rappel", "Choisissez la durée de report", [
@@ -552,9 +519,6 @@ export default function RemindersScreen({ onStore }: Props) {
     [snoozeReminder],
   );
 
-  /**
-   * Handle deleting a reminder
-   */
   const handleDelete = useCallback(
     (id: string) => {
       Alert.alert(
@@ -573,20 +537,13 @@ export default function RemindersScreen({ onStore }: Props) {
     [deleteReminder],
   );
 
-  /**
-   * Handle viewing reminder details
-   */
   const handleViewReminder = useCallback(
     (id: string) => {
-      // Navigate to detail screen
       router.push(`/reminders/${id}`);
     },
     [router],
   );
 
-  /**
-   * Handle notification press
-   */
   const handleNotificationPress = useCallback(() => {
     router.push("/notifications");
   }, [router]);
@@ -595,7 +552,6 @@ export default function RemindersScreen({ onStore }: Props) {
   // Render States
   // ================================================================================== //
 
-  // Show loading while auth is hydrating or reminders are loading
   if (!isHydrated || isLoadingReminders) {
     return (
       <View style={styles.centerContainer}>
@@ -609,7 +565,6 @@ export default function RemindersScreen({ onStore }: Props) {
     );
   }
 
-  // Show error if there's an error fetching reminders
   if (error) {
     const errorMessage =
       typeof error === "string"
@@ -632,6 +587,7 @@ export default function RemindersScreen({ onStore }: Props) {
   // ================================================================================== //
   // Render
   // ================================================================================== //
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
@@ -664,13 +620,13 @@ export default function RemindersScreen({ onStore }: Props) {
           />
         }
       >
-        {/* ── Filters ── */}
+        {/* Filters */}
         <FilterTabs value={filterStatus} onChange={setFilterStatus} />
 
-        {/* ── Limit banner ── */}
+        {/* Limit banner */}
         {limitReached && <LimitBanner onUpgrade={handleUpgrade} />}
 
-        {/* ── Summary Stats ── */}
+        {/* Summary Stats */}
         {summary && reminderList.length > 0 && (
           <View style={styles.summaryContainer}>
             <View style={styles.summaryItem}>
@@ -692,12 +648,12 @@ export default function RemindersScreen({ onStore }: Props) {
           </View>
         )}
 
-        {/* ── List ── */}
+        {/* List */}
         <View style={styles.list}>
           {reminderList.length === 0 ? (
             <EmptyState onAdd={() => addSheetRef.current?.open()} />
           ) : (
-            reminderList.map((item) => (
+            reminderList.map((item: ReminderResponse) => (
               <ReminderCard
                 key={item.id}
                 item={item}
@@ -713,7 +669,7 @@ export default function RemindersScreen({ onStore }: Props) {
           )}
         </View>
 
-        {/* ── Pagination Info ── */}
+        {/* Pagination Info */}
         {pagination && reminderList.length > 0 && (
           <Text style={styles.paginationText}>
             Affichage {reminderList.length} sur {pagination.total} rappels
@@ -721,7 +677,7 @@ export default function RemindersScreen({ onStore }: Props) {
         )}
       </ScrollView>
 
-      {/* ── FAB ── */}
+      {/* FAB */}
       {!limitReached && (
         <TouchableOpacity
           style={styles.fab}
@@ -739,7 +695,7 @@ export default function RemindersScreen({ onStore }: Props) {
         </TouchableOpacity>
       )}
 
-      {/* ── Add reminder sheet ── */}
+      {/* Add reminder sheet */}
       <AddReminderBottomSheet
         ref={addSheetRef}
         onAdd={handleAdd}
@@ -754,6 +710,7 @@ export default function RemindersScreen({ onStore }: Props) {
 // ================================================================================== //
 
 const styles = StyleSheet.create({
+  // ... styles existants inchangés
   safe: {
     flex: 1,
     backgroundColor: colors.white,
@@ -794,8 +751,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 100,
   },
-
-  // Filter
   filterContainer: {
     marginBottom: 16,
   },
@@ -823,8 +778,6 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: colors.white,
   },
-
-  // Summary stats
   summaryContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -849,8 +802,6 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     marginTop: 4,
   },
-
-  // Banner
   banner: {
     flexDirection: "row",
     alignItems: "center",
@@ -883,13 +834,9 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     lineHeight: 16,
   },
-
-  // List
   list: {
     gap: 12,
   },
-
-  // Empty
   empty: {
     marginTop: "30%",
     alignItems: "center",
@@ -920,8 +867,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20,
   },
-
-  // Card
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -1004,8 +949,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: fontSize.xs,
   },
-
-  // Pagination
   paginationText: {
     textAlign: "center",
     fontFamily: fontFamily.regular,
@@ -1014,8 +957,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
   },
-
-  // FAB
   fab: {
     position: "absolute",
     bottom: 30,

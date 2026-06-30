@@ -1,3 +1,4 @@
+// app/(main)/explore/index.tsx
 import { useRef, useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -16,7 +17,9 @@ import { colors, fontFamily, fontSize } from "@/themes";
 import {
   ProfessionalProviderBottomSheet,
   ProfessionalProviderBottomSheetRef,
-} from "@/components/providers/ProfessionalProviderBottomSheet";
+  ShareContactBottomSheet,
+  ShareContactBottomSheetRef,
+} from "@/components/providers";
 import { useMapStore } from "@/store";
 import {
   ClinicProviderResponse,
@@ -35,47 +38,79 @@ import { useNotificationStore } from "@/store/notification.store";
  * Map clinic and doctor detail to provider data for the bottom sheet
  */
 const mapProviderData = (
-  clinic: ClinicProviderResponse,
+  clinic: ClinicProviderResponse | null,
   detail: DoctorDetailResponse | null,
 ) => {
+  // ✅ Vérifier que clinic existe
+  if (!clinic) {
+    return {
+      clinicName: "Nom non spécifié",
+      avatarUri: "",
+      specialty: "Spécialiste",
+      experience: "+5 Ans",
+      language: "FR-EN",
+      doctorName: "Dr. Inconnu",
+      description: "Aucune description disponible",
+      hoursRange: "Horaires non spécifiés",
+      hoursdays: "Jours non spécifiés",
+      location: "Adresse non spécifiée",
+      coverUri: undefined,
+      phone: undefined,
+      email: undefined,
+    };
+  }
+
   if (detail) {
     return {
-      clinicName: detail.doctor.cabinet ?? clinic.clinicName,
+      clinicName:
+        detail.doctor.cabinet ?? clinic.clinicName ?? "Nom non spécifié",
       avatarUri: detail.doctor.avatarUrl ?? clinic.avatarUri ?? "",
-      specialty: detail.doctor.specialization ?? clinic.specialty,
+      specialty:
+        detail.doctor.specialization ?? clinic.specialty ?? "Spécialiste",
       experience: detail.doctor.experienceYears
         ? `+${detail.doctor.experienceYears} Ans`
         : "+5 Ans",
       language: "FR-EN",
-      doctorName: detail.doctor.fullName ?? clinic.doctorName,
+      doctorName: detail.doctor.fullName ?? clinic.doctorName ?? "Dr. Inconnu",
       description:
         detail.doctor.bio ??
         clinic.description ??
         "Spécialiste de santé qualifié.",
-      hoursRange: detail.doctor.hours ?? clinic.hours,
-      hoursdays: detail.doctor.days ?? clinic.days,
-      location: detail.doctor.address ?? detail.doctor.city ?? clinic.location,
+      hoursRange:
+        detail.doctor.hours ?? clinic.hours ?? "Horaires non spécifiés",
+      hoursdays: detail.doctor.days ?? clinic.days ?? "Jours non spécifiés",
+      location:
+        detail.doctor.address ??
+        detail.doctor.city ??
+        clinic.location ??
+        "Adresse non spécifiée",
       coverUri: detail.doctor.serviceLocationImageUrl ?? clinic.imageUri,
+      phone: detail.doctor.phone ?? clinic.phone,
+      email: detail.doctor.email ?? clinic.email,
     };
   }
+
   return {
-    clinicName: clinic.clinicName,
+    clinicName: clinic.clinicName ?? "Nom non spécifié",
     avatarUri: clinic.avatarUri || "",
-    specialty: clinic.specialty,
+    specialty: clinic.specialty ?? "Spécialiste",
     experience: "+5 Ans",
     language: "FR-EN",
-    doctorName: clinic.doctorName,
+    doctorName: clinic.doctorName ?? "Dr. Inconnu",
     description: clinic.description || "Spécialiste de santé qualifié.",
-    hoursRange: clinic.hours,
-    hoursdays: clinic.days,
-    location: clinic.location,
+    hoursRange: clinic.hours ?? "Horaires non spécifiés",
+    hoursdays: clinic.days ?? "Jours non spécifiés",
+    location: clinic.location ?? "Adresse non spécifiée",
     coverUri: clinic.imageUri,
+    phone: clinic.phone,
+    email: clinic.email,
   };
 };
 
 // ================================================================================== //
 // Main
 // ================================================================================== //
+
 export default function ExploreScreen() {
   // ================================================================================== //
   // Hooks
@@ -99,6 +134,7 @@ export default function ExploreScreen() {
   // Refs
   // ================================================================================== //
   const profileSheetRef = useRef<ProfessionalProviderBottomSheetRef>(null);
+  const shareSheetRef = useRef<ShareContactBottomSheetRef>(null);
 
   // ================================================================================== //
   // States
@@ -109,6 +145,7 @@ export default function ExploreScreen() {
   );
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [currentProvider, setCurrentProvider] = useState<any>(null);
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -124,6 +161,7 @@ export default function ExploreScreen() {
     if (!selectedClinic) {
       setDoctorDetail(null);
       setDetailError(null);
+      setCurrentProvider(null);
       return;
     }
 
@@ -150,6 +188,11 @@ export default function ExploreScreen() {
         const detail: DoctorDetailResponse = body?.data ?? body;
         setDoctorDetail(detail);
         setDetailError(null);
+
+        // ✅ Mettre à jour le provider courant
+        if (selectedClinic) {
+          setCurrentProvider(mapProviderData(selectedClinic, detail));
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -221,6 +264,15 @@ export default function ExploreScreen() {
   const handleNotification = useCallback(() => {
     router.push("/(modals)/notifications" as never);
   }, [router]);
+
+  // ✅ Gestion du partage - ouvre le bottom sheet de partage
+  const handleShare = useCallback(() => {
+    if (currentProvider) {
+      shareSheetRef.current?.open();
+    } else {
+      Alert.alert("Info", "Aucun contact à partager");
+    }
+  }, [currentProvider]);
 
   // ================================================================================== //
   // Renders
@@ -335,20 +387,26 @@ export default function ExploreScreen() {
       )}
 
       {/* Profile sheet */}
-      {selectedClinic && (
+      {selectedClinic && currentProvider && (
         <ProfessionalProviderBottomSheet
           ref={profileSheetRef}
-          provider={mapProviderData(selectedClinic, doctorDetail)}
+          provider={currentProvider}
           onReservation={() => handleReservation()}
           onShowOnMap={() => {
             profileSheetRef.current?.close();
             router.push(`/home/map?clinicId=${selectedClinic.id}` as never);
           }}
-          onShare={() => {
-            // TODO: Implémenter le partage
-          }}
+          onShare={handleShare}
         />
       )}
+
+      {/* Share Contact Bottom Sheet */}
+      <ShareContactBottomSheet
+        ref={shareSheetRef}
+        provider={
+          currentProvider || mapProviderData(selectedClinic!, doctorDetail)
+        }
+      />
     </SafeAreaView>
   );
 }

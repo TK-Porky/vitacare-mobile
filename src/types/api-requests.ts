@@ -220,6 +220,7 @@ export interface UpdateNotificationPreferencesRequest {
 
 export interface CreateReminderRequest {
   medicationId: number;
+  medicationName: string;
   form: string;
   dosage: string;
   frequency: string;

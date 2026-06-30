@@ -1,33 +1,36 @@
 /**
  * Reminder hooks for managing medication intake reminders
- * 
+ *
  * @remarks
  * This hook provides reminder operations including fetching, creating, updating,
  * and managing reminder status. It uses TanStack Query for state management
  * and React Query for data fetching.
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { reminderService } from '../services/reminder.service';
-import { notificationService } from '../services/notification.service';
-import type { 
-  CreateReminderRequest, 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { reminderService } from "@/services/reminder.service";
+import { notificationService } from "@/services/notification.service";
+import type {
+  CreateReminderRequest,
   UpdateReminderRequest,
-  RemindersListQuery 
-} from '../types/api-requests';
+  RemindersListQuery,
+} from "@/types/api-requests";
 
 // Query keys for caching and invalidation
 export const reminderKeys = {
-  all: ['reminders'] as const,
-  lists: () => [...reminderKeys.all, 'list'] as const,
-  list: (query?: RemindersListQuery) => [...reminderKeys.lists(), query] as const,
-  details: () => [...reminderKeys.all, 'detail'] as const,
+  all: ["reminders"] as const,
+  lists: () => [...reminderKeys.all, "list"] as const,
+  list: (query?: RemindersListQuery) =>
+    [...reminderKeys.lists(), query] as const,
+  details: () => [...reminderKeys.all, "detail"] as const,
   detail: (id: string) => [...reminderKeys.details(), id] as const,
-  summary: () => [...reminderKeys.all, 'summary'] as const,
-  upcoming: () => [...reminderKeys.all, 'upcoming'] as const,
-  today: () => [...reminderKeys.all, 'today'] as const,
-  patient: (patientId: string) => [...reminderKeys.all, 'patient', patientId] as const,
-  medication: (medicationId: string) => [...reminderKeys.all, 'medication', medicationId] as const,
+  summary: () => [...reminderKeys.all, "summary"] as const,
+  upcoming: () => [...reminderKeys.all, "upcoming"] as const,
+  today: () => [...reminderKeys.all, "today"] as const,
+  patient: (patientId: string) =>
+    [...reminderKeys.all, "patient", patientId] as const,
+  medication: (medicationId: string) =>
+    [...reminderKeys.all, "medication", medicationId] as const,
 };
 
 export const useReminders = (query?: RemindersListQuery) => {
@@ -42,7 +45,21 @@ export const useReminders = (query?: RemindersListQuery) => {
    */
   const remindersQuery = useQuery({
     queryKey: reminderKeys.list(query),
-    queryFn: () => reminderService.getReminders(query),
+    queryFn: async () => {
+      const result = await reminderService.getReminders(query);
+      console.log("[useReminders] Service result:", result);
+
+      return {
+        items: result.items || [],
+        pagination: result.pagination || {
+          total: 0,
+          page: 1,
+          limit: 20,
+          totalPages: 0,
+        },
+        summary: result.summary || { pending: 0, taken: 0, missed: 0 },
+      };
+    },
   });
 
   /**
@@ -89,10 +106,14 @@ export const useReminders = (query?: RemindersListQuery) => {
   /**
    * Get reminders for a specific patient
    */
-  const usePatientReminders = (patientId: string, patientQuery?: RemindersListQuery) => {
+  const usePatientReminders = (
+    patientId: string,
+    patientQuery?: RemindersListQuery,
+  ) => {
     return useQuery({
       queryKey: reminderKeys.patient(patientId),
-      queryFn: () => reminderService.getPatientReminders(patientId, patientQuery),
+      queryFn: () =>
+        reminderService.getPatientReminders(patientId, patientQuery),
       enabled: !!patientId,
     });
   };
@@ -100,10 +121,14 @@ export const useReminders = (query?: RemindersListQuery) => {
   /**
    * Get reminders for a specific medication
    */
-  const useMedicationReminders = (medicationId: string, medicationQuery?: RemindersListQuery) => {
+  const useMedicationReminders = (
+    medicationId: string,
+    medicationQuery?: RemindersListQuery,
+  ) => {
     return useQuery({
       queryKey: reminderKeys.medication(medicationId),
-      queryFn: () => reminderService.getMedicationReminders(medicationId, medicationQuery),
+      queryFn: () =>
+        reminderService.getMedicationReminders(medicationId, medicationQuery),
       enabled: !!medicationId,
     });
   };
@@ -116,10 +141,11 @@ export const useReminders = (query?: RemindersListQuery) => {
    * Create a new reminder
    */
   const createReminderMutation = useMutation({
-    mutationFn: (data: CreateReminderRequest) => reminderService.createReminder(data),
+    mutationFn: (data: CreateReminderRequest) =>
+      reminderService.createReminder(data),
     onSuccess: (created) => {
       // Planifier une notification locale pour le rappel de traitement
-      const [hours, mins] = created.scheduledHour.split(':').map(Number);
+      const [hours, mins] = created.scheduledHour.split(":").map(Number);
       const reminderTime = new Date();
       reminderTime.setHours(hours, mins, 0, 0);
       if (reminderTime <= new Date()) {
@@ -140,7 +166,7 @@ export const useReminders = (query?: RemindersListQuery) => {
    * Update an existing reminder
    */
   const updateReminderMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateReminderRequest }) => 
+    mutationFn: ({ id, data }: { id: string; data: UpdateReminderRequest }) =>
       reminderService.updateReminder(id, data),
     onSuccess: (data, variables) => {
       // Update the specific reminder in cache
@@ -158,7 +184,7 @@ export const useReminders = (query?: RemindersListQuery) => {
     mutationFn: (id: string) => reminderService.deleteReminder(id),
     onSuccess: (_, id) => {
       // Annuler la notification locale associée
-      notificationService.cancelByDataKey('treatmentId', id);
+      notificationService.cancelByDataKey("treatmentId", id);
 
       queryClient.removeQueries({ queryKey: reminderKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
@@ -170,7 +196,7 @@ export const useReminders = (query?: RemindersListQuery) => {
    * Mark a reminder as taken
    */
   const markAsTakenMutation = useMutation({
-    mutationFn: ({ id, takenAt }: { id: string; takenAt?: string }) => 
+    mutationFn: ({ id, takenAt }: { id: string; takenAt?: string }) =>
       reminderService.markAsTaken(id, takenAt),
     onSuccess: (data, variables) => {
       // Update the specific reminder in cache
@@ -185,13 +211,18 @@ export const useReminders = (query?: RemindersListQuery) => {
    * Snooze a reminder
    */
   const snoozeReminderMutation = useMutation({
-    mutationFn: ({ id, minutes }: { id: string; minutes: number }) => 
+    mutationFn: ({ id, minutes }: { id: string; minutes: number }) =>
       reminderService.snoozeReminder(id, minutes),
     onSuccess: (data, variables) => {
       // Reporter la notification locale
-      const [hours, mins] = data.scheduledHour.split(':').map(Number);
+      const [hours, mins] = data.scheduledHour.split(":").map(Number);
       const reminderTime = new Date();
-      reminderTime.setHours(hours + Math.floor(variables.minutes / 60), mins + variables.minutes % 60, 0, 0);
+      reminderTime.setHours(
+        hours + Math.floor(variables.minutes / 60),
+        mins + (variables.minutes % 60),
+        0,
+        0,
+      );
       notificationService.scheduleTreatmentReminder({
         treatmentId: String(data.id),
         treatmentName: data.medicationName,
@@ -208,8 +239,13 @@ export const useReminders = (query?: RemindersListQuery) => {
    * Create multiple reminders at once
    */
   const createBulkRemindersMutation = useMutation({
-    mutationFn: ({ patientId, reminders }: { patientId: string; reminders: Omit<CreateReminderRequest, 'patientId'>[] }) => 
-      reminderService.createBulkReminders(patientId, reminders),
+    mutationFn: ({
+      patientId,
+      reminders,
+    }: {
+      patientId: string;
+      reminders: Omit<CreateReminderRequest, "patientId">[];
+    }) => reminderService.createBulkReminders(patientId, reminders),
     onSuccess: () => {
       // Invalidate all reminders queries
       queryClient.invalidateQueries({ queryKey: reminderKeys.all });
@@ -220,7 +256,8 @@ export const useReminders = (query?: RemindersListQuery) => {
    * Mark specific reminders as read
    */
   const markAsReadMutation = useMutation({
-    mutationFn: (reminderIds: string[]) => reminderService.markAsRead(reminderIds),
+    mutationFn: (reminderIds: string[]) =>
+      reminderService.markAsRead(reminderIds),
     onSuccess: () => {
       // Invalidate lists
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
