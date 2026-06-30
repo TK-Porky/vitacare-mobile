@@ -1,35 +1,21 @@
-import { View, StyleSheet } from 'react-native';
-import { Mail } from 'lucide-react-native';
-import { BaseInput, BaseInputProps } from '../generics/BaseInput';
-import { colors } from '../../themes';
+import { Mail } from "lucide-react-native";
+import { BaseInput, BaseInputProps } from "../generics/BaseInput";
+import { colors } from "../../themes";
 
-type Props = Omit<BaseInputProps, 'leftSlot' | 'keyboardType'>;
+type Props = Omit<BaseInputProps, "leftSlot" | "keyboardType">;
 
-export function EmailInput({
-  value,
-  ...baseProps
-}: Props) {
+export function EmailInput(props: Props) {
   return (
     <BaseInput
-      keyboardType="email-address"
+      secureTextEntry={false}
       autoCapitalize="none"
       autoCorrect={false}
+      keyboardType="email-address"
       placeholder="Adresse email"
-      value={value}
       leftSlot={
-        <View style={styles.leftSlot}>
-          <Mail size={16} color={colors.inkLight} style={{ opacity: 1.0 }} />
-        </View>
+        <Mail size={16} color={colors.inkLight} style={{ opacity: 1.0 }} />
       }
-      {...baseProps}
+      {...props}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  leftSlot: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  }
-})

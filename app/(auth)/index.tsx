@@ -1,4 +1,3 @@
-// app/(auth)/index.tsx
 import React, { useEffect } from "react";
 import {
   View,
@@ -68,7 +67,6 @@ export default function LandingScreen() {
     );
   }
 
-  // Afficher le carousel si jamais vu
   if (showCarousel) {
     const slides = [
       {
@@ -76,7 +74,7 @@ export default function LandingScreen() {
         title: "Bienvenue sur VitaCare",
         description:
           "Gérez votre santé en toute simplicité avec notre application.\nPrenez soin de vous et vos proches.",
-        animation: ANIMATIONS.welcome,
+        animation: ANIMATIONS.doctor,
       },
       {
         id: "2",
@@ -106,16 +104,6 @@ export default function LandingScreen() {
   // Écran d'accueil normal
   return (
     <View style={styles.container}>
-      {/* Bouton passer */}
-      <TouchableOpacity
-        style={styles.skipBtn}
-        onPress={() => handleNavigate("/(auth)/login-phone")}
-        accessibilityLabel="Passer l'introduction"
-        accessibilityRole="button"
-      >
-        <Text style={styles.skipText}>Passer</Text>
-      </TouchableOpacity>
-
       {/* ── Illustration avec Lottie ── */}
       <View style={styles.illustrationArea}>
         {/* Animation Lottie principale */}
@@ -146,7 +134,7 @@ export default function LandingScreen() {
 
         {/* CTA principal */}
         <AuthButton
-          label="Continuer avec le mail"
+          label="Se connecter avec l'email"
           onPress={() => handleNavigate("/(auth)/login-email")}
           variant="primary"
           fullWidth
@@ -163,19 +151,6 @@ export default function LandingScreen() {
 
         {/* Secondaires côte à côte */}
         <View style={styles.secondaryRow}>
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={() => handleNavigate("/(auth)/login-phone")}
-            activeOpacity={0.7}
-            accessibilityLabel="Se connecter par téléphone"
-            accessibilityRole="button"
-          >
-            <Ionicons name="call-outline" size={17} color={colors.primary} />
-            <Text style={styles.secondaryText}>Par téléphone</Text>
-          </TouchableOpacity>
-
-          <View style={styles.secondaryDivider} />
-
           <TouchableOpacity
             style={styles.secondaryBtn}
             onPress={() => handleNavigate("/(auth)/register")}
@@ -217,6 +192,7 @@ export default function LandingScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 30,
     flex: 1,
     backgroundColor: colors.white,
     alignItems: "center",
@@ -251,22 +227,6 @@ const styles = StyleSheet.create({
     position: "relative",
     paddingTop: 20,
   },
-  pulseRing1: {
-    position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    borderWidth: 1.5,
-    borderColor: "rgba(29,158,117,0.12)",
-  },
-  pulseRing2: {
-    position: "absolute",
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    borderWidth: 1,
-    borderColor: "rgba(29,158,117,0.06)",
-  },
   lottieWrapper: {
     width: width * 0.6,
     height: width * 0.6,
@@ -300,8 +260,7 @@ const styles = StyleSheet.create({
   bottom: {
     width: "100%",
     paddingHorizontal: 24,
-    paddingBottom: Platform.OS === "ios" ? 32 : 24,
-    paddingTop: 16,
+    paddingBottom: Platform.OS === "ios" ? 60 : 40,
     gap: 16,
   },
   copy: {

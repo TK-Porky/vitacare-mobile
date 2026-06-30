@@ -13,14 +13,7 @@ import {
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import {
-  CustomInput,
-  PasswordInput,
-  PrimaryButton,
-  HelperText,
-  CheckboxField,
-  EmailInput,
-} from "@/components";
+import { PasswordInput, HelperText, EmailInput } from "@/components";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { colors, fontFamily, fontSize } from "@/themes";
@@ -43,7 +36,8 @@ export default function LoginEmailScreen() {
   // ================================================================================== //
   // Hooks
   // ================================================================================== //
-  const { loginEmail, isLoggingInEmail } = useAuth();
+  const { loginEmail, isLoggingInEmail, googleLogin, isGoogleLoading } =
+    useAuth();
   const storeError = useAuthStore((state) => state.error);
   const clearStoreError = useAuthStore((state) => state.clearError);
 
@@ -79,15 +73,15 @@ export default function LoginEmailScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
-    loginEmail({ email, password, rememberMe });
+    await loginEmail({ email, password, rememberMe });
   }, [email, password, rememberMe, validate, clearStoreError, loginEmail]);
 
-  const handleGoogle = useCallback(async () => {
+  const handleGoogleLogin = useCallback(async () => {
     if (Platform.OS === "ios") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    // TODO: Google OAuth
-  }, []);
+    await googleLogin();
+  }, [googleLogin]);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -118,10 +112,12 @@ export default function LoginEmailScreen() {
   // ================================================================================== //
   // Render
   // ================================================================================== //
+
+  const isLoading = isLoggingInEmail || isGoogleLoading;
+
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <ScrollView
@@ -140,18 +136,26 @@ export default function LoginEmailScreen() {
 
         {/* ── Form ── */}
         <View style={styles.form}>
-          <EmailInput
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              if (localError) setLocalError("");
-              if (storeError) clearStoreError();
-            }}
-            placeholder="exemple@email.com"
-            autoFocus
-          />
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.label}>
+              Email <Text style={styles.required}>*</Text>
+            </Text>
+            <EmailInput
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (localError) setLocalError("");
+                if (storeError) clearStoreError();
+              }}
+              placeholder="exemple@email.com"
+              autoFocus
+            />
+          </View>
 
-          <View style={styles.passwordWrapper}>
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.label}>
+              Mot de passe <Text style={styles.required}>*</Text>
+            </Text>
             <PasswordInput
               value={password}
               onChangeText={(text) => {
@@ -164,11 +168,6 @@ export default function LoginEmailScreen() {
           </View>
 
           <View style={styles.rememberRow}>
-            <CheckboxField
-              label="Se souvenir de moi"
-              checked={rememberMe}
-              onToggle={() => setRememberMe((v) => !v)}
-            />
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={handleForgotPassword}
@@ -194,8 +193,12 @@ export default function LoginEmailScreen() {
             onPress={handleSubmit}
             variant="primary"
             fullWidth
-            loading={isLoggingInEmail}
+            loading={isLoading}
+            disabled={isLoading}
             size="lg"
+            icon={
+              <Ionicons name="log-in-outline" size={18} color={colors.white} />
+            }
           />
 
           <View style={styles.divider}>
@@ -204,16 +207,26 @@ export default function LoginEmailScreen() {
             <View style={styles.dividerLine} />
           </View>
 
+          {/* ✅ Google Sign-In avec Firebase */}
           <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogle}
+            style={[
+              styles.googleButton,
+              isLoading && styles.googleButtonDisabled,
+            ]}
+            onPress={handleGoogleLogin}
             activeOpacity={0.7}
-            disabled={isLoggingInEmail}
+            disabled={isLoading}
             accessibilityLabel="Se connecter avec Google"
             accessibilityRole="button"
           >
-            <Ionicons name="logo-google" size={20} color="#4285F4" />
-            <Text style={styles.googleText}>Continuer avec Google</Text>
+            {isGoogleLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <>
+                <Ionicons name="logo-google" size={20} color="#4285F4" />
+                <Text style={styles.googleText}>Continuer avec Google</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -221,24 +234,22 @@ export default function LoginEmailScreen() {
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             Vous n'avez pas de compte ?{" "}
-            <TouchableOpacity
-              onPress={handleSignUp}
-              accessibilityLabel="Créer un compte"
-              accessibilityRole="button"
-            >
-              <Text style={styles.footerLink}>S'inscrire</Text>
-            </TouchableOpacity>
+            <Text style={styles.legalLink} onPress={handleSignUp}>
+              S'inscrire
+            </Text>
           </Text>
 
+          {/* Légal */}
           <Text style={styles.legal}>
             En continuant, vous acceptez nos{" "}
-            <TouchableOpacity onPress={handleTerms}>
-              <Text style={styles.legalLink}>conditions d'utilisation</Text>
-            </TouchableOpacity>{" "}
+            <Text style={styles.legalLink} onPress={handleTerms}>
+              Conditions d'utilisation
+            </Text>{" "}
             et notre{" "}
-            <TouchableOpacity onPress={handlePrivacy}>
-              <Text style={styles.legalLink}>politique de confidentialité</Text>
-            </TouchableOpacity>
+            <Text style={styles.legalLink} onPress={handlePrivacy}>
+              Politique de confidentialité
+            </Text>
+            .
           </Text>
         </View>
       </ScrollView>
@@ -252,6 +263,7 @@ export default function LoginEmailScreen() {
 
 const styles = StyleSheet.create({
   root: {
+    marginTop: 30,
     flex: 1,
     backgroundColor: colors.white,
   },
@@ -259,7 +271,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 8,
-    paddingBottom: Platform.OS === "ios" ? 32 : 24,
+    paddingBottom: Platform.OS === "ios" ? 60 : 40,
   },
 
   // Form
@@ -267,13 +279,21 @@ const styles = StyleSheet.create({
     marginTop: 24,
     gap: 20,
   },
-  passwordWrapper: {
-    marginTop: 4,
+  label: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  required: {
+    color: colors.error || "#E53935",
+  },
+  fieldWrapper: {
+    gap: 6,
   },
   rememberRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     marginTop: 4,
   },
   forgotText: {
@@ -309,10 +329,13 @@ const styles = StyleSheet.create({
     gap: 10,
     borderWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: 50,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.white,
+  },
+  googleButtonDisabled: {
+    opacity: 0.6,
   },
   googleText: {
     fontFamily: fontFamily.medium,
@@ -333,19 +356,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.inkLight,
   },
-  footerLink: {
-    fontFamily: fontFamily.semiBold,
-    color: colors.primary,
-  },
+
+  // Legal
   legal: {
-    fontFamily: fontFamily.regular,
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.regular,
     color: colors.inkLight,
     textAlign: "center",
     lineHeight: 17,
   },
   legalLink: {
-    fontFamily: fontFamily.semiBold,
     color: colors.primary,
+    fontFamily: fontFamily.semiBold,
   },
 });

@@ -159,24 +159,22 @@ export default function LoginPhoneScreen() {
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             Vous n'avez pas de compte ?{" "}
-            <TouchableOpacity
-              onPress={handleSignUp}
-              accessibilityLabel="Créer un compte"
-              accessibilityRole="button"
-            >
-              <Text style={styles.footerLink}>S'inscrire</Text>
-            </TouchableOpacity>
+            <Text style={styles.legalLink} onPress={handleSignUp}>
+              S'inscrire
+            </Text>
           </Text>
 
+          {/* Légal */}
           <Text style={styles.legal}>
             En continuant, vous acceptez nos{" "}
-            <TouchableOpacity onPress={handleTerms}>
-              <Text style={styles.legalLink}>conditions d'utilisation</Text>
-            </TouchableOpacity>
-            <Text style={styles.legal}> et notre </Text>
-            <TouchableOpacity onPress={handlePrivacy}>
-              <Text style={styles.legalLink}>politique de confidentialité</Text>
-            </TouchableOpacity>
+            <Text style={styles.legalLink} onPress={handleTerms}>
+              Conditions d'utilisation
+            </Text>{" "}
+            et notre{" "}
+            <Text style={styles.legalLink} onPress={handlePrivacy}>
+              Politique de confidentialité
+            </Text>
+            .
           </Text>
         </View>
       </ScrollView>

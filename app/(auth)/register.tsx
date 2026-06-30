@@ -38,7 +38,7 @@ export default function RegisterScreen() {
   // ================================================================================== //
   // States
   // ================================================================================== //
-  const [mode, setMode] = useState<RegisterMode>("phone");
+  const [mode, setMode] = useState<RegisterMode>("email");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -189,7 +189,6 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <ScrollView
@@ -227,7 +226,7 @@ export default function RegisterScreen() {
             )}
           </View>
 
-          {/* Mode d'inscription */}
+          {/* Mode d'inscription 
           <View style={styles.fieldWrapper}>
             <Text style={styles.label}>
               Mode d'inscription <Text style={styles.required}>*</Text>
@@ -263,6 +262,7 @@ export default function RegisterScreen() {
               ))}
             </View>
           </View>
+          */}
 
           {/* Contact (Phone ou Email) */}
           <View style={styles.fieldWrapper}>
@@ -375,24 +375,22 @@ export default function RegisterScreen() {
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             Vous avez déjà un compte ?{" "}
-            <TouchableOpacity
-              onPress={handleLogin}
-              accessibilityLabel="Se connecter"
-              accessibilityRole="button"
-            >
-              <Text style={styles.footerLink}>Se connecter</Text>
-            </TouchableOpacity>
+            <Text style={styles.legalLink} onPress={handleLogin}>
+              Se connecter
+            </Text>
           </Text>
 
+          {/* Légal */}
           <Text style={styles.legal}>
             En continuant, vous acceptez nos{" "}
-            <TouchableOpacity onPress={handleTerms}>
-              <Text style={styles.legalLink}>conditions d'utilisation</Text>
-            </TouchableOpacity>{" "}
+            <Text style={styles.legalLink} onPress={handleTerms}>
+              Conditions d'utilisation
+            </Text>{" "}
             et notre{" "}
-            <TouchableOpacity onPress={handlePrivacy}>
-              <Text style={styles.legalLink}>politique de confidentialité</Text>
-            </TouchableOpacity>
+            <Text style={styles.legalLink} onPress={handlePrivacy}>
+              Politique de confidentialité
+            </Text>
+            .
           </Text>
         </View>
       </ScrollView>
@@ -406,6 +404,7 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
   root: {
+    marginTop: 30,
     flex: 1,
     backgroundColor: colors.white,
   },
@@ -413,7 +412,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 8,
-    paddingBottom: Platform.OS === "ios" ? 32 : 24,
+    paddingBottom: Platform.OS === "ios" ? 60 : 40,
   },
 
   // Form
@@ -426,7 +425,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: colors.ink,
   },
   required: {
@@ -434,7 +433,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     color: colors.inkLight,
     lineHeight: 16,
     marginTop: 2,
@@ -480,23 +479,24 @@ const styles = StyleSheet.create({
   // Footer
   footer: {
     marginTop: 24,
-    gap: 16,
+    gap: 24,
     alignItems: "center",
     flex: 1,
     justifyContent: "flex-end",
   },
   footerText: {
     fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: colors.inkLight,
   },
   footerLink: {
     fontFamily: fontFamily.semiBold,
     color: colors.primary,
   },
+
   legal: {
     fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     color: colors.inkLight,
     textAlign: "center",
     lineHeight: 17,

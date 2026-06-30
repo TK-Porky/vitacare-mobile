@@ -1,8 +1,8 @@
-import { User } from 'lucide-react-native';
-import { BaseInput, BaseInputProps } from '../generics/BaseInput';
-import { colors } from '../../themes';
+import { User } from "lucide-react-native";
+import { BaseInput, BaseInputProps } from "../generics/BaseInput";
+import { colors } from "../../themes";
 
-type Props = Omit<BaseInputProps, 'leftSlot' | 'keyboardType'>;
+type Props = Omit<BaseInputProps, "leftSlot" | "keyboardType">;
 
 /** Champ prénom / nom avec icône utilisateur. */
 export function NameInput(props: Props) {
@@ -10,8 +10,12 @@ export function NameInput(props: Props) {
     <BaseInput
       keyboardType="default"
       autoCapitalize="words"
+      autoCorrect={false}
+      secureTextEntry={false}
       placeholder="Nom complet"
-      leftSlot={<User size={16} color={colors.inkLight} style={{ opacity: 1.0 }} />}
+      leftSlot={
+        <User size={16} color={colors.inkLight} style={{ opacity: 1.0 }} />
+      }
       {...props}
     />
   );
