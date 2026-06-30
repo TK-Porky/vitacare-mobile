@@ -1,19 +1,19 @@
 /**
  * Client API Handler
- * 
+ *
  * This class handles all API requests with automatic token management and retry logic.
  * Optimized for Expo SDK 56+ with modern fetch API and FormData for file uploads.
  */
-import { fetch } from 'expo/fetch';
-import { File as ExpoFile } from 'expo-file-system';
-import * as SecureStore from 'expo-secure-store';
-import { API_CONFIG } from '../types/api-endpoints';
-import { ApiResponse } from '../types/api-responses';
+import { fetch } from "expo/fetch";
+import { File as ExpoFile } from "expo-file-system";
+import * as SecureStore from "expo-secure-store";
+import { API_CONFIG } from "../types/api-endpoints";
+import { ApiResponse } from "../types/api-responses";
 
 // Types
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-interface RequestConfig extends Omit<RequestInit, 'method'> {
+interface RequestConfig extends Omit<RequestInit, "method"> {
   method: HttpMethod;
   retries?: number;
   retryDelay?: number;
@@ -43,8 +43,8 @@ class ApiClient {
   constructor() {
     this.baseURL = `${API_CONFIG.BASE_URL}`;
     this.defaultHeaders = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      "Content-Type": "application/json",
+      Accept: "application/json",
     };
   }
 
@@ -62,9 +62,9 @@ class ApiClient {
    */
   private async getToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync('vitacare_access_token');
+      return await SecureStore.getItemAsync("vitacare_access_token");
     } catch (error) {
-      console.error('[API] Failed to get token:', error);
+      console.error("[API] Failed to get token:", error);
       return null;
     }
   }
@@ -75,9 +75,9 @@ class ApiClient {
    */
   private async getRefreshToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync('vitacare_refresh_token');
+      return await SecureStore.getItemAsync("vitacare_refresh_token");
     } catch (error) {
-      console.error('[API] Failed to get refresh token:', error);
+      console.error("[API] Failed to get refresh token:", error);
       return null;
     }
   }
@@ -109,7 +109,7 @@ class ApiClient {
   /**
    * Cancel a specific request
    */
-  cancelRequest(endpoint: string, method: HttpMethod = 'GET') {
+  cancelRequest(endpoint: string, method: HttpMethod = "GET") {
     const id = this.getRequestId(endpoint, method);
     const controller = this.abortControllers.get(id);
     if (controller) {
@@ -137,10 +137,10 @@ class ApiClient {
     if (__DEV__) {
       console.log(`[API] ${method} ${url}`);
       if (data && !(data instanceof FormData)) {
-        console.log('[API] Body:', data);
+        console.log("[API] Body:", data);
       }
       if (data instanceof FormData) {
-        console.log('[API] FormData upload');
+        console.log("[API] FormData upload");
       }
     }
   }
@@ -151,8 +151,9 @@ class ApiClient {
   private logResponse(url: string, status: number, data: any) {
     if (__DEV__) {
       console.log(`[API] ${status} ${url}`);
+      console.log(`[API] Response ${status} ${url}`, data);
       if (status >= 400) {
-        console.warn('[API] Error Response:', data);
+        console.warn("[API] Error Response:", data);
       }
     }
   }
@@ -169,7 +170,7 @@ class ApiClient {
    */
   private async requestWithRetry<T = any>(
     endpoint: string,
-    options: RequestConfig = { method: 'GET' }
+    options: RequestConfig = { method: "GET" },
   ): Promise<ApiResponse<T>> {
     const retries = options.retries ?? this.MAX_RETRIES;
     const retryDelay = options.retryDelay ?? this.BASE_RETRY_DELAY;
@@ -178,30 +179,30 @@ class ApiClient {
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
         const result = await this.request<T>(endpoint, options);
-        
+
         // Si succès ou erreur non récupérable, retourner immédiatement
         if (result.success || (result.statusCode && result.statusCode < 500)) {
           return result;
         }
-        
+
         // Erreur 5xx, on retente
         lastError = result;
-        
+
         if (attempt < retries - 1) {
           const delay = this.getRetryDelay(attempt, retryDelay);
           console.log(`[API] Retry ${attempt + 1}/${retries} in ${delay}ms`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       } catch (error) {
         lastError = {
           success: false,
-          error: error instanceof Error ? error.message : 'Request failed',
+          error: error instanceof Error ? error.message : "Request failed",
           statusCode: 0,
         };
-        
+
         if (attempt < retries - 1) {
           const delay = this.getRetryDelay(attempt, retryDelay);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
@@ -214,33 +215,35 @@ class ApiClient {
    */
   private async request<T = any>(
     endpoint: string,
-    options: RequestConfig = { method: 'GET' }
+    options: RequestConfig = { method: "GET" },
   ): Promise<ApiResponse<T>> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${this.baseURL}${endpoint}`;
     const requestId = this.getRequestId(endpoint, options.method);
-    
+
     // Get the auth state
     const token = await this.getToken();
-    
+
     // Set the headers
     const headers: Record<string, string> = {
       ...this.defaultHeaders,
-      ...(options.headers as Record<string, string> || {}),
+      ...((options.headers as Record<string, string>) || {}),
     };
 
     // Ne pas ajouter Content-Type pour FormData (le navigateur gère la boundary)
     if (!(options.body instanceof FormData)) {
-      headers['Content-Type'] = 'application/json';
+      headers["Content-Type"] = "application/json";
     }
 
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
     // Create AbortController for timeout and cancellation
     const controller = new AbortController();
     this.abortControllers.set(requestId, controller);
-    
+
     // Setup timeout
     const timeoutId = setTimeout(() => {
       controller.abort();
@@ -254,17 +257,21 @@ class ApiClient {
     };
 
     // Convert body to JSON if needed
-    if (options.body && !(options.body instanceof FormData) && typeof options.body === 'object') {
+    if (
+      options.body &&
+      !(options.body instanceof FormData) &&
+      typeof options.body === "object"
+    ) {
       config.body = JSON.stringify(options.body);
     }
 
     try {
       this.logRequest(options.method, url, options.body);
-      
+
       const response = await fetch(url, config);
       clearTimeout(timeoutId);
       this.abortControllers.delete(requestId);
-      
+
       // Handle authentication errors (401 or 403)
       if (response.status === 401 || response.status === 403) {
         return this.handleAuthError<T>(endpoint, options, response);
@@ -273,11 +280,11 @@ class ApiClient {
       // Process response
       const text = await response.text();
       let data: any = {};
-      
+
       try {
         data = text ? JSON.parse(text) : {};
       } catch (err) {
-        console.warn('[API] Response is not valid JSON:', text);
+        console.warn("[API] Response is not valid JSON:", text);
       }
 
       this.logResponse(url, response.status, data);
@@ -287,20 +294,22 @@ class ApiClient {
         success: response.ok,
         data: body?.data ?? body,
         message: body?.message,
-        error: !response.ok ? data.error || data.message || `HTTP Error ${response.status}` : undefined,
+        error: !response.ok
+          ? data.error || data.message || `HTTP Error ${response.status}`
+          : undefined,
         statusCode: response.status,
       };
     } catch (error) {
       clearTimeout(timeoutId);
       this.abortControllers.delete(requestId);
-      
-      console.error('[API] Request error:', error);
-      
+
+      console.error("[API] Request error:", error);
+
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
+        if (error.name === "AbortError") {
           return {
             success: false,
-            error: 'La requête a expiré ou a été annulée',
+            error: "La requête a expiré ou a été annulée",
             statusCode: 408,
           };
         }
@@ -313,7 +322,7 @@ class ApiClient {
 
       return {
         success: false,
-        error: 'Une erreur inattendue est survenue',
+        error: "Une erreur inattendue est survenue",
         statusCode: 500,
       };
     }
@@ -325,7 +334,7 @@ class ApiClient {
   private async handleAuthError<T = any>(
     endpoint: string,
     options: RequestConfig,
-    originalResponse: Response
+    originalResponse: Response,
   ): Promise<ApiResponse<T>> {
     // Si ce n'est pas une erreur 401, retourner l'erreur directement
     if (originalResponse.status !== 401) {
@@ -334,11 +343,12 @@ class ApiClient {
       try {
         data = text ? JSON.parse(text) : {};
       } catch (err) {
-        console.warn('[API] Response is not valid JSON:', text);
+        console.warn("[API] Response is not valid JSON:", text);
       }
       return {
         success: false,
-        error: data.error || data.message || `HTTP Error ${originalResponse.status}`,
+        error:
+          data.error || data.message || `HTTP Error ${originalResponse.status}`,
         statusCode: originalResponse.status,
       };
     }
@@ -347,8 +357,13 @@ class ApiClient {
     if (this.isRefreshing) {
       return new Promise((resolve) => {
         this.addRefreshSubscriber((newToken) => {
-          const newHeaders = { ...options.headers, 'Authorization': `Bearer ${newToken}` };
-          resolve(this.request<T>(endpoint, { ...options, headers: newHeaders }));
+          const newHeaders = {
+            ...options.headers,
+            Authorization: `Bearer ${newToken}`,
+          };
+          resolve(
+            this.request<T>(endpoint, { ...options, headers: newHeaders }),
+          );
         });
       });
     }
@@ -359,12 +374,15 @@ class ApiClient {
     try {
       const newToken = await this.refreshToken();
       this.isRefreshing = false;
-      
+
       // Notifier tous les subscribers
       this.onTokenRefreshed(newToken);
-      
+
       // Retenter la requête originale
-      const newHeaders = { ...options.headers, 'Authorization': `Bearer ${newToken}` };
+      const newHeaders = {
+        ...options.headers,
+        Authorization: `Bearer ${newToken}`,
+      };
       return this.request<T>(endpoint, { ...options, headers: newHeaders });
     } catch (error) {
       this.isRefreshing = false;
@@ -372,7 +390,7 @@ class ApiClient {
       this.onLogout?.();
       return {
         success: false,
-        error: 'Session expirée. Veuillez vous reconnecter.',
+        error: "Session expirée. Veuillez vous reconnecter.",
         statusCode: 401,
       };
     }
@@ -384,39 +402,39 @@ class ApiClient {
   private async refreshToken(): Promise<string> {
     const refreshToken = await this.getRefreshToken();
     if (!refreshToken) {
-      throw new Error('No refresh token available');
+      throw new Error("No refresh token available");
     }
 
     try {
       const response = await fetch(`${this.baseURL}/auth/refresh-token`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ refreshToken }),
       });
 
       const text = await response.text();
       let data: any = {};
-      
+
       try {
         data = text ? JSON.parse(text) : {};
       } catch (err) {
-        console.warn('[API] Refresh response is not valid JSON:', text);
+        console.warn("[API] Refresh response is not valid JSON:", text);
       }
 
       // Backend wraps in ApiResponse: { success, data: { accessToken, expiresIn } }
       const accessToken = data.data?.accessToken || data.accessToken;
-      
+
       if (response.ok && accessToken) {
-        await SecureStore.setItemAsync('vitacare_access_token', accessToken);
+        await SecureStore.setItemAsync("vitacare_access_token", accessToken);
         return accessToken;
       }
-      
-      throw new Error('Token refresh failed');
+
+      throw new Error("Token refresh failed");
     } catch (error) {
-      console.error('[API] Token refresh error:', error);
-      throw new Error('Failed to refresh token');
+      console.error("[API] Token refresh error:", error);
+      throw new Error("Failed to refresh token");
     }
   }
 
@@ -430,10 +448,10 @@ class ApiClient {
   async get<T = any>(
     endpoint: string,
     params?: Record<string, string | number | boolean>,
-    options: Omit<RequestConfig, 'method' | 'body'> = {}
+    options: Omit<RequestConfig, "method" | "body"> = {},
   ): Promise<ApiResponse<T>> {
     let url = endpoint;
-    
+
     if (params) {
       const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
@@ -443,11 +461,11 @@ class ApiClient {
       });
       const queryString = searchParams.toString();
       if (queryString) {
-        url += (url.includes('?') ? '&' : '?') + queryString;
+        url += (url.includes("?") ? "&" : "?") + queryString;
       }
     }
 
-    return this.requestWithRetry<T>(url, { ...options, method: 'GET' });
+    return this.requestWithRetry<T>(url, { ...options, method: "GET" });
   }
 
   /**
@@ -456,11 +474,11 @@ class ApiClient {
   async post<T = any>(
     endpoint: string,
     data?: any,
-    options: Omit<RequestConfig, 'method' | 'body'> = {}
+    options: Omit<RequestConfig, "method" | "body"> = {},
   ): Promise<ApiResponse<T>> {
     return this.requestWithRetry<T>(endpoint, {
       ...options,
-      method: 'POST',
+      method: "POST",
       body: data,
     });
   }
@@ -471,11 +489,11 @@ class ApiClient {
   async put<T = any>(
     endpoint: string,
     data?: any,
-    options: Omit<RequestConfig, 'method' | 'body'> = {}
+    options: Omit<RequestConfig, "method" | "body"> = {},
   ): Promise<ApiResponse<T>> {
     return this.requestWithRetry<T>(endpoint, {
       ...options,
-      method: 'PUT',
+      method: "PUT",
       body: data,
     });
   }
@@ -486,11 +504,11 @@ class ApiClient {
   async patch<T = any>(
     endpoint: string,
     data?: any,
-    options: Omit<RequestConfig, 'method' | 'body'> = {}
+    options: Omit<RequestConfig, "method" | "body"> = {},
   ): Promise<ApiResponse<T>> {
     return this.requestWithRetry<T>(endpoint, {
       ...options,
-      method: 'PATCH',
+      method: "PATCH",
       body: data,
     });
   }
@@ -501,11 +519,11 @@ class ApiClient {
   async delete<T = any>(
     endpoint: string,
     data?: any,
-    options: Omit<RequestConfig, 'method' | 'body'> = {}
+    options: Omit<RequestConfig, "method" | "body"> = {},
   ): Promise<ApiResponse<T>> {
     return this.requestWithRetry<T>(endpoint, {
       ...options,
-      method: 'DELETE',
+      method: "DELETE",
       body: data,
     });
   }
@@ -523,30 +541,32 @@ class ApiClient {
     fileUri: string,
     fileName: string,
     fileType: string,
-    fieldName: string = 'file',
+    fieldName: string = "file",
     additionalData?: Record<string, any>,
-    options: Omit<RequestConfig, 'method' | 'body'> = {}
+    options: Omit<RequestConfig, "method" | "body"> = {},
   ): Promise<ApiResponse<T>> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
-    const requestId = this.getRequestId(endpoint, 'UPLOAD');
-    
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${this.baseURL}${endpoint}`;
+    const requestId = this.getRequestId(endpoint, "UPLOAD");
+
     try {
       // Get token for authentication
       const token = await this.getToken();
-      
+
       // Prepare headers
       const headers: Record<string, string> = {
-        'Accept': 'application/json',
-        ...(options.headers as Record<string, string> || {}),
+        Accept: "application/json",
+        ...((options.headers as Record<string, string>) || {}),
       };
 
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers["Authorization"] = `Bearer ${token}`;
       }
 
       // Create FormData
       const formData = new FormData();
-      
+
       // Create file object using Expo's File API (SDK 56+)
       const file = new ExpoFile(fileUri);
       formData.append(fieldName, file, fileName);
@@ -563,17 +583,17 @@ class ApiClient {
       // Create AbortController for timeout
       const controller = new AbortController();
       this.abortControllers.set(requestId, controller);
-      
+
       const timeoutId = setTimeout(() => {
         controller.abort();
         this.abortControllers.delete(requestId);
       }, API_CONFIG.TIMEOUT || 60000); // Longer timeout for uploads
 
-      this.logRequest('UPLOAD', url, { file: fileName, size: file.size });
+      this.logRequest("UPLOAD", url, { file: fileName, size: file.size });
 
       // Use fetch from expo/fetch (not global fetch)
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: formData,
         signal: controller.signal,
@@ -585,11 +605,11 @@ class ApiClient {
       // Process response
       const text = await response.text();
       let data: any = {};
-      
+
       try {
         data = text ? JSON.parse(text) : {};
       } catch (err) {
-        console.warn('[API] Upload response is not valid JSON:', text);
+        console.warn("[API] Upload response is not valid JSON:", text);
       }
 
       this.logResponse(url, response.status, data);
@@ -603,13 +623,16 @@ class ApiClient {
             const newToken = await this.refreshToken();
             this.isRefreshing = false;
             this.onTokenRefreshed(newToken);
-            
+
             // Retry upload with new token
-            const retryHeaders = { ...headers, 'Authorization': `Bearer ${newToken}` };
+            const retryHeaders = {
+              ...headers,
+              Authorization: `Bearer ${newToken}`,
+            };
             const retryFormData = new FormData();
             const retryFile = new ExpoFile(fileUri);
             retryFormData.append(fieldName, retryFile, fileName);
-            
+
             if (additionalData) {
               Object.entries(additionalData).forEach(([key, value]) => {
                 if (value !== undefined && value !== null) {
@@ -619,7 +642,7 @@ class ApiClient {
             }
 
             const retryResponse = await fetch(url, {
-              method: 'POST',
+              method: "POST",
               headers: retryHeaders,
               body: retryFormData,
             });
@@ -629,7 +652,10 @@ class ApiClient {
             try {
               retryData = retryText ? JSON.parse(retryText) : {};
             } catch (err) {
-              console.warn('[API] Retry upload response is not valid JSON:', retryText);
+              console.warn(
+                "[API] Retry upload response is not valid JSON:",
+                retryText,
+              );
             }
 
             const retryBody = retryResponse.ok ? retryData : undefined;
@@ -637,7 +663,11 @@ class ApiClient {
               success: retryResponse.ok,
               data: retryBody?.data ?? retryBody,
               message: retryBody?.message ?? retryData.message,
-              error: !retryResponse.ok ? retryData.error || retryData.message || `Upload HTTP Error ${retryResponse.status}` : undefined,
+              error: !retryResponse.ok
+                ? retryData.error ||
+                  retryData.message ||
+                  `Upload HTTP Error ${retryResponse.status}`
+                : undefined,
               statusCode: retryResponse.status,
             };
           } catch (error) {
@@ -645,7 +675,7 @@ class ApiClient {
             this.onLogout?.();
             return {
               success: false,
-              error: 'Session expirée. Veuillez vous reconnecter.',
+              error: "Session expirée. Veuillez vous reconnecter.",
               statusCode: 401,
             };
           }
@@ -654,11 +684,14 @@ class ApiClient {
         // If refresh is already in progress
         return new Promise((resolve) => {
           this.addRefreshSubscriber(async (newToken) => {
-            const retryHeaders = { ...headers, 'Authorization': `Bearer ${newToken}` };
+            const retryHeaders = {
+              ...headers,
+              Authorization: `Bearer ${newToken}`,
+            };
             const retryFormData = new FormData();
             const retryFile = new ExpoFile(fileUri);
             retryFormData.append(fieldName, retryFile, fileName);
-            
+
             if (additionalData) {
               Object.entries(additionalData).forEach(([key, value]) => {
                 if (value !== undefined && value !== null) {
@@ -668,7 +701,7 @@ class ApiClient {
             }
 
             const retryResponse = await fetch(url, {
-              method: 'POST',
+              method: "POST",
               headers: retryHeaders,
               body: retryFormData,
             });
@@ -678,7 +711,10 @@ class ApiClient {
             try {
               retryData = retryText ? JSON.parse(retryText) : {};
             } catch (err) {
-              console.warn('[API] Retry upload response is not valid JSON:', retryText);
+              console.warn(
+                "[API] Retry upload response is not valid JSON:",
+                retryText,
+              );
             }
 
             const retryBody2 = retryResponse.ok ? retryData : undefined;
@@ -686,7 +722,11 @@ class ApiClient {
               success: retryResponse.ok,
               data: retryBody2?.data ?? retryBody2,
               message: retryBody2?.message ?? retryData.message,
-              error: !retryResponse.ok ? retryData.error || retryData.message || `Upload HTTP Error ${retryResponse.status}` : undefined,
+              error: !retryResponse.ok
+                ? retryData.error ||
+                  retryData.message ||
+                  `Upload HTTP Error ${retryResponse.status}`
+                : undefined,
               statusCode: retryResponse.status,
             });
           });
@@ -698,16 +738,18 @@ class ApiClient {
         success: response.ok,
         data: body?.data ?? body,
         message: body?.message ?? data.message,
-        error: !response.ok ? data.error || data.message || `Upload HTTP Error ${response.status}` : undefined,
+        error: !response.ok
+          ? data.error || data.message || `Upload HTTP Error ${response.status}`
+          : undefined,
         statusCode: response.status,
       };
     } catch (error) {
       this.abortControllers.delete(requestId);
-      
-      console.error('[API] Upload error:', error);
-      
+
+      console.error("[API] Upload error:", error);
+
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
+        if (error.name === "AbortError") {
           return {
             success: false,
             error: "L'upload a expiré ou a été annulé",
@@ -734,27 +776,34 @@ class ApiClient {
    */
   async uploadMultiple<T = any>(
     endpoint: string,
-    files: Array<{ uri: string; name: string; type: string; fieldName?: string }>,
+    files: Array<{
+      uri: string;
+      name: string;
+      type: string;
+      fieldName?: string;
+    }>,
     additionalData?: Record<string, any>,
-    options: Omit<RequestConfig, 'method' | 'body'> = {}
+    options: Omit<RequestConfig, "method" | "body"> = {},
   ): Promise<ApiResponse<T>> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
-    const requestId = this.getRequestId(endpoint, 'UPLOAD_MULTIPLE');
-    
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${this.baseURL}${endpoint}`;
+    const requestId = this.getRequestId(endpoint, "UPLOAD_MULTIPLE");
+
     try {
       const token = await this.getToken();
-      
+
       const headers: Record<string, string> = {
-        'Accept': 'application/json',
-        ...(options.headers as Record<string, string> || {}),
+        Accept: "application/json",
+        ...((options.headers as Record<string, string>) || {}),
       };
 
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers["Authorization"] = `Bearer ${token}`;
       }
 
       const formData = new FormData();
-      
+
       // Add all files
       files.forEach((file, index) => {
         const fieldName = file.fieldName || `file${index + 1}`;
@@ -774,16 +823,18 @@ class ApiClient {
       // Create AbortController for timeout
       const controller = new AbortController();
       this.abortControllers.set(requestId, controller);
-      
+
       const timeoutId = setTimeout(() => {
         controller.abort();
         this.abortControllers.delete(requestId);
       }, API_CONFIG.TIMEOUT || 90000); // Longer timeout for multiple files
 
-      this.logRequest('UPLOAD_MULTIPLE', url, { files: files.map(f => f.name) });
+      this.logRequest("UPLOAD_MULTIPLE", url, {
+        files: files.map((f) => f.name),
+      });
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: formData,
         signal: controller.signal,
@@ -794,11 +845,11 @@ class ApiClient {
 
       const text = await response.text();
       let data: any = {};
-      
+
       try {
         data = text ? JSON.parse(text) : {};
       } catch (err) {
-        console.warn('[API] Upload response is not valid JSON:', text);
+        console.warn("[API] Upload response is not valid JSON:", text);
       }
 
       this.logResponse(url, response.status, data);
@@ -807,16 +858,18 @@ class ApiClient {
         success: response.ok,
         data: response.ok ? data : undefined,
         message: data.message,
-        error: !response.ok ? data.error || data.message || `Upload HTTP Error ${response.status}` : undefined,
+        error: !response.ok
+          ? data.error || data.message || `Upload HTTP Error ${response.status}`
+          : undefined,
         statusCode: response.status,
       };
     } catch (error) {
       this.abortControllers.delete(requestId);
-      
-      console.error('[API] Upload error:', error);
-      
+
+      console.error("[API] Upload error:", error);
+
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
+        if (error.name === "AbortError") {
           return {
             success: false,
             error: "L'upload multiple a expiré ou a été annulé",

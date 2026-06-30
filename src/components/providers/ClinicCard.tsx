@@ -1,141 +1,298 @@
-import { useState } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+// components/ClinicCard.tsx
+import React, { useState, useCallback, memo } from "react";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { MoreHorizontal } from "lucide-react-native";
-import { colors, fontFamily, fontSize } from "../../themes";
-import { PrimaryButton } from "../buttons";
-import { ClinicProvider } from "../../types";
-import { Skeleton } from "../generics";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { PrimaryButton } from "@/components/buttons";
+import { ClinicProvider } from "@/types";
+import { Skeleton } from "@/components/generics";
 
-function DoctorRow({
-  avatar,
-  name,
-  specialty,
-  price,
-  onMore,
-  onProfile,
-}: {
-  avatar?: string;
-  name: string;
-  specialty: string;
-  price: string;
-  onMore?: () => void;
-  onProfile?: () => void;
-}) {
-  return (
-    <View style={styles.doctorRow}>
-      <TouchableOpacity style={styles.avatar} onPress={onProfile}>
-        {avatar ? (
-          <Image
-            source={{ uri: avatar }}
-            style={styles.avatarImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <Text style={styles.avatarInitial}>{name[0]}</Text>
-        )}
-      </TouchableOpacity>
-      <View style={styles.doctorInfo}>
-        <Text style={styles.doctorName}>{name}</Text>
-        <View style={styles.doctorMeta}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{specialty}</Text>
+// ================================================================================== //
+// Helpers
+// ================================================================================== //
+
+/**
+ * Format price for display
+ */
+const formatPrice = (price?: string, priceXCFA?: number): string => {
+  if (price) return price;
+  if (priceXCFA) return `${priceXCFA} FCFA`;
+  return "0 FCFA";
+};
+
+/**
+ * Truncate description with ellipsis
+ */
+const MAX_DESCRIPTION_LENGTH = 150;
+const truncateDescription = (
+  text: string,
+  expanded: boolean,
+): { display: string; showMore: boolean } => {
+  if (expanded || text.length <= MAX_DESCRIPTION_LENGTH) {
+    return { display: text, showMore: false };
+  }
+  return {
+    display: text.substring(0, MAX_DESCRIPTION_LENGTH),
+    showMore: true,
+  };
+};
+
+// ================================================================================== //
+// Sub-components
+// ================================================================================== //
+
+/**
+ * Doctor row component - displays doctor avatar, name, specialty, and price
+ */
+const DoctorRow = memo(
+  ({
+    avatar,
+    name = "Docteur",
+    specialty = "Spécialiste",
+    price,
+    onMore,
+    onProfile,
+  }: {
+    avatar?: string;
+    name: string;
+    specialty: string;
+    price: string;
+    onMore?: () => void;
+    onProfile?: () => void;
+  }) => {
+    const initial = name?.[0] || "?";
+
+    return (
+      <View style={styles.doctorRow}>
+        <TouchableOpacity
+          style={styles.avatar}
+          onPress={onProfile}
+          accessibilityLabel={`Profil de ${name}`}
+          accessibilityRole="button"
+        >
+          {avatar ? (
+            <Image
+              source={{ uri: avatar }}
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.avatarInitial}>{initial}</Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.doctorInfo}>
+          <Text style={styles.doctorName} onPress={onProfile} numberOfLines={1}>
+            {name}
+          </Text>
+          <View style={styles.doctorMeta}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{specialty}</Text>
+            </View>
+            <Text style={styles.price}> • {price}</Text>
           </View>
-          <Text style={styles.price}> • {price}</Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={onMore}
+          activeOpacity={0.7}
+          style={styles.moreBtn}
+          accessibilityLabel={`Plus d'options pour ${name}`}
+          accessibilityRole="button"
+        >
+          <MoreHorizontal size={18} color={colors.inkLight} />
+        </TouchableOpacity>
+      </View>
+    );
+  },
+);
+
+DoctorRow.displayName = "DoctorRow";
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Clinic image component with loading state
+ */
+const ClinicImage = memo(
+  ({
+    uri,
+    fallbackColor = "#C8B8A2",
+  }: {
+    uri?: string;
+    fallbackColor?: string;
+  }) => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
+
+    const handleLoadStart = useCallback(() => {
+      setIsLoading(true);
+      setHasError(false);
+    }, []);
+
+    const handleLoadEnd = useCallback(() => {
+      setIsLoading(false);
+    }, []);
+
+    const handleError = useCallback(() => {
+      setIsLoading(false);
+      setHasError(true);
+    }, []);
+
+    if (!uri || hasError) {
+      return (
+        <View style={[styles.image, { backgroundColor: fallbackColor }]} />
+      );
+    }
+
+    return (
+      <View style={styles.imageContainer}>
+        {isLoading && (
+          <View
+            style={[
+              styles.image,
+              styles.imageLoading,
+              { backgroundColor: fallbackColor },
+            ]}
+          >
+            <ActivityIndicator color={colors.primary} size="large" />
+          </View>
+        )}
+        <Image
+          source={{ uri }}
+          style={[styles.image, isLoading && styles.imageHidden]}
+          resizeMode="cover"
+          onLoadStart={handleLoadStart}
+          onLoadEnd={handleLoadEnd}
+          onError={handleError}
+        />
+      </View>
+    );
+  },
+);
+
+ClinicImage.displayName = "ClinicImage";
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Clinic information component
+ */
+const ClinicInfo = memo(
+  ({
+    clinicName = "Nom non spécifié",
+    description = "Aucune description disponible",
+    hours = "Horaires non spécifiés",
+    days = "Jours non spécifiés",
+    location = "Adresse non spécifiée",
+    onReserve,
+  }: {
+    clinicName: string;
+    description: string;
+    hours: string;
+    days: string;
+    location: string;
+    onReserve?: () => void;
+  }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    const handleToggleExpand = useCallback(() => {
+      setExpanded((prev) => !prev);
+    }, []);
+
+    const { display, showMore } = truncateDescription(description, expanded);
+
+    return (
+      <View style={styles.infoContainer}>
+        <View style={styles.titleRow}>
+          <Text style={styles.clinicName} numberOfLines={1}>
+            {clinicName}
+          </Text>
+          <PrimaryButton label="Réserver" size="sm" onPress={onReserve} />
+        </View>
+
+        <Text style={styles.description}>
+          {display}
+          {showMore && (
+            <Text style={styles.moreLink} onPress={handleToggleExpand}>
+              {" ...plus"}
+            </Text>
+          )}
+          {expanded && description.length > MAX_DESCRIPTION_LENGTH && (
+            <Text style={styles.moreLink} onPress={handleToggleExpand}>
+              {" moins"}
+            </Text>
+          )}
+        </Text>
+
+        <View style={styles.hoursRow}>
+          <Text style={styles.infoText}>
+            <Text style={styles.infoBold}>{hours}</Text>
+          </Text>
+          <Text style={styles.dot}> • </Text>
+          <Text style={styles.infoText}>
+            Ouvert de <Text style={styles.infoBold}>{days}</Text>
+          </Text>
+        </View>
+
+        <View style={styles.locationRow}>
+          <Ionicons name="location-outline" size={14} color={colors.inkLight} />
+          <Text style={styles.location} numberOfLines={1}>
+            {location}
+          </Text>
         </View>
       </View>
-      <TouchableOpacity
-        onPress={onMore}
-        activeOpacity={0.7}
-        style={styles.moreBtn}
-      >
-        <MoreHorizontal size={18} color={colors.inkLight} />
-      </TouchableOpacity>
-    </View>
-  );
-}
+    );
+  },
+);
 
-function ClinicImage({
-  uri,
-  fallbackColor = "#C8B8A2",
-}: {
-  uri?: string;
-  fallbackColor?: string;
-}) {
-  if (uri) {
-    return <Image source={{ uri }} style={styles.image} resizeMode="cover" />;
-  }
-  return <View style={[styles.image, { backgroundColor: fallbackColor }]} />;
-}
+ClinicInfo.displayName = "ClinicInfo";
 
-function ClinicInfo({
-  clinicName,
-  description,
-  hours,
-  days,
-  location,
-  onReserve,
-}: {
-  clinicName: string;
-  description: string;
-  hours: string;
-  days: string;
-  location: string;
-  onReserve?: () => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <View style={styles.infoContainer}>
-      <View style={styles.titleRow}>
-        <Text style={styles.clinicName}>{clinicName}</Text>
-        <PrimaryButton label="Réserver" size="sm" onPress={onReserve} />
-      </View>
-
-      <Text style={styles.description}>
-        {description}
-        {!expanded && (
-          <Text style={styles.moreLink} onPress={() => setExpanded(true)}>
-            {" ...plus"}
-          </Text>
-        )}
-      </Text>
-
-      <View style={styles.hoursRow}>
-        <Text style={styles.infoText}>
-          <Text style={styles.infoBold}>{hours}</Text>
-        </Text>
-        <Text style={styles.dot}> • </Text>
-        <Text style={styles.infoText}>
-          Ouvert de <Text style={styles.infoBold}>{days}</Text>
-        </Text>
-      </View>
-
-      <View style={styles.locationRow}>
-        <Ionicons name="location-outline" size={14} color={colors.inkLight} />
-        <Text style={styles.location}>{location}</Text>
-      </View>
-    </View>
-  );
-}
+// ================================================================================== //
+// Main Component
+// ================================================================================== //
 
 interface ClinicCardProps {
   data: ClinicProvider;
   onReserve?: () => void;
   onMore?: () => void;
   onProfile?: () => void;
+  isLoading?: boolean;
 }
 
-export function ClinicCard({ data, onReserve, onMore, onProfile }: ClinicCardProps) {
+/**
+ * Clinic card component - displays clinic information in a card format
+ */
+export function ClinicCard({
+  data,
+  onReserve,
+  onMore,
+  onProfile,
+  isLoading = false,
+}: ClinicCardProps) {
+  const price = formatPrice(data.price, data.priceXCFA);
+
+  if (isLoading) {
+    return <ClinicCardSkeleton />;
+  }
+
   return (
     <View style={styles.card}>
       <DoctorRow
         avatar={data.avatarUri}
         name={data.doctorName}
         specialty={data.specialty}
-        price={data.price || `${data.priceXCFA || 0} FCFA`}
+        price={price}
         onMore={onMore}
-        onProfile={onProfile}
+        onProfile={onProfile || onMore}
       />
       <ClinicImage
         uri={data.imageUri}
@@ -144,8 +301,8 @@ export function ClinicCard({ data, onReserve, onMore, onProfile }: ClinicCardPro
       <ClinicInfo
         clinicName={data.clinicName}
         description={data.description}
-        hours={data.hours}
-        days={data.days}
+        hours={data.hours!}
+        days={data.days!}
         location={data.location}
         onReserve={onReserve}
       />
@@ -153,6 +310,13 @@ export function ClinicCard({ data, onReserve, onMore, onProfile }: ClinicCardPro
   );
 }
 
+// ================================================================================== //
+// Skeleton
+// ================================================================================== //
+
+/**
+ * Skeleton loading state for clinic card
+ */
 export function ClinicCardSkeleton() {
   return (
     <View style={styles.card}>
@@ -165,8 +329,11 @@ export function ClinicCardSkeleton() {
             <Skeleton width={40} height={12} />
           </View>
         </View>
+        <Skeleton width={24} height={24} borderRadius={12} />
       </View>
+
       <Skeleton width="100%" height={200} borderRadius={0} />
+
       <View style={styles.infoContainer}>
         <View style={styles.titleRow}>
           <Skeleton width="50%" height={20} />
@@ -176,17 +343,35 @@ export function ClinicCardSkeleton() {
           <Skeleton width="100%" height={14} />
           <Skeleton width="85%" height={14} />
         </View>
-        <View style={{ flexDirection: "row", gap: 6, alignItems: "center", marginTop: 4 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 6,
+            alignItems: "center",
+            marginTop: 4,
+          }}
+        >
           <Skeleton width={120} height={12} />
           <Skeleton width={100} height={12} />
         </View>
-        <View style={{ flexDirection: "row", gap: 6, alignItems: "center", marginTop: 2 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 6,
+            alignItems: "center",
+            marginTop: 2,
+          }}
+        >
           <Skeleton width="40%" height={12} />
         </View>
       </View>
     </View>
   );
 }
+
+// ================================================================================== //
+// Styles
+// ================================================================================== //
 
 const styles = StyleSheet.create({
   card: {
@@ -196,25 +381,30 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
     shadowRadius: 8,
+    backgroundColor: colors.white,
+    elevation: 0,
   },
+
+  // Doctor Row
   doctorRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
+    paddingHorizontal: 12,
     gap: 10,
   },
   avatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#D0C4B8",
+    backgroundColor: colors.inkLight,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   avatarImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 22,
   },
   avatarInitial: {
     fontSize: fontSize.lg,
@@ -233,6 +423,7 @@ const styles = StyleSheet.create({
   doctorMeta: {
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
   },
   badge: {
     backgroundColor: "#F3E5F5",
@@ -253,12 +444,33 @@ const styles = StyleSheet.create({
   moreBtn: {
     padding: 4,
   },
+
+  // Clinic Image
+  imageContainer: {
+    position: "relative",
+    backgroundColor: colors.surface,
+  },
   image: {
     width: "100%",
-    height: 200,
+    height: 400,
   },
+  imageLoading: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageHidden: {
+    opacity: 0,
+  },
+
+  // Clinic Info
   infoContainer: {
     paddingVertical: 14,
+    paddingHorizontal: 12,
     gap: 8,
   },
   titleRow: {
@@ -271,6 +483,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold,
     color: colors.ink,
     flex: 1,
+    marginRight: 8,
   },
   description: {
     fontSize: fontSize.md,
@@ -303,10 +516,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    flexShrink: 1,
   },
   location: {
     fontSize: fontSize.sm,
     fontFamily: fontFamily.regular,
     color: colors.inkLight,
+    flexShrink: 1,
   },
 });

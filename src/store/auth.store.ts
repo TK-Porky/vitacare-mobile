@@ -127,7 +127,6 @@ export const useAuthStore = create<AuthState>()(
               const res = await apiClient.get<UserProfile>(
                 "/users/patients/profile",
               );
-              console.log(res.data);
               set({ user: res.data, isHydrated: true });
               return;
             }

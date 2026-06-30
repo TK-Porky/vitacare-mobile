@@ -14,6 +14,7 @@ import { colors, fontFamily, fontSize } from "../../themes";
 
 type Props = {
   title?: string;
+  showLogo?: boolean;
   searchBar?: boolean;
   searchValue?: string;
   onSearch?: () => void;
@@ -32,6 +33,7 @@ type Props = {
 
 export function AppHeader({
   title,
+  showLogo,
   searchBar,
   searchValue = "",
   onSearch,
@@ -48,7 +50,7 @@ export function AppHeader({
   notificationBell,
 }: Props) {
   const statusBarHeight = StatusBar.currentHeight ?? 50;
-  const hideLogo = !!title;
+  const hideLogo = !!title || showLogo == false;
 
   return (
     <View style={[styles.container, { paddingTop: statusBarHeight + 8 }]}>
