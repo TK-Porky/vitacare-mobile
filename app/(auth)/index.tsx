@@ -134,7 +134,7 @@ export default function LandingScreen() {
 
         {/* CTA principal */}
         <AuthButton
-          label="Se connecter avec l'email"
+          label="Se connecter via l'email"
           onPress={() => handleNavigate("/(auth)/login-email")}
           variant="primary"
           fullWidth
@@ -151,6 +151,19 @@ export default function LandingScreen() {
 
         {/* Secondaires côte à côte */}
         <View style={styles.secondaryRow}>
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => handleNavigate("/(auth)/login-phone")}
+            activeOpacity={0.7}
+            accessibilityLabel="Continuer avec téléphone"
+            accessibilityRole="button"
+          >
+            <Ionicons name="call-outline" size={17} color={colors.primary} />
+            <Text style={styles.secondaryText}>
+              Se connecter via numéro de téléphone
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.secondaryBtn}
             onPress={() => handleNavigate("/(auth)/register")}
@@ -303,19 +316,22 @@ const styles = StyleSheet.create({
 
   // Secondaires
   secondaryRow: {
-    flexDirection: "row",
+    flexDirection: "column",
+    gap: 16,
     borderRadius: 50,
-    overflow: "hidden",
-    backgroundColor: colors.ltsurface,
   },
   secondaryBtn: {
-    flex: 1,
+    height: 50,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: 50,
     paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
+    backgroundColor: colors.white,
   },
   secondaryDivider: {
     width: 0.5,
@@ -323,7 +339,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   secondaryText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     fontFamily: fontFamily.semiBold,
     color: colors.ink,
   },

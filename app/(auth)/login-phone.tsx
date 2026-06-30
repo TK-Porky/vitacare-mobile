@@ -95,7 +95,6 @@ export default function LoginPhoneScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === "ios" ? "height" : "padding"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <ScrollView
@@ -188,6 +187,7 @@ export default function LoginPhoneScreen() {
 
 const styles = StyleSheet.create({
   root: {
+    marginTop: 30,
     flex: 1,
     backgroundColor: colors.white,
   },
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 8,
-    paddingBottom: Platform.OS === "ios" ? 32 : 24,
+    paddingBottom: Platform.OS === "ios" ? 60 : 40,
   },
 
   // Form

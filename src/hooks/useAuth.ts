@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Alert } from "react-native";
-import { useAuthStore } from "../store/auth.store";
+import { useAuthStore } from "@/store/auth.store";
 import type {
   LoginEmailInput,
   OtpInput,
   RegisterInput,
-} from "../schemas/auth.schema";
+} from "@/schemas/auth.schema";
 import { auth } from "@/firebase/config";
 import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
 import {

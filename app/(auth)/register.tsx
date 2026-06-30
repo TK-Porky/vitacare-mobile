@@ -226,7 +226,7 @@ export default function RegisterScreen() {
             )}
           </View>
 
-          {/* Mode d'inscription 
+          {/* Mode d'inscription */}
           <View style={styles.fieldWrapper}>
             <Text style={styles.label}>
               Mode d'inscription <Text style={styles.required}>*</Text>
@@ -262,7 +262,6 @@ export default function RegisterScreen() {
               ))}
             </View>
           </View>
-          */}
 
           {/* Contact (Phone ou Email) */}
           <View style={styles.fieldWrapper}>
