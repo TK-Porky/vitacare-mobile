@@ -1,4 +1,5 @@
-import React, { forwardRef, useImperativeHandle, useRef } from "react";
+// components/appointments/AppointmentDetailBottomSheet.tsx
+import React, { forwardRef, useImperativeHandle, useRef, memo } from "react";
 import {
   View,
   Text,
@@ -48,51 +49,78 @@ const STATUS_CONFIG: Record<
   PAID: { label: "Payé", bg: "#E8FFF0", color: "#1A7F3C" },
   CANCELLED: { label: "Annulé", bg: "#FFF0F0", color: "#B91C1C" },
   NO_SHOW: { label: "Non présenté", bg: "#FFF0F0", color: "#B91C1C" },
-  IN_PROGRESS: { label: "En cours", bg: "#FFF0F0", color: "#B91C1C" },
+  IN_PROGRESS: { label: "En cours", bg: "#E8F0FE", color: "#1A56DB" },
   RESCHEDULED: { label: "Reporté", bg: "#FFF0F0", color: "#B91C1C" },
-  COMPLETED: { label: "Terminé", bg: "#FFF0F0", color: "#1A7F3C" },
+  COMPLETED: { label: "Terminé", bg: "#E8FFF0", color: "#1A7F3C" },
+};
+
+const DEFAULT_STATUS = {
+  label: "Inconnu",
+  bg: colors.surface,
+  color: colors.inkLight,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const formatPrice = (n: number): string =>
-  Math.abs(n)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+// ✅ Correction: Conserver le signe pour les nombres négatifs
+const formatPrice = (n: number): string => {
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+  return sign + abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ✅ Valeurs par défaut
+const DEFAULT_APPOINTMENT: Partial<Appointment> = {
+  title: "Rendez-vous",
+  reason: "Motif non spécifié",
+  doctorName: "Dr. Inconnu",
+  specialty: "Spécialiste",
+  clinic: "Clinique non spécifiée",
+  address: "Adresse non spécifiée",
+  time: "",
+};
 
-const Divider = () => <View style={styles.divider} />;
+// ─── Sub-components avec memo ────────────────────────────────────────────────
 
-const SectionTitle = ({ children }: { children: string }) => (
+const Divider = memo(() => <View style={styles.divider} />);
+Divider.displayName = "Divider";
+
+const SectionTitle = memo(({ children }: { children: string }) => (
   <Text style={styles.sectionTitle}>{children}</Text>
-);
+));
+SectionTitle.displayName = "SectionTitle";
 
-const InfoRow = ({
-  icon,
-  children,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  children: React.ReactNode;
-}) => (
-  <View style={styles.infoRow}>
-    <Ionicons name={icon} size={20} color={colors.ink} />
-    <View style={styles.infoRowContent}>{children}</View>
-  </View>
+const InfoRow = memo(
+  ({
+    icon,
+    children,
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    children: React.ReactNode;
+  }) => (
+    <View style={styles.infoRow}>
+      <Ionicons name={icon} size={20} color={colors.ink} />
+      <View style={styles.infoRowContent}>{children}</View>
+    </View>
+  ),
 );
+InfoRow.displayName = "InfoRow";
 
-const PaymentRow = ({
-  icon,
-  label,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-}) => (
-  <View style={styles.paymentMethod}>
-    <Ionicons name={icon} size={22} color={colors.ink} />
-    <Text style={styles.paymentMethodText}>{label}</Text>
-  </View>
+const PaymentRow = memo(
+  ({
+    icon,
+    label,
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+  }) => (
+    <View style={styles.paymentMethod}>
+      <Ionicons name={icon} size={22} color={colors.ink} />
+      <Text style={styles.paymentMethodText}>{label || "Non spécifié"}</Text>
+    </View>
+  ),
 );
+PaymentRow.displayName = "PaymentRow";
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -123,11 +151,47 @@ export const AppointmentDetailBottomSheet = forwardRef<
 
     if (!appointment) return null;
 
-    const currency = appointment.currency ?? "XCFA";
-    const fmt = (n: number) => `${formatPrice(n)} ${currency}`;
-    const statusCfg = STATUS_CONFIG[appointment.status];
+    // ✅ Valeurs par défaut
+    const {
+      title = DEFAULT_APPOINTMENT.title,
+      doctorName = DEFAULT_APPOINTMENT.doctorName,
+      specialty = DEFAULT_APPOINTMENT.specialty,
+      clinic = DEFAULT_APPOINTMENT.clinic,
+      address = DEFAULT_APPOINTMENT.address,
+      reason = DEFAULT_APPOINTMENT.reason,
+      time = DEFAULT_APPOINTMENT.time,
+      total = 0,
+      currency = "XCFA",
+      status,
+      doctorAvatarUri,
+      avatarUri,
+      invoiceLines = [],
+      paymentMethod = "Non spécifié",
+    } = appointment;
+
+    const currencySymbol = currency ?? "XCFA";
+    const fmt = (n: number) => `${formatPrice(n)} ${currencySymbol}`;
+    const statusCfg = STATUS_CONFIG[status] ?? DEFAULT_STATUS;
     const { day, month, year } = parseAppointmentDate(appointment.date);
 
+    // ✅ Gestion du format de la date
+    const dateString =
+      day && month && year
+        ? `${day} ${month} ${year}${time ? ` à ${time}` : ""}`
+        : "Date non spécifiée";
+
+    // ✅ Gestion des images
+    const avatarSource =
+      doctorAvatarUri || appointment.doctorAvatarUri
+        ? { uri: doctorAvatarUri || appointment.doctorAvatarUri }
+        : undefined;
+
+    const clinicImageSource =
+      avatarUri || appointment.avatarUri
+        ? { uri: avatarUri || appointment.avatarUri }
+        : undefined;
+
+    // ✅ Handlers
     const handleReschedule = () => {
       sheetRef.current?.close();
       onReschedule?.();
@@ -163,12 +227,30 @@ export const AppointmentDetailBottomSheet = forwardRef<
 
     const handleDownload = async () => {
       try {
-        // TODO : Implement PDF Ticket Generation
-        Alert.alert("Succès", "Ticket généré avec succès");
-      } catch {
-        Alert.alert("Erreur", "Impossible de générer le ticket PDF.");
+        // TODO: Implement PDF Ticket Generation
+        Alert.alert(
+          "Bientôt disponible",
+          "La génération de tickets PDF sera disponible prochainement.",
+        );
+        // Si la feature est implémentée
+        if (onDownload) {
+          await onDownload();
+        }
+      } catch (error) {
+        console.error("Download error:", error);
+        Alert.alert("Erreur", "Impossible de générer le ticket.");
       }
     };
+
+    const handleDoctorPress = () => {
+      if (onDoctorPress) {
+        onDoctorPress();
+      }
+    };
+
+    // ✅ Déterminer l'icône de paiement
+    const paymentIcon: keyof typeof Ionicons.glyphMap =
+      paymentMethod === "Espèces" ? "cash-outline" : "card-outline";
 
     return (
       <AppBottomSheet
@@ -178,26 +260,35 @@ export const AppointmentDetailBottomSheet = forwardRef<
         scrollable
         containerStyle={styles.sheet}
       >
-        <Text style={styles.visitTitle}>{appointment.title}</Text>
+        {/* ── Titre ── */}
+        <Text style={styles.visitTitle}>{title}</Text>
 
+        {/* ── Docteur & Statut ── */}
         <View style={styles.doctorStatusCard}>
           <TouchableOpacity
             style={styles.doctorRow}
-            onPress={onDoctorPress}
+            onPress={handleDoctorPress}
             activeOpacity={0.75}
           >
-            <Image
-              source={{ uri: appointment.doctorAvatarUri }}
-              style={styles.avatar}
-            />
+            {avatarSource ? (
+              <Image source={avatarSource} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                <Ionicons
+                  name="person-outline"
+                  size={24}
+                  color={colors.white}
+                />
+              </View>
+            )}
             <View style={styles.doctorInfo}>
-              <Text style={styles.doctorName}>{appointment.doctorName}</Text>
-              <Text style={styles.specialty}>{appointment.specialty}</Text>
+              <Text style={styles.doctorName}>{doctorName}</Text>
+              <Text style={styles.specialty}>{specialty}</Text>
             </View>
             <Ionicons
               name="chevron-forward"
               size={18}
-              color={colors.inkMuted}
+              color={colors.inkMuted || colors.inkLight}
             />
           </TouchableOpacity>
 
@@ -217,39 +308,40 @@ export const AppointmentDetailBottomSheet = forwardRef<
 
             <View style={styles.totalBlock}>
               <Text style={styles.totalCaption}>Total estimé</Text>
-              <Text style={styles.totalValue}>
-                {fmt(appointment.total || 0)}
-              </Text>
+              <Text style={styles.totalValue}>{fmt(total)}</Text>
             </View>
           </View>
         </View>
 
+        {/* ── Motif ── */}
         <SectionTitle>Motif</SectionTitle>
-        <Text style={styles.bodyText}>{appointment.reason}</Text>
+        <Text style={styles.bodyText}>{reason}</Text>
 
+        {/* ── Date & Heure ── */}
         <SectionTitle>Date & Heure</SectionTitle>
         <InfoRow icon="calendar-outline">
-          <Text style={styles.bodyText}>
-            {day} {month} {year} à {appointment.time}
-          </Text>
+          <Text style={styles.bodyText}>{dateString}</Text>
         </InfoRow>
 
+        {/* ── Lieux ── */}
         <SectionTitle>Lieux</SectionTitle>
         <InfoRow icon="location-outline">
           <Text style={styles.bodyText}>
-            <Text style={styles.boldInline}>{appointment.clinic}</Text>
-            {` ${appointment.address}`}
+            <Text style={styles.boldInline}>{clinic}</Text>
+            {address ? ` ${address}` : ""}
           </Text>
         </InfoRow>
 
-        {appointment.avatarUri ? (
+        {/* ── Image de la clinique ── */}
+        {clinicImageSource && (
           <Image
-            source={{ uri: appointment.avatarUri }}
+            source={clinicImageSource}
             style={styles.clinicImage}
             resizeMode="cover"
           />
-        ) : null}
+        )}
 
+        {/* ── Carte ── */}
         <GrayButton
           label="Montrer sur la Carte"
           icon="map-outline"
@@ -257,39 +349,41 @@ export const AppointmentDetailBottomSheet = forwardRef<
           style={styles.mapBtn}
         />
 
+        {/* ── Méthodes de paiements ── */}
         <SectionTitle>Méthodes de paiements</SectionTitle>
+        <PaymentRow icon={paymentIcon} label={paymentMethod} />
 
-        {appointment.paymentMethod === "Espèces" ? (
-          <PaymentRow icon="cash-outline" label={appointment.paymentMethod} />
-        ) : (
-          <PaymentRow icon="card-outline" label={appointment.paymentMethod} />
-        )}
-
+        {/* ── Facture ── */}
         <SectionTitle>Facture</SectionTitle>
 
-        {appointment.invoiceLines?.map((line) => (
-          <View key={line.label} style={styles.invoiceLine}>
-            <Text style={styles.invoiceLabel}>{line.label}</Text>
-            <Text
-              style={[
-                styles.invoiceAmount,
-                line.isDiscount && styles.invoiceAmountDiscount,
-              ]}
-            >
-              {line.isDiscount
-                ? `-${formatPrice(line.amount)} ${currency}`
-                : fmt(line.amount)}
-            </Text>
-          </View>
-        ))}
+        {invoiceLines.length > 0 ? (
+          <>
+            {invoiceLines.map((line, index) => (
+              <View key={index} style={styles.invoiceLine}>
+                <Text style={styles.invoiceLabel}>{line.label}</Text>
+                <Text
+                  style={[
+                    styles.invoiceAmount,
+                    line.isDiscount && styles.invoiceAmountDiscount,
+                  ]}
+                >
+                  {line.isDiscount
+                    ? `-${formatPrice(line.amount)} ${currencySymbol}`
+                    : fmt(line.amount)}
+                </Text>
+              </View>
+            ))}
 
-        <View style={styles.totalLine}>
-          <Text style={styles.totalLineLabel}>Total</Text>
-          <Text style={styles.totalLineAmount}>
-            {fmt(appointment.total || 0)}
-          </Text>
-        </View>
+            <View style={styles.totalLine}>
+              <Text style={styles.totalLineLabel}>Total</Text>
+              <Text style={styles.totalLineAmount}>{fmt(total)}</Text>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.bodyText}>Aucune facture disponible</Text>
+        )}
 
+        {/* ── Actions ── */}
         <View style={styles.actionsRow}>
           {actionVariant === "reschedule" ? (
             <>
@@ -297,13 +391,17 @@ export const AppointmentDetailBottomSheet = forwardRef<
                 label="Réprogrammer"
                 variant="solid"
                 size="md"
+                fullWidth={statusCfg.label === "Annulé"}
                 onPress={handleReschedule}
+                style={styles.rescheduleButton}
               />
-              <GrayButton
-                label="Annuler"
-                onPress={handleCancel}
-                style={{ flex: 0.75 }}
-              />
+              {statusCfg.label !== "Annulé" && (
+                <GrayButton
+                  label="Annuler"
+                  onPress={handleCancel}
+                  style={styles.cancelButton}
+                />
+              )}
             </>
           ) : (
             <PrimaryButton
@@ -312,7 +410,7 @@ export const AppointmentDetailBottomSheet = forwardRef<
               fullWidth
               size="md"
               onPress={handleBookAgain}
-              style={{ flex: 0.95 }}
+              style={styles.bookAgainButton}
             />
           )}
 
@@ -345,9 +443,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   doctorStatusCard: {
-    backgroundColor: colors.ltsurface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cardDivider: {
     height: 1,
@@ -365,6 +465,11 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     backgroundColor: colors.border,
   },
+  avatarPlaceholder: {
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   doctorInfo: {
     flex: 1,
     gap: 3,
@@ -377,7 +482,7 @@ const styles = StyleSheet.create({
   specialty: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
-    color: colors.inkMuted,
+    color: colors.inkMuted || colors.inkLight,
   },
   statusTotalRow: {
     flexDirection: "row",
@@ -408,7 +513,7 @@ const styles = StyleSheet.create({
   totalCaption: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.xs,
-    color: colors.inkMuted,
+    color: colors.inkMuted || colors.inkLight,
   },
   totalValue: {
     fontFamily: fontFamily.bold,
@@ -517,6 +622,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 28,
     marginBottom: 8,
+    gap: 8,
+  },
+  rescheduleButton: {
+    flex: 1.5,
+  },
+  cancelButton: {
+    flex: 1,
+  },
+  bookAgainButton: {
+    flex: 1,
   },
   downloadBtn: {
     width: 50,
@@ -524,5 +639,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 0,
     paddingVertical: 0,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

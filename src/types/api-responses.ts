@@ -359,7 +359,7 @@ export interface MedicationDetailResponse extends StoreMedicationResponse {
 // Reminders
 // ---------------------------------------------------------------------------
 
-export type ReminderStatus = "PENDING" | "TAKEN" | "MISSED";
+export type ReminderStatus = "PENDING" | "TAKEN" | "MISSED" | "SNOOZED";
 
 export interface ReminderResponse {
   id: number;

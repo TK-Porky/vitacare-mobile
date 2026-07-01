@@ -190,12 +190,12 @@ export const useAuthStore = create<AuthState>()(
       loginWithEmail: async (data) => {
         set({ isLoading: true, error: null });
         try {
-          // ✅ Firebase sign in with email/password
+          // Firebase sign in with email/password
           const result = await authService.loginWithEmail(data);
           await handleAuthResult(result, set);
           router.replace("/(main)");
         } catch (e: any) {
-          // ✅ Firebase error messages
+          // Firebase error messages
           let message = "Email ou mot de passe incorrect.";
           if (e.code === "auth/user-not-found") {
             message = "Aucun compte associé à cet email.";
@@ -255,11 +255,13 @@ export const useAuthStore = create<AuthState>()(
         try {
           if (data.mode === "phone") {
             await get().sendOtp(data.phone!, data.fullName);
+            console.log("API Register data : ", data);
             return;
           }
 
           // ✅ Email registration with Firebase
           const result = await authService.register(data);
+          console.log("API Register result : ", result);
           if (result && !("requiresOtp" in result)) {
             await handleAuthResult(result, set);
             router.replace("/(auth)/onboarding-location");
@@ -270,8 +272,14 @@ export const useAuthStore = create<AuthState>()(
             message = "Cet email est déjà utilisé.";
           } else if (e.code === "auth/invalid-email") {
             message = "Adresse email invalide.";
+          } else if (e.code === "auth/argument-error") {
+            message = "Le mot de passe doit contenir au moins 6 caracteres.";
           } else if (e.code === "auth/weak-password") {
             message = "Le mot de passe est trop faible.";
+          } else if (e.code === "auth/user-disabled") {
+            message = "Ce compte a été désactivé.";
+          } else if (e.code === "auth/too-many-requests") {
+            message = "Trop de tentatives. Veuillez réessayer plus tard.";
           }
           set({ error: e?.message || message });
         } finally {

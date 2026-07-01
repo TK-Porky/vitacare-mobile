@@ -5,6 +5,7 @@ import {
   getReactNativePersistence,
   GoogleAuthProvider,
   getAuth,
+  Auth,
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -31,6 +32,17 @@ const firebaseConfig = {
   measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || "",
 };
 
+// Vérifier que les variables sont définies
+const missingVars = Object.entries(firebaseConfig)
+  .filter(([key, value]) => !value && key !== "measurementId")
+  .map(([key]) => key);
+
+if (missingVars.length > 0) {
+  console.warn(
+    `⚠️ Firebase: Variables d'environnement manquantes: ${missingVars.join(", ")}`,
+  );
+}
+
 // ================================================================================== //
 // Initialize Firebase
 // ================================================================================== //
@@ -39,11 +51,39 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 // ================================================================================== //
 // Initialize Auth with persistence
 // ================================================================================== //
-export const firebaseAuth = initializeAuth(app, {
-  persistence: (getReactNativePersistence as any)(AsyncStorage),
-});
 
-export const auth = getAuth(app);
+let auth: Auth;
+
+try {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+  console.log("✅ Firebase Auth initialized with AsyncStorage persistence");
+} catch (error: any) {
+  if (error?.message?.includes("already initialized")) {
+    console.log(
+      "ℹ️ Firebase Auth already initialized, using existing instance",
+    );
+    auth = getAuth(app);
+  } else {
+    console.warn(
+      "⚠️ Failed to initialize Auth with persistence, using default:",
+      error,
+    );
+    auth = getAuth(app);
+  }
+}
+
+// ================================================================================== //
+// Providers & Services
+// ================================================================================== //
+
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
+
+// ================================================================================== //
+// Exports
+// ================================================================================== //
+
+export { app, auth };
 export default app;

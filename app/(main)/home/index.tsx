@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+// app/(main)/(tabs)/index.tsx
+import React, { useEffect, useRef } from "react";
 import {
   ScrollView,
   View,
@@ -18,10 +19,14 @@ import {
   SectionHeader,
   MedicationItem,
   AppointmentItem,
-  HelperText,
 } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useDashboardStore, useAuthStore } from "@/store";
+import {
+  ErrorScreen,
+  SupportContactBottomSheet,
+  SupportContactBottomSheetRef,
+} from "@/components/errors";
 
 // ================================================================================== //
 // Types
@@ -44,6 +49,7 @@ export default function DashboardScreen({
   const { data, isLoading, error, fetchOverview, updateMedicationStatus } =
     useDashboardStore();
   const user = useAuthStore((state) => state.user);
+  const supportSheetRef = useRef<SupportContactBottomSheetRef>(null);
 
   // ================================================================================== //
   // Effects
@@ -73,6 +79,15 @@ export default function DashboardScreen({
 
   const handleNotifications = () => {
     router.push("/(modals)/notifications" as any);
+  };
+
+  const closeSupportSheet = () => {
+    supportSheetRef.current?.close();
+  };
+
+  const handleErrorContactSupport = () => {
+    // Fermer l'ErrorScreen si visible
+    supportSheetRef.current?.open();
   };
 
   /**
@@ -114,9 +129,21 @@ export default function DashboardScreen({
    * Handle appointment press
    */
   const handleAppointmentPress = (appointmentId: number) => {
-    // In a real app, navigate to appointment details
-    // router.push({ pathname: "/(main)/appointments/[id]", params: { id: appointmentId } } as any);
     console.log("Navigate to appointment:", appointmentId);
+  };
+
+  /**
+   * Handle error retry
+   */
+  const handleErrorRetry = () => {
+    fetchOverview();
+  };
+
+  /**
+   * Handle contact support
+   */
+  const handleContactSupport = () => {
+    supportSheetRef.current?.open();
   };
 
   // ================================================================================== //
@@ -135,12 +162,17 @@ export default function DashboardScreen({
   // ================================================================================== //
   if (!data && error) {
     return (
-      <View style={styles.errorContainer}>
-        <HelperText message={error} type="error" />
-        <Text style={styles.retry} onPress={() => fetchOverview()}>
-          Réessayer
-        </Text>
-      </View>
+      <ErrorScreen
+        visible={true}
+        type="server"
+        title="Chargement impossible"
+        message={error}
+        errorCode="ERR-500"
+        onRetry={handleErrorRetry}
+        onContactSupport={handleContactSupport}
+        retryLabel="Réessayer"
+        showSupport={true}
+      />
     );
   }
 
@@ -279,6 +311,9 @@ export default function DashboardScreen({
           )}
         </View>
       </ScrollView>
+
+      {/* Support Bottom Sheet */}
+      <SupportContactBottomSheet ref={supportSheetRef} />
     </View>
   );
 }
@@ -300,19 +335,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface,
   },
-  errorContainer: {
-    flex: 1,
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-    backgroundColor: colors.surface,
-    gap: 12,
-  },
-  retry: {
-    color: colors.primary,
-    fontFamily: fontFamily.bold,
-  },
+  // ✅ Styles d'erreur supprimés car gérés par ErrorScreen
   greeting: {
     gap: 4,
   },

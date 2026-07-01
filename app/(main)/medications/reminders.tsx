@@ -38,7 +38,7 @@ import { useNotificationStore } from "@/store";
 // Types
 // ================================================================================== //
 type Reminder = ReminderResponse;
-type FilterStatus = "all" | "PENDING" | "TAKEN" | "MISSED" | "SNOOZED";
+type FilterStatus = "ALL" | "PENDING" | "TAKEN" | "MISSED" | "SNOOZED";
 
 type Props = {
   onStore?: () => void;
@@ -46,7 +46,7 @@ type Props = {
 
 const FREE_LIMIT = 5;
 const STATUS_LABELS: Record<FilterStatus, string> = {
-  all: "Tous",
+  ALL: "Tous",
   PENDING: "En attente",
   TAKEN: "Pris",
   MISSED: "Manqué",
@@ -147,7 +147,7 @@ const FilterTabs = ({
   onChange: (v: FilterStatus) => void;
 }) => {
   const statuses: FilterStatus[] = [
-    "all",
+    "ALL",
     "PENDING",
     "TAKEN",
     "MISSED",
@@ -392,7 +392,7 @@ export default function RemindersScreen({ onStore }: Props) {
     (state) => state.unreadCount,
   );
 
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("ALL");
 
   const {
     reminders,
@@ -411,7 +411,7 @@ export default function RemindersScreen({ onStore }: Props) {
     deleteReminder,
     isDeleting,
   } = useReminders({
-    status: filterStatus === "all" ? undefined : filterStatus,
+    status: filterStatus === "ALL" ? undefined : filterStatus,
   });
 
   const reminderList = reminders ?? [];

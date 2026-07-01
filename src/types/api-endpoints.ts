@@ -80,7 +80,7 @@ export const API_ENDPOINTS = {
     LIST: "/appointments/mine",
     CREATE: "/appointments",
     DETAIL: (id: string | number) => `/appointments/${id}`,
-    CANCEL: (id: string | number) => `/appointments/${id}/cancel`,
+    CANCEL: (id: string | number) => `/appointments/${id}`,
     RESCHEDULE: (id: string | number) => `/appointments/${id}/reschedule`,
   },
 

@@ -1,4 +1,3 @@
-// app/(auth)/register.tsx
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
@@ -8,6 +7,7 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -41,12 +41,12 @@ export default function RegisterScreen() {
   const [mode, setMode] = useState<RegisterMode>("email");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("+237");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ================================================================================== //
   // Hooks
@@ -124,6 +124,10 @@ export default function RegisterScreen() {
     return Object.keys(newErrors).length === 0;
   }, [fullName, mode, phone, email, password, confirmPassword]);
 
+  const formatPhone = useCallback((countryCode: string, phone: string) => {
+    return countryCode + phone.replace(/\s/g, "");
+  }, []);
+
   const handleSubmit = useCallback(async () => {
     if (!validate()) {
       if (Platform.OS === "ios") {
@@ -136,18 +140,35 @@ export default function RegisterScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
+    setIsSubmitting(true);
     clearStoreError();
 
-    register({
-      data: {
-        fullName,
-        mode,
-        phone: mode === "phone" ? phone : undefined,
-        email: mode === "email" ? email : undefined,
-        password: mode === "email" ? password : undefined,
-        confirmPassword: mode === "email" ? confirmPassword : undefined,
-      },
-    });
+    try {
+      await register({
+        data: {
+          fullName,
+          mode,
+          phone: mode === "phone" ? formatPhone(countryCode, phone) : undefined,
+          email: mode === "email" ? email : undefined,
+          password: mode === "email" ? password : undefined,
+          confirmPassword: mode === "email" ? confirmPassword : undefined,
+        },
+      });
+    } catch (error: any) {
+      if (error?.code === "auth/too-many-requests") {
+        Alert.alert(
+          "Trop de tentatives",
+          "Veuillez patienter quelques minutes avant de réessayer.",
+        );
+      } else if (error?.message?.includes("reCAPTCHA")) {
+        Alert.alert(
+          "Vérification de sécurité",
+          "Une vérification de sécurité est nécessaire. Veuillez réessayer.",
+        );
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   }, [
     validate,
     clearStoreError,
@@ -248,7 +269,7 @@ export default function RegisterScreen() {
                   <Ionicons
                     name={m === "phone" ? "call-outline" : "mail-outline"}
                     size={16}
-                    color={mode === m ? colors.primary : colors.inkLight}
+                    color={mode === m ? colors.black : colors.inkLight}
                   />
                   <Text
                     style={[
@@ -271,6 +292,7 @@ export default function RegisterScreen() {
             </Text>
             {mode === "phone" ? (
               <PhoneInput
+                countryCode={countryCode}
                 value={phone}
                 onChangeText={(text) => {
                   setPhone(text);
@@ -458,7 +480,7 @@ const styles = StyleSheet.create({
   toggleBtnActive: {
     backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.black,
   },
   toggleLabel: {
     fontFamily: fontFamily.medium,
@@ -466,7 +488,7 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
   },
   toggleLabelActive: {
-    color: colors.primary,
+    color: colors.black,
   },
 
   // Actions

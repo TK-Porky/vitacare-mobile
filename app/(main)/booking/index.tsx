@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,26 +8,26 @@ import {
   Platform,
   StatusBar,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
-import { ProgressBar } from '../../../src/components/booking/ProgressBar';
-import { StepDate } from '../../../src/components/booking/StepDate';
-import { StepTime } from '../../../src/components/booking/StepTime';
-import { StepReason } from '../../../src/components/booking/StepReason';
-import { StepConfirm } from '../../../src/components/booking/StepConfirm';
-import { PrimaryButton } from '../../../src/components/buttons/PrimaryButton';
-import { MomoPaymentSheet } from '../../../src/components/payment/MomoPaymentSheet';
-import { OrangePaymentSheet } from '../../../src/components/payment/OrangePaymentSheet';
-import { CardPaymentSheet } from '../../../src/components/payment/CardPaymentSheet';
-import type { PaymentSheetRef } from '../../../src/components/payment/MomoPaymentSheet';
-import { colors, fontFamily, fontSize } from '../../../src/themes';
-import { apiClient } from '../../../src/lib/api.client';
-import { API_ENDPOINTS } from '../../../src/types/api-endpoints';
-import { appointmentService } from '../../../src/services/appointment.service';
-import { notificationService } from '../../../src/services/notification.service';
+import { ProgressBar } from "@/components/booking/ProgressBar";
+import { StepDate } from "@/components/booking/StepDate";
+import { StepTime } from "@/components/booking/StepTime";
+import { StepReason } from "@/components/booking/StepReason";
+import { StepConfirm } from "@/components/booking/StepConfirm";
+import { PrimaryButton } from "@/components/buttons/PrimaryButton";
+import { MomoPaymentSheet } from "@/components/payment/MomoPaymentSheet";
+import { OrangePaymentSheet } from "@/components/payment/OrangePaymentSheet";
+import { CardPaymentSheet } from "@/components/payment/CardPaymentSheet";
+import type { PaymentSheetRef } from "@/components/payment/MomoPaymentSheet";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { apiClient } from "@/lib/api.client";
+import { API_ENDPOINTS } from "@/types/api-endpoints";
+import { appointmentService } from "@/services/appointment.service";
+import { notificationService } from "@/services/notification.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,8 +35,8 @@ type BookingData = {
   date: Date | null;
   time: string | null;
   reason: string;
-  paymentMethod: 'now' | 'later';
-  paymentProvider: 'mobile_money' | 'orange_money' | 'card';
+  paymentMethod: "now" | "later";
+  paymentProvider: "mobile_money" | "orange_money" | "card";
 };
 
 type Provider = {
@@ -52,24 +52,44 @@ type Provider = {
 
 const TOTAL_STEPS = 4;
 
-const DAYS   = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const DAYS = [
+  "Dimanche",
+  "Lundi",
+  "Mardi",
+  "Mercredi",
+  "Jeudi",
+  "Vendredi",
+  "Samedi",
+];
+const MONTHS = [
+  "Janvier",
+  "Février",
+  "Mars",
+  "Avril",
+  "Mai",
+  "Juin",
+  "Juillet",
+  "Août",
+  "Septembre",
+  "Octobre",
+  "Novembre",
+  "Décembre",
+];
 
 const DEFAULT_PROVIDER: Provider = {
-  name: 'Dr. Igriss Kakmo',
-  specialty: 'Gynécologue',
-  avatarUri: 'https://randomuser.me/api/portraits/men/75.jpg',
+  name: "Dr. Igriss Kakmo",
+  specialty: "Gynécologue",
+  avatarUri: "https://randomuser.me/api/portraits/men/75.jpg",
   priceXCFA: 5000,
-  location: 'Clinique Wellstar, Bastos, Yaoundé',
+  location: "Clinique Wellstar, Bastos, Yaoundé",
 };
 
 const DEFAULT_BOOKING: BookingData = {
   date: null,
-  time: '08:00',
-  reason: '',
-  paymentMethod: 'now',
-  paymentProvider: 'mobile_money',
+  time: "08:00",
+  reason: "",
+  paymentMethod: "now",
+  paymentProvider: "mobile_money",
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -90,28 +110,32 @@ export default function BookingScreen() {
     name: params.providerName ?? DEFAULT_PROVIDER.name,
     specialty: params.specialty ?? DEFAULT_PROVIDER.specialty,
     avatarUri: params.avatarUri ?? DEFAULT_PROVIDER.avatarUri,
-    priceXCFA: params.priceXCFA ? Number(params.priceXCFA) : DEFAULT_PROVIDER.priceXCFA,
+    priceXCFA: params.priceXCFA
+      ? Number(params.priceXCFA)
+      : DEFAULT_PROVIDER.priceXCFA,
     location: params.location ?? DEFAULT_PROVIDER.location,
   };
 
   const [step, setStep] = useState(1);
   const [booking, setBooking] = useState<BookingData>(DEFAULT_BOOKING);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableSlots, setAvailableSlots] = useState<string[] | undefined>(undefined);
+  const [availableSlots, setAvailableSlots] = useState<string[] | undefined>(
+    undefined,
+  );
   const [slotsLoading, setSlotsLoading] = useState(false);
 
   // Payment sheet refs
-  const momoSheetRef   = useRef<PaymentSheetRef>(null);
+  const momoSheetRef = useRef<PaymentSheetRef>(null);
   const orangeSheetRef = useRef<PaymentSheetRef>(null);
-  const cardSheetRef   = useRef<PaymentSheetRef>(null);
+  const cardSheetRef = useRef<PaymentSheetRef>(null);
 
   // Store created appointment ID for payment
   const createdAppointmentId = useRef<number | null>(null);
 
   const patchBooking = useCallback((patch: Partial<BookingData>) => {
-    setBooking(prev => {
+    setBooking((prev) => {
       const next = { ...prev, ...patch };
-      if ('date' in patch && patch.date !== prev.date) {
+      if ("date" in patch && patch.date !== prev.date) {
         next.time = null;
       }
       return next;
@@ -127,31 +151,43 @@ export default function BookingScreen() {
     let cancelled = false;
     setSlotsLoading(true);
     const y = booking.date.getFullYear();
-    const m = String(booking.date.getMonth() + 1).padStart(2, '0');
-    const d = String(booking.date.getDate()).padStart(2, '0');
+    const m = String(booking.date.getMonth() + 1).padStart(2, "0");
+    const d = String(booking.date.getDate()).padStart(2, "0");
     const dateStr = `${y}-${m}-${d}`;
 
     const mon = new Date(booking.date);
     mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
     const wy = mon.getFullYear();
-    const wm = String(mon.getMonth() + 1).padStart(2, '0');
-    const wd = String(mon.getDate()).padStart(2, '0');
+    const wm = String(mon.getMonth() + 1).padStart(2, "0");
+    const wd = String(mon.getDate()).padStart(2, "0");
     const weekStart = `${wy}-${wm}-${wd}`;
 
-    apiClient.get<any>(API_ENDPOINTS.CLINICS.AVAILABLE_SLOTS(provider.id), { weekStart })
-      .then(res => {
+    apiClient
+      .get<any>(API_ENDPOINTS.CLINICS.AVAILABLE_SLOTS(provider.id), {
+        weekStart,
+      })
+      .then((res) => {
         if (cancelled) return;
-        if (!res.success) { setAvailableSlots(undefined); return; }
+        if (!res.success) {
+          setAvailableSlots(undefined);
+          return;
+        }
         const raw: any[] = res.data ?? [];
         const times = raw
           .filter((s: any) => s.startTime?.startsWith(dateStr) && !s.isBooked)
-          .map((s: any) => s.startTime.split('T')[1].slice(0, 5));
+          .map((s: any) => s.startTime.split("T")[1].slice(0, 5));
         setAvailableSlots(times);
       })
-      .catch(() => { if (!cancelled) setAvailableSlots(undefined); })
-      .finally(() => { if (!cancelled) setSlotsLoading(false); });
+      .catch(() => {
+        if (!cancelled) setAvailableSlots(undefined);
+      })
+      .finally(() => {
+        if (!cancelled) setSlotsLoading(false);
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [booking.date, provider.id]);
 
   const canContinue = (): boolean => {
@@ -160,40 +196,44 @@ export default function BookingScreen() {
     return true;
   };
 
-  const navigateToSuccess = useCallback((appointmentId: number) => {
-    const dateLabel = booking.date
-      ? `${DAYS[booking.date.getDay()]}, ${booking.date.getDate()} ${MONTHS[booking.date.getMonth()]} ${booking.date.getFullYear()}`
-      : '';
-    const timeLabel = booking.time?.replace(':', 'h') ?? '';
+  const navigateToSuccess = useCallback(
+    (appointmentId: number) => {
+      const dateLabel = booking.date
+        ? `${DAYS[booking.date.getDay()]}, ${booking.date.getDate()} ${MONTHS[booking.date.getMonth()]} ${booking.date.getFullYear()}`
+        : "";
+      const timeLabel = booking.time?.replace(":", "h") ?? "";
 
-    const PAYMENT_LABELS: Record<string, string> = {
-      now_mobile_money: 'Payé via Mobile Money (MTN)',
-      now_orange_money: 'Payé via Orange Money',
-      now_card:         'Payé par carte bancaire',
-      later:            'Paiement à la consultation',
-    };
-    const key = booking.paymentMethod === 'later'
-      ? 'later'
-      : `now_${booking.paymentProvider}`;
+      const PAYMENT_LABELS: Record<string, string> = {
+        now_mobile_money: "Payé via Mobile Money (MTN)",
+        now_orange_money: "Payé via Orange Money",
+        now_card: "Payé par carte bancaire",
+        later: "Paiement à la consultation",
+      };
+      const key =
+        booking.paymentMethod === "later"
+          ? "later"
+          : `now_${booking.paymentProvider}`;
 
-    router.push({
-      pathname: '/(main)/booking/booking-success',
-      params: {
-        appointmentId: String(appointmentId),
-        doctorName:   provider.name,
-        specialty:    provider.specialty,
-        avatarUri:    provider.avatarUri,
-        date:         dateLabel,
-        time:         timeLabel,
-        paymentLabel: PAYMENT_LABELS[key],
-        location:     provider.location,
-      },
-    } as never);
-  }, [booking, provider, router]);
+      router.push({
+        pathname: "/(main)/booking/booking-success",
+        params: {
+          appointmentId: String(appointmentId),
+          doctorName: provider.name,
+          specialty: provider.specialty,
+          avatarUri: provider.avatarUri,
+          date: dateLabel,
+          time: timeLabel,
+          paymentLabel: PAYMENT_LABELS[key],
+          location: provider.location,
+        },
+      } as never);
+    },
+    [booking, provider, router],
+  );
 
   const handleNext = async () => {
     if (step < TOTAL_STEPS) {
-      setStep(s => s + 1);
+      setStep((s) => s + 1);
       return;
     }
 
@@ -202,19 +242,20 @@ export default function BookingScreen() {
     setIsSubmitting(true);
     try {
       const y = booking.date.getFullYear();
-      const m = String(booking.date.getMonth() + 1).padStart(2, '0');
-      const d = String(booking.date.getDate()).padStart(2, '0');
+      const m = String(booking.date.getMonth() + 1).padStart(2, "0");
+      const d = String(booking.date.getDate()).padStart(2, "0");
       const appointment = await appointmentService.create({
         providerId: provider.id ?? 0,
         date: `${y}-${m}-${d}`,
         time: booking.time,
-        reason: booking.reason || 'Consultation générale',
-        paymentMethod: booking.paymentMethod === 'now' ? booking.paymentProvider : 'later',
+        reason: booking.reason || "Consultation générale",
+        paymentMethod:
+          booking.paymentMethod === "now" ? booking.paymentProvider : "later",
       });
       createdAppointmentId.current = appointment.id;
 
       // Planifier une notification locale pour le rappel RDV
-      const [hours, mins] = booking.time!.split(':').map(Number);
+      const [hours, mins] = booking.time!.split(":").map(Number);
       const appointmentDate = new Date(booking.date!);
       appointmentDate.setHours(hours, mins, 0, 0);
       notificationService.scheduleAppointmentReminder({
@@ -225,16 +266,21 @@ export default function BookingScreen() {
 
       setIsSubmitting(false);
 
-      if (booking.paymentMethod === 'later') {
+      if (booking.paymentMethod === "later") {
         navigateToSuccess(appointment.id);
       } else {
-        if (booking.paymentProvider === 'mobile_money') momoSheetRef.current?.open();
-        else if (booking.paymentProvider === 'orange_money') orangeSheetRef.current?.open();
+        if (booking.paymentProvider === "mobile_money")
+          momoSheetRef.current?.open();
+        else if (booking.paymentProvider === "orange_money")
+          orangeSheetRef.current?.open();
         else cardSheetRef.current?.open();
       }
     } catch (err: any) {
       setIsSubmitting(false);
-      Alert.alert('Erreur', err?.message || 'Impossible de créer le rendez-vous.');
+      Alert.alert(
+        "Erreur",
+        err?.message || "Impossible de créer le rendez-vous.",
+      );
     }
   };
 
@@ -245,22 +291,22 @@ export default function BookingScreen() {
   }, [navigateToSuccess]);
 
   const handleBack = () => {
-    if (step > 1) setStep(s => s - 1);
+    if (step > 1) setStep((s) => s - 1);
     else router.back();
   };
 
   // Computed total (same formula as StepConfirm)
   const paymentTotal = (() => {
-    const fee      = provider.priceXCFA;
+    const fee = provider.priceXCFA;
     const discount = Math.round(fee * 0.03);
-    const taxes    = Math.round(fee * 0.02);
+    const taxes = Math.round(fee * 0.02);
     return fee - discount + taxes;
   })();
 
   const isLastStep = step === TOTAL_STEPS;
 
   return (
-    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -276,19 +322,18 @@ export default function BookingScreen() {
         {!isLastStep && (
           <Text style={styles.headerTitle}>Nouvelle réservation</Text>
         )}
-        {isLastStep
-          ? (
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.headerBack}
-              activeOpacity={1}
-              hitSlop={8}
-            >
-              <Ionicons name="close" size={22} color={colors.ink} />
-            </TouchableOpacity>
-          )
-          : <View style={styles.headerSpacer} />
-        }
+        {isLastStep ? (
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.headerBack}
+            activeOpacity={1}
+            hitSlop={8}
+          >
+            <Ionicons name="close" size={22} color={colors.ink} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
       {/* ── Progress ────────────────────────────────────────────────────────── */}
@@ -310,10 +355,10 @@ export default function BookingScreen() {
         <View style={styles.datePreview}>
           <Ionicons name="calendar-outline" size={18} color={colors.primary} />
           <Text style={styles.datePreviewText}>
-            {booking.date.toLocaleDateString('fr-FR', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
+            {booking.date.toLocaleDateString("fr-FR", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
             })}
           </Text>
         </View>
@@ -324,20 +369,20 @@ export default function BookingScreen() {
         {step === 1 && (
           <StepDate
             selected={booking.date}
-            onSelect={d => patchBooking({ date: d })}
+            onSelect={(d) => patchBooking({ date: d })}
           />
         )}
         {step === 2 && (
           <StepTime
             slots={slotsLoading ? [] : availableSlots}
             selected={booking.time}
-            onSelect={t => patchBooking({ time: t })}
+            onSelect={(t) => patchBooking({ time: t })}
           />
         )}
         {step === 3 && (
           <StepReason
             value={booking.reason}
-            onChange={t => patchBooking({ reason: t })}
+            onChange={(t) => patchBooking({ reason: t })}
           />
         )}
         {step === 4 && (
@@ -353,15 +398,23 @@ export default function BookingScreen() {
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <View style={styles.footer}>
         {step > 1 && !isLastStep && (
-          <TouchableOpacity onPress={handleBack} style={styles.footerBack} hitSlop={8}>
+          <TouchableOpacity
+            onPress={handleBack}
+            style={styles.footerBack}
+            hitSlop={8}
+          >
             <Ionicons name="chevron-back" size={20} color={colors.ink} />
             <Text style={styles.footerBackText}>Retour</Text>
           </TouchableOpacity>
         )}
         <PrimaryButton
-          label={isLastStep
-            ? (isSubmitting ? 'Création en cours...' : 'Confirmer la réservation')
-            : 'Continuer'}
+          label={
+            isLastStep
+              ? isSubmitting
+                ? "Création en cours..."
+                : "Confirmer la réservation"
+              : "Continuer"
+          }
           variant="solid"
           size="md"
           fullWidth={step === 1 || isLastStep}
@@ -372,7 +425,7 @@ export default function BookingScreen() {
 
       {isLastStep && (
         <Text style={styles.terms}>
-          En confirmant, j'ai lu et approuvé les{' '}
+          En confirmant, j'ai lu et approuvé les{" "}
           <Text style={styles.termsLink}>Termes de Réservation.</Text>
         </Text>
       )}
@@ -410,17 +463,17 @@ const styles = StyleSheet.create({
 
   // ── Header ──
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 12,
     paddingBottom: 16,
   },
   headerBack: {
     width: 36,
     height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
     fontFamily: fontFamily.bold,
@@ -434,8 +487,8 @@ const styles = StyleSheet.create({
 
   // ── Provider card ──
   providerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginHorizontal: 16,
     marginBottom: 16,
@@ -466,8 +519,8 @@ const styles = StyleSheet.create({
 
   // ── Date preview ──
   datePreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginHorizontal: 16,
     marginBottom: 12,
@@ -475,14 +528,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
-    backgroundColor: colors.primary + '08',
+    borderColor: colors.primary + "40",
+    backgroundColor: colors.primary + "08",
   },
   datePreviewText: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.sm,
     color: colors.primary,
-    textTransform: 'capitalize',
+    textTransform: "capitalize",
   },
 
   // ── Step content ──
@@ -494,18 +547,18 @@ const styles = StyleSheet.create({
 
   // ── Footer ──
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: 12,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 0 : 8,
+    paddingBottom: Platform.OS === "ios" ? 0 : 8,
   },
   footerBack: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   footerBackText: {
     fontSize: fontSize.md,
@@ -518,7 +571,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
     color: colors.ink,
-    textAlign: 'center',
+    textAlign: "center",
     paddingHorizontal: 24,
     marginBottom: 8,
     lineHeight: 18,

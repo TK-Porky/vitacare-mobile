@@ -76,8 +76,8 @@ const STATUS_CONFIG: Record<
   },
   IN_PROGRESS: {
     icon: "checkmark",
-    color: colors.success,
-    bg: colors.successLight,
+    color: colors.warning,
+    bg: colors.warningLight,
     label: "En cours",
   },
 };
@@ -174,23 +174,11 @@ export function AppointmentCard({
           </Text>
 
           {/* Action selon statut */}
-          {!past && (
-            <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
-              <Text style={[styles.statusLabel, { color: cfg.color }]}>
-                {cfg.label}
-              </Text>
-            </View>
-          )}
-          {item.status === "PAID" && (
-            <TouchableOpacity style={styles.btnReview} onPress={onReview}>
-              <Text style={styles.btnReviewText}>Avis</Text>
-            </TouchableOpacity>
-          )}
-          {item.status === "CANCELLED" && (
-            <TouchableOpacity style={styles.btnRebook} onPress={onRebook}>
-              <Text style={styles.btnRebookText}>Reprendre</Text>
-            </TouchableOpacity>
-          )}
+          <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
+            <Text style={[styles.statusLabel, { color: cfg.color }]}>
+              {cfg.label}
+            </Text>
+          </View>
         </View>
 
         {/* Adresse */}
@@ -389,7 +377,7 @@ const styles = StyleSheet.create({
 
   // Bouton Reprendre (cancelled)
   btnRebook: {
-    backgroundColor: colors.primaryLight ?? colors.successLight,
+    backgroundColor: colors.successLight ?? colors.successLight,
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 4,
