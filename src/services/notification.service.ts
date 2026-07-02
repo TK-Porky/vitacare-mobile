@@ -1,7 +1,7 @@
-// services/notification.service.ts
 import * as ExpoNotifications from "expo-notifications";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import messaging from "@react-native-firebase/messaging";
 import { router } from "expo-router";
 import { Platform, Alert } from "react-native";
 import {
@@ -20,6 +20,7 @@ import { useNotificationStore } from "@/store";
 // ── Constants ─────────────────────────────────────────────────────────────
 const STORAGE_KEY_INBOX = "vitacare:notifications:inbox";
 const STORAGE_KEY_PUSH_TOKEN = "vitacare:notifications:pushToken";
+const STORAGE_KEY_FCM_TOKEN = "vitacare:notifications:fcmToken";
 const STORAGE_KEY_PREFERENCES = "vitacare:notifications:preferences";
 const STORAGE_KEY_INBOX_CACHE = "vitacare:notifications:inbox:cache";
 const PAGE_SIZE = 20;
@@ -44,8 +45,18 @@ interface CachedInboxData {
   data: NotificationData[];
   timestamp: number;
   page: number;
+  pageSize?: number;
   hasNextPage: boolean;
   total: number;
+}
+
+interface DeviceInfo {
+  brand: string | null;
+  modelName: string | null;
+  osName: string | null;
+  osVersion: string | null;
+  deviceType: string | null;
+  isDevice: boolean;
 }
 
 // ── Service ───────────────────────────────────────────────────────────────
@@ -65,12 +76,14 @@ class NotificationService {
 
   // ── Permissions & registration ─────────────────────────────────────────
 
+  // Enregistre le token de notification
   async register(): Promise<string | null> {
     if (this._isRegistered) {
       return this._pushToken;
     }
 
     try {
+      // S'assurer que le handler est défini
       ExpoNotifications.setNotificationHandler({
         handleNotification: async () => ({
           shouldShowBanner: true,
@@ -79,89 +92,187 @@ class NotificationService {
           shouldSetBadge: true,
         }),
       });
-    } catch {
-      console.warn(
-        "[NotificationService] setNotificationHandler not available (Expo Go).",
-      );
-      return null;
-    }
 
-    let finalStatus: string;
-    try {
+      // Vérifier les permissions
       const { status: existingStatus } =
         await ExpoNotifications.getPermissionsAsync();
-      finalStatus = existingStatus;
+      let finalStatus = existingStatus;
 
       if (existingStatus !== "granted") {
         const { status } = await ExpoNotifications.requestPermissionsAsync();
         finalStatus = status;
       }
-    } catch {
-      console.warn(
-        "[NotificationService] Permission API not available (Expo Go).",
-      );
-      return null;
-    }
 
-    if (finalStatus !== "granted") {
-      console.warn("[NotificationService] Permission not granted.");
-      return null;
-    }
-
-    if (Platform.OS === "android") {
-      try {
-        await ExpoNotifications.setNotificationChannelAsync(
-          "vitacare-default",
-          {
-            name: "VitaCare",
-            importance: ExpoNotifications.AndroidImportance.HIGH,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: "#0D9488",
-          },
-        );
-        await ExpoNotifications.setNotificationChannelAsync(
-          "vitacare-reminders",
-          {
-            name: "Rappels",
-            importance: ExpoNotifications.AndroidImportance.HIGH,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: "#0D9488",
-          },
-        );
-      } catch {
-        console.warn(
-          "[NotificationService] Could not create notification channels (Expo Go).",
-        );
+      if (finalStatus !== "granted") {
+        console.warn("[NotificationService] Permission not granted.");
+        return null;
       }
-    }
 
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ??
-      Constants.easConfig?.projectId;
+      // ✅ Créer les canaux Android
+      if (Platform.OS === "android") {
+        await this.createAndroidChannels();
+      }
 
-    try {
+      // ✅ Obtenir le token
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        Constants.easConfig?.projectId;
       const tokenData = await ExpoNotifications.getExpoPushTokenAsync({
         projectId,
       });
+
       this._pushToken = tokenData.data;
       await AsyncStorage.setItem(STORAGE_KEY_PUSH_TOKEN, this._pushToken);
       this._isRegistered = true;
 
+      // ✅ Configurer les catégories iOS
       await this.setupNotificationCategories();
 
+      // ✅ Démarrer le nettoyage
       this.startCleanupJob();
 
       return this._pushToken;
-    } catch {
-      console.warn(
-        "[NotificationService] Could not obtain push token (requires a development build).",
-      );
+    } catch (error) {
+      console.error("[NotificationService] Registration error:", error);
       return null;
+    }
+  }
+
+  // Méthode helper pour les canaux Android
+  private async createAndroidChannels(): Promise<void> {
+    try {
+      await ExpoNotifications.setNotificationChannelAsync("vitacare-default", {
+        name: "VitaCare",
+        importance: ExpoNotifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#0D9488",
+      });
+      await ExpoNotifications.setNotificationChannelAsync(
+        "vitacare-reminders",
+        {
+          name: "Rappels",
+          importance: ExpoNotifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: "#0D9488",
+        },
+      );
+      console.log("✅ Canaux Android créés");
+    } catch (error) {
+      console.warn("⚠️ Could not create notification channels:", error);
+    }
+  }
+
+  // ─── Gestion du token FCM ──────────────────────────────────────────────
+
+  // Permission
+  async getFCMToken(): Promise<string | null> {
+    try {
+      const authStatus = await messaging().requestPermission();
+      const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+      if (!enabled) {
+        console.log("Permission de notification refusée");
+        return null;
+      }
+
+      // Sur Android, cela fonctionne directement. Sur iOS, il faut parfois le token APNS d'abord.
+      const fcmToken = await messaging().getToken();
+      return fcmToken;
+    } catch (error) {
+      console.error("Erreur getFCMToken:", error);
+      return null;
+    }
+  }
+
+  // Supprimer le token FCM
+  async deleteFCMToken() {
+    try {
+      await messaging().deleteToken();
+      await AsyncStorage.removeItem(STORAGE_KEY_FCM_TOKEN);
+      console.log("✅ Token FCM supprimé");
+    } catch (error) {
+      console.error("Erreur deleteFCMToken:", error);
+    }
+  }
+
+  // Enregistrer le token FCM auprès du backend
+  private async saveTokenToBackend(
+    deviceInfo: DeviceInfo,
+    token: string,
+  ): Promise<ApiResponse> {
+    try {
+      const response = await apiClient.post<ApiResponse>(`/fcm/token`, {
+        fcmToken: token,
+        deviceInfo: {
+          brand: deviceInfo.brand,
+          model: deviceInfo.modelName,
+          os: deviceInfo.osName,
+          osVersion: deviceInfo.osVersion,
+          type: deviceInfo.deviceType,
+          isDevice: deviceInfo.isDevice,
+        },
+      });
+      return response;
+    } catch (error) {
+      console.error("❌ Erreur de sauvegarde du token:", error);
+      throw error;
+    }
+  }
+
+  // Enregistrer le device auprès du backend
+  async registerDevice(
+    deviceToken: string | null,
+    deviceInfo: DeviceInfo,
+  ): Promise<void> {
+    if (!deviceToken) {
+      console.warn("🚨 Token manquant, impossible d'enregistrer le device");
+      return;
+    }
+
+    try {
+      const response = await this.saveTokenToBackend(deviceInfo, deviceToken);
+
+      if (!response.success) {
+        throw new Error(response.error || "Erreur lors de l'enregistrement");
+      }
+
+      // ✅ Sauvegarder le token localement
+      await AsyncStorage.setItem(STORAGE_KEY_FCM_TOKEN, deviceToken);
+      console.log("✅ Device enregistré avec succès");
+    } catch (error) {
+      console.error("❌ Erreur lors de l'enregistrement du device:", error);
+    }
+  }
+
+  // Supprimer l'enregistrement du device
+  async clearDeviceRegistration(): Promise<void> {
+    if (!this._pushToken) {
+      console.warn("🚨 Token manquant, impossible de désenregistrer le device");
+      return;
+    }
+
+    try {
+      // Supprimer le token FCM
+      await this.deleteFCMToken();
+
+      // Supprimer le push token Expo
+      this._pushToken = null;
+      await AsyncStorage.removeItem(STORAGE_KEY_PUSH_TOKEN);
+
+      // Désenregistrer du backend
+      await apiClient.delete(`/fcm/token/${this._pushToken}`);
+
+      console.log("✅ Device désenregistré");
+    } catch (error) {
+      console.error("❌ Erreur de désenregistrement:", error);
     }
   }
 
   // ── Gestion des notifications de rappel ──────────────────────────────
 
+  // Gérer l'ouverture d'une notification de rappel
   handleReminderNotification(data: ReminderNotificationData): void {
     console.log("🔔 Notification de rappel ouverte:", data);
 
@@ -182,9 +293,7 @@ class NotificationService {
     });
   }
 
-  /**
-   * Programme une notification de rappel avec actions
-   */
+  // Planifier une notification de rappel
   async scheduleReminderNotification(
     reminderId: string,
     medicationName: string,
@@ -204,8 +313,6 @@ class NotificationService {
         `📅 Programmation du rappel pour: ${triggerDate.toLocaleString()}`,
       );
 
-      // ✅ Correction: actions doit être au niveau du contenu, mais Expo ne supporte pas actions sur Android
-      // Les actions sont gérées via les catégories iOS ou via la réponse à la notification
       const identifier = await ExpoNotifications.scheduleNotificationAsync({
         content: {
           title: "💊 Rappel de médicament",
@@ -219,8 +326,10 @@ class NotificationService {
           },
           sound: true,
           priority: ExpoNotifications.AndroidNotificationPriority.HIGH,
-          // ✅ categoryIdentifier est supporté sur iOS et Android (Expo)
-          categoryIdentifier: "reminder",
+          // categoryIdentifier uniquement sur iOS
+          ...(Platform.OS === "ios" && {
+            categoryIdentifier: "reminder",
+          }),
         },
         trigger: {
           type: ExpoNotifications.SchedulableTriggerInputTypes.DATE,
@@ -236,13 +345,10 @@ class NotificationService {
     }
   }
 
-  /**
-   * Configure les catégories de notifications pour iOS
-   */
+  // Configurer les catégories de notifications (iOS)
   async setupNotificationCategories(): Promise<void> {
     if (Platform.OS === "ios") {
       try {
-        // ✅ Correction: utiliser setNotificationCategoryAsync avec les bonnes options
         await ExpoNotifications.setNotificationCategoryAsync("reminder", [
           {
             identifier: "take",
@@ -276,9 +382,7 @@ class NotificationService {
     }
   }
 
-  /**
-   * Gère les actions des notifications
-   */
+  // Gérer les actions de notification
   async handleNotificationAction(
     response: ExpoNotifications.NotificationResponse,
   ): Promise<void> {
@@ -320,6 +424,7 @@ class NotificationService {
     }
   }
 
+  // Gérer l'action "prise"
   private async handleTakeAction(
     data: ReminderNotificationData,
   ): Promise<void> {
@@ -327,8 +432,9 @@ class NotificationService {
 
     try {
       const response = await apiClient.patch<ApiResponse>(
-        `/reminders/${data.reminderId}/take`,
+        `/reminders/mark-taken`,
         {
+          reminderId: data.reminderId,
           takenAt: new Date().toISOString(),
         },
       );
@@ -336,8 +442,6 @@ class NotificationService {
       if (!response.success) {
         throw new Error(response.message || "Erreur lors du marquage");
       }
-
-      await this.cancel(data.reminderId);
 
       Alert.alert(
         "✅ Prise confirmée",
@@ -347,60 +451,64 @@ class NotificationService {
     } catch (error) {
       console.error("❌ Erreur:", error);
       Alert.alert("Erreur", "Impossible de marquer le rappel comme pris.");
+    } finally {
+      // TOUJOURS annuler la notification, même en cas d'erreur
+      await this.cancel(data.reminderId);
     }
   }
 
+  // Gérer l'action "snooze"
   private async handleSnoozeAction(
     data: ReminderNotificationData,
   ): Promise<void> {
     console.log("⏰ Snooze:", data.reminderId);
 
     try {
-      const response = await apiClient.patch<ApiResponse>(
-        `/reminders/${data.reminderId}/snooze`,
-        {
-          minutes: 15,
-        },
-      );
+      const response = await apiClient.patch<ApiResponse>(`/reminders/snooze`, {
+        reminderId: data.reminderId,
+        minutes: data.minutes,
+      });
 
       if (!response.success) {
         throw new Error(response.message || "Erreur lors du report");
       }
 
-      await ExpoNotifications.cancelScheduledNotificationAsync(data.reminderId);
-
       const newTime = new Date(Date.now() + 15 * 60 * 1000);
-      await this.scheduleReminderNotification(
-        data.reminderId,
-        data.medicationName,
-        data.dosage,
-        newTime,
-      );
 
-      Alert.alert("⏰ Rappel reporté", `Vous serez notifié dans 15 minutes.`, [
-        { text: "OK" },
-      ]);
+      await this.scheduleTreatmentReminder({
+        treatmentId: data.reminderId,
+        treatmentName: data.medicationName,
+        reminderTime: newTime,
+      });
+
+      Alert.alert(
+        "⏰ Rappel reporté",
+        `Vous serez notifié dans ${data.minutes} minutes.`,
+        [{ text: "OK" }],
+      );
     } catch (error) {
       console.error("❌ Erreur de snooze:", error);
       Alert.alert("Erreur", "Impossible de reporter le rappel.");
+    } finally {
+      // ✅ TOUJOURS annuler l'ancienne notification
+      await this.cancel(data.reminderId);
     }
   }
 
+  // Gérer l'action "ignoré"
   private async handleSkipAction(
     data: ReminderNotificationData,
   ): Promise<void> {
     console.log("❌ Ignoré:", data.reminderId);
 
     try {
-      const response = await apiClient.patch<ApiResponse>(
-        `/reminders/${data.reminderId}/skip`,
-      );
+      const response = await apiClient.patch<ApiResponse>(`/reminders/skip`, {
+        reminderId: data.reminderId,
+      });
 
       if (!response.success) {
         throw new Error(response.message || "Erreur lors de l'ignorance");
       }
-
-      await this.cancel(data.reminderId);
 
       Alert.alert(
         "❌ Rappel ignoré",
@@ -410,15 +518,20 @@ class NotificationService {
     } catch (error) {
       console.error("❌ Erreur:", error);
       Alert.alert("Erreur", "Impossible d'ignorer le rappel.");
+    } finally {
+      // TOUJOURS annuler la notification
+      await this.cancel(data.reminderId);
     }
   }
 
   // ── Getters ─────────────────────────────────────────────────────────────
 
+  // Getter pour le push token
   get pushToken(): string | null {
     return this._pushToken;
   }
 
+  // Charger le push token sauvegardé
   async loadSavedToken(): Promise<string | null> {
     this._pushToken = await AsyncStorage.getItem(STORAGE_KEY_PUSH_TOKEN);
     return this._pushToken;
@@ -426,6 +539,7 @@ class NotificationService {
 
   // ── Preferences ────────────────────────────────────────────────────────
 
+  // Récupérer les préférences de notification
   async getPreferences(): Promise<NotificationPreferences> {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY_PREFERENCES);
@@ -470,6 +584,7 @@ class NotificationService {
     }
   }
 
+  // Sauvegarder les préférences de notification
   async savePreferences(
     prefs: Partial<NotificationPreferences>,
   ): Promise<void> {
@@ -484,6 +599,7 @@ class NotificationService {
 
   // ── Inbox ──────────────────────────────────────────────────────────────
 
+  // Récupérer la boîte de réception
   async getInbox(
     page: number = 1,
     limit: number = PAGE_SIZE,
@@ -563,6 +679,7 @@ class NotificationService {
     }
   }
 
+  // Ajouter une notification à la boîte de réception
   async addToInbox(notification: NotificationData): Promise<void> {
     try {
       const inbox = await this.getInboxData();
@@ -596,6 +713,7 @@ class NotificationService {
     }
   }
 
+  // Marquer une notification comme lue
   async markAsRead(id: string): Promise<void> {
     try {
       await apiClient.patch<ApiResponse>(`/notifications/${id}/read`);
@@ -619,6 +737,7 @@ class NotificationService {
     }
   }
 
+  // Marquer toutes les notifications comme lues
   async markAllAsRead(): Promise<void> {
     try {
       await apiClient.post<ApiResponse>("/notifications/read-all");
@@ -642,6 +761,7 @@ class NotificationService {
     }
   }
 
+  // Supprimer une notification de la boîte de réception
   async deleteFromInbox(id: string): Promise<void> {
     try {
       await apiClient.delete<ApiResponse>(`/notifications/${id}`);
@@ -661,6 +781,7 @@ class NotificationService {
     }
   }
 
+  // Supprimer toutes les notifications
   async deleteAll(): Promise<void> {
     try {
       await apiClient.delete<ApiResponse>("/notifications");
@@ -677,6 +798,7 @@ class NotificationService {
     }
   }
 
+  // Récupérer le nombre de notifications non lues
   async getUnreadCount(): Promise<number> {
     try {
       const inbox = await this.getInboxData();
@@ -689,6 +811,17 @@ class NotificationService {
 
   // ── Cache management ───────────────────────────────────────────────────
 
+  private async saveFCMToken(): Promise<string | null> {
+    const token = await this.getFCMToken();
+    if (!token) {
+      console.warn("🚨 Token manquant, impossible d'enregistrer le device");
+      return null;
+    }
+    await AsyncStorage.setItem(STORAGE_KEY_FCM_TOKEN, token);
+    return token;
+  }
+
+  // Récupérer la boîte de réception depuis le cache
   private async getInboxData(): Promise<NotificationData[]> {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY_INBOX);
@@ -700,12 +833,14 @@ class NotificationService {
     }
   }
 
+  // Mettre en cache la boîte de réception
   private async cacheInbox(data: PaginatedResponse): Promise<void> {
     try {
       const cacheData: CachedInboxData = {
         data: data.data,
         timestamp: Date.now(),
         page: data.pagination.page,
+        pageSize: data.pagination.pageSize,
         hasNextPage: data.pagination.hasNextPage,
         total: data.pagination.total,
       };
@@ -718,6 +853,7 @@ class NotificationService {
     }
   }
 
+  // Récupérer la boîte de réception depuis le cache
   private async getCachedInbox(): Promise<PaginatedResponse | null> {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY_INBOX_CACHE);
@@ -735,8 +871,8 @@ class NotificationService {
         pagination: {
           total: cached.total,
           page: cached.page,
-          pageSize: PAGE_SIZE,
-          totalPages: Math.ceil(cached.total / PAGE_SIZE),
+          pageSize: cached.pageSize || PAGE_SIZE,
+          totalPages: Math.ceil(cached.total / (cached.pageSize || PAGE_SIZE)),
           hasNextPage: cached.hasNextPage,
           hasPreviousPage: cached.page > 1,
         },
@@ -749,6 +885,7 @@ class NotificationService {
 
   // ── Badge management ───────────────────────────────────────────────────
 
+  // Mettre à jour le badge
   private async updateBadge(): Promise<void> {
     try {
       const unreadCount = await this.getUnreadCount();
@@ -762,6 +899,7 @@ class NotificationService {
 
   // ── Cleanup ────────────────────────────────────────────────────────────
 
+  // Démarrer le nettoyage
   private startCleanupJob(): void {
     if (this._cleanupInterval) return;
 
@@ -775,6 +913,7 @@ class NotificationService {
     );
   }
 
+  // Nettoyage des notifications expirées
   async cleanupExpiredNotifications(): Promise<void> {
     try {
       const inbox = await this.getInboxData();
@@ -808,6 +947,7 @@ class NotificationService {
 
   // ── Local notification scheduling ─────────────────────────────────────
 
+  // Planifier une notification locale
   async schedule({
     title,
     body,
@@ -867,6 +1007,7 @@ class NotificationService {
     return identifier;
   }
 
+  // Annuler une notification locale
   async cancel(identifier: string): Promise<void> {
     try {
       await ExpoNotifications.cancelScheduledNotificationAsync(identifier);
@@ -876,6 +1017,7 @@ class NotificationService {
     await this.deleteFromInbox(identifier);
   }
 
+  // Annuler une notification locale par clé de données
   async cancelByDataKey(key: string, value: string): Promise<void> {
     const inbox = await this.getInboxData();
     const match = inbox.find((n) => {
@@ -887,6 +1029,7 @@ class NotificationService {
     }
   }
 
+  // Annuler toutes les notifications locales
   async cancelAll(resetPreferences: boolean = false): Promise<void> {
     try {
       await ExpoNotifications.cancelAllScheduledNotificationsAsync();
@@ -917,6 +1060,7 @@ class NotificationService {
 
   // ── Convenience schedulers ─────────────────────────────────────────────
 
+  // Planifier un rappel de rendez-vous
   async scheduleAppointmentReminder({
     appointmentId,
     doctorName,
@@ -943,6 +1087,7 @@ class NotificationService {
     });
   }
 
+  // Planifier un rappel de traitement
   async scheduleTreatmentReminder({
     treatmentId,
     treatmentName,
@@ -963,6 +1108,7 @@ class NotificationService {
 
   // ── Event listeners ────────────────────────────────────────────────────
 
+  // Ajoute un listener pour les notifications reçues en premier plan
   addForegroundListener(
     callback?: (notification: ExpoNotifications.Notification) => void,
   ): ExpoNotifications.Subscription {
@@ -988,6 +1134,7 @@ class NotificationService {
     }
   }
 
+  // Ajoute un listener pour les réponses aux notifications
   addResponseListener(
     callback: (response: ExpoNotifications.NotificationResponse) => void,
   ): ExpoNotifications.Subscription {
@@ -1000,6 +1147,7 @@ class NotificationService {
     }
   }
 
+  // Détruit le service
   destroy(): void {
     if (this._cleanupInterval) {
       clearInterval(this._cleanupInterval);

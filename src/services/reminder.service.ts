@@ -1,5 +1,3 @@
-// services/reminder.service.ts
-
 import { apiClient } from "@/lib/api.client";
 import { API_ENDPOINTS } from "@/types/api-endpoints";
 import {
@@ -9,11 +7,11 @@ import {
   RemindersListQuery,
 } from "@/types/api-requests";
 import { ReminderResponse, RemindersListResponse } from "@/types/api-responses";
-import { notificationService } from "./notification.service";
+import { notificationService } from "./notifications";
 
-/**
- * Helper to build query string
- */
+// ── Helper functions ───────────────────────────────────────────────────────
+
+// Construit une chaîne de requête URL
 const buildQueryString = (params?: Record<string, any>): string => {
   if (!params) return "";
 
@@ -29,14 +27,12 @@ const buildQueryString = (params?: Record<string, any>): string => {
   return queryString ? `?${queryString}` : "";
 };
 
-/**
- * Reminder Service
- * Manages medication intake reminders for users.
- */
+// ── Service ───────────────────────────────────────────────────────────────
+
 export const reminderService = {
-  /**
-   * Get all reminders for the user with pagination and filtering
-   */
+  // ── Requêtes API ───────────────────────────────────────────────────────────
+
+  // Récupère tous les rappels avec pagination et filtrage
   async getReminders(query?: RemindersListQuery) {
     const params = new URLSearchParams();
     if (query?.status) params.append("status", query.status);
@@ -102,9 +98,7 @@ export const reminderService = {
     };
   },
 
-  /**
-   * Create a new reminder linked to an existing medication (by medicationId)
-   */
+  // Crée un nouveau rappel lié à un médicament existant (par medicationId)
   async createReminder(data: CreateReminderRequest): Promise<ReminderResponse> {
     const res = await apiClient.post<ReminderResponse>(
       API_ENDPOINTS.REMINDERS.CREATE,
@@ -113,26 +107,33 @@ export const reminderService = {
     if (!res.success) throw new Error(res.error ?? "Failed to create reminder");
     const reminder = res.data!;
 
-    // ✅ Utiliser scheduleTreatmentReminder (qui utilise la méthode schedule qui fonctionne)
-    if (reminder.scheduledDate && reminder.scheduledTime) {
-      const scheduledDate = new Date(
-        reminder.scheduledDate + "T" + reminder.scheduledTime,
+    // Utiliser scheduleTreatmentReminder (qui utilise la méthode schedule qui fonctionne)
+    if (data.scheduledDate && data.scheduledTime) {
+      let scheduledDate = new Date(
+        data.scheduledDate + "T" + data.scheduledTime,
       );
-      if (scheduledDate > new Date()) {
-        await notificationService.scheduleTreatmentReminder({
-          treatmentId: String(reminder.id),
-          treatmentName: reminder.medicationName || "Médicament",
-          reminderTime: scheduledDate,
-        });
+      if (scheduledDate <= new Date()) {
+        console.warn("⏰ Date de rappel passée, reprogrammation dans 1 minute");
+        scheduledDate = new Date(Date.now() + 60000);
       }
+      console.log(
+        `📅 Planification du rappel ${data.medicationName} à ${scheduledDate.toISOString()}`,
+      );
+      await notificationService.scheduleTreatmentReminder({
+        treatmentId: String(reminder.id),
+        treatmentName: data.medicationName || "Médicament",
+        reminderTime: scheduledDate,
+      });
+    } else {
+      console.warn(
+        "⚠️ scheduledDate ou scheduledHour manquant dans la réponse",
+      );
     }
     return reminder;
   },
 
-  /**
-   * Create a simple reminder by medication name (auto-resolve or create medication)
-   * ✅ Planifie la notification
-   */
+  // Crée un rappel simple par nom de médicament (résolution automatique ou création de médicament)
+  // Planifie la notification
   async createSimpleReminder(
     data: CreateSimpleReminderRequest,
   ): Promise<ReminderResponse> {
@@ -145,29 +146,24 @@ export const reminderService = {
 
     const reminder = res.data!;
 
-    // ✅ Planifier la notification de rappel
-    if (reminder.scheduledDate && reminder.scheduledTime) {
-      const scheduledDate = new Date(
-        reminder.scheduledDate + "T" + reminder.scheduledTime,
-      );
+    // Planifier la notification de rappel
+    if (data.startDate && data.times) {
+      const scheduledDate = new Date(data.startDate + "T" + data.times);
 
       if (scheduledDate > new Date()) {
-        await notificationService.scheduleReminderNotification(
-          String(reminder.id),
-          reminder.medicationName || reminder.name || "Médicament",
-          reminder.dosage || reminder.medicationDosage || "",
-          scheduledDate,
-        );
+        await notificationService.scheduleTreatmentReminder({
+          treatmentId: String(reminder.id),
+          treatmentName: data.name || "Médicament",
+          reminderTime: scheduledDate,
+        });
       }
     }
 
     return reminder;
   },
 
-  /**
-   * Update an existing reminder
-   * ✅ Reprogramme la notification
-   */
+  // Met à jour un rappel existant
+  // Reprogramme la notification
   async updateReminder(
     reminderId: string,
     data: UpdateReminderRequest,
@@ -179,42 +175,40 @@ export const reminderService = {
     if (!res.success) throw new Error(res.error ?? "Failed to update reminder");
     const reminder = res.data!;
 
-    // ✅ Annuler l'ancienne notification
-    await notificationService.cancel(reminderId);
+    // Annuler l'ancienne notification
+    await notificationService.cancelNotification(reminderId);
 
-    // ✅ Reprogrammer avec scheduleTreatmentReminder
-    if (reminder.scheduledDate && reminder.scheduledTime) {
-      const scheduledDate = new Date(
-        reminder.scheduledDate + "T" + reminder.scheduledTime,
+    // Reprogrammer avec scheduleTreatmentReminder
+    if (data.scheduledDate && data.scheduledTime) {
+      let scheduledDate = new Date(
+        data.scheduledDate + "T" + data.scheduledTime,
       );
-      if (scheduledDate > new Date()) {
-        await notificationService.scheduleTreatmentReminder({
-          treatmentId: String(reminder.id),
-          treatmentName: reminder.medicationName || "Médicament",
-          reminderTime: scheduledDate,
-        });
+      if (scheduledDate <= new Date()) {
+        scheduledDate = new Date(Date.now() + 60000);
       }
+      await notificationService.scheduleTreatmentReminder({
+        treatmentId: String(reminder.id),
+        treatmentName:
+          data.medicationName || reminder.medicationName || "Médicament",
+        reminderTime: scheduledDate,
+      });
     }
     return reminder;
   },
 
-  /**
-   * Delete a reminder
-   * ✅ Annule la notification
-   */
+  // Supprime un rappel
+  // Annule la notification
   async deleteReminder(reminderId: string): Promise<void> {
     const res = await apiClient.delete(
       API_ENDPOINTS.REMINDERS.DELETE(reminderId),
     );
     if (!res.success) throw new Error(res.error ?? "Failed to delete reminder");
-    // ✅ Annuler la notification
-    await notificationService.cancel(reminderId);
+    // Annuler la notification
+    await notificationService.cancelNotification(reminderId);
   },
 
-  /**
-   * Mark a reminder as taken (acknowledge intake)
-   * ✅ Annule la notification après prise
-   */
+  // Marque un rappel comme pris (confirme la prise)
+  // Annule la notification après prise
   async markAsTaken(
     reminderId: string,
     takenAt?: string,
@@ -224,15 +218,13 @@ export const reminderService = {
       { reminderId, takenAt },
     );
     if (!res.success) throw new Error(res.error ?? "Failed to mark as taken");
-    // ✅ Annuler la notification
-    await notificationService.cancel(reminderId);
+    // Annuler la notification
+    await notificationService.cancelNotification(reminderId);
     return res.data!;
   },
 
-  /**
-   * Snooze a reminder for a specified duration (minutes)
-   * ✅ Reprogramme la notification après snooze
-   */
+  // Snooze un rappel pour une durée spécifiée (minutes)
+  // Reprogramme la notification après snooze
   async snoozeReminder(
     reminderId: string,
     minutes: number,
@@ -244,29 +236,26 @@ export const reminderService = {
     if (!res.success) throw new Error(res.error ?? "Failed to snooze reminder");
     const reminder = res.data!;
 
-    // ✅ Annuler l'ancienne notification
-    await notificationService.cancel(reminderId);
+    await notificationService.cancelNotification(reminderId);
 
-    // ✅ Reprogrammer avec scheduleTreatmentReminder
-    if (reminder.scheduledDate && reminder.scheduledTime) {
-      const scheduledDate = new Date(
-        reminder.scheduledDate + "T" + reminder.scheduledTime,
+    if (reminder.scheduledDate && reminder.scheduledHour) {
+      let scheduledDate = new Date(
+        reminder.scheduledDate + "T" + reminder.scheduledHour,
       );
-      if (scheduledDate > new Date()) {
-        await notificationService.scheduleTreatmentReminder({
-          treatmentId: String(reminder.id),
-          treatmentName: reminder.medicationName || "Médicament",
-          reminderTime: scheduledDate,
-        });
+      if (scheduledDate <= new Date()) {
+        scheduledDate = new Date(Date.now() + 60000);
       }
+      await notificationService.scheduleTreatmentReminder({
+        treatmentId: String(reminder.id),
+        treatmentName: reminder.medicationName || "Médicament",
+        reminderTime: scheduledDate,
+      });
     }
     return reminder;
   },
 
-  /**
-   * Skip a reminder (mark as missed without notification)
-   * ✅ Annule la notification
-   */
+  // Skip un rappel (marque comme manqué sans notification)
+  // Annule la notification
   async skipReminder(reminderId: string): Promise<ReminderResponse> {
     const res = await apiClient.post<ReminderResponse>(
       API_ENDPOINTS.REMINDERS.SKIP,
@@ -274,15 +263,15 @@ export const reminderService = {
     );
     if (!res.success) throw new Error(res.error ?? "Failed to skip reminder");
 
-    // ✅ Annuler la notification après skip
-    await notificationService.cancel(reminderId);
+    // Annuler la notification après skip
+    await notificationService.cancelNotification(reminderId);
 
     return res.data!;
   },
 
-  /**
-   * Get upcoming reminders (next 24 hours)
-   */
+  // ── Dashboard ──────────────────────────────────────────────────────────────
+
+  // Récupère les prochains rappels (prochaines 24 heures)
   async getUpcomingReminders(): Promise<RemindersListResponse> {
     const res = await apiClient.get<RemindersListResponse>(
       API_ENDPOINTS.REMINDERS.UPCOMING,
@@ -292,9 +281,7 @@ export const reminderService = {
     return res.data!;
   },
 
-  /**
-   * Get today's intake schedule
-   */
+  // Récupère les prochains rappels (prochaines 24 heures)
   async getTodaySchedule(): Promise<RemindersListResponse> {
     const res = await apiClient.get<RemindersListResponse>(
       API_ENDPOINTS.REMINDERS.TODAY,
@@ -304,9 +291,7 @@ export const reminderService = {
     return res.data!;
   },
 
-  /**
-   * Get reminder summary statistics
-   */
+  // Récupère les statistiques des rappels
   async getSummary(): Promise<{
     pending: number;
     taken: number;
@@ -324,9 +309,9 @@ export const reminderService = {
     return res.data!;
   },
 
-  /**
-   * Get reminders for a specific patient
-   */
+  // ── Listes ───────────────────────────────────────────────────────────────
+
+  // Récupère les rappels d'un patient spécifique
   async getPatientReminders(
     patientId: string,
     query?: RemindersListQuery,
@@ -340,9 +325,7 @@ export const reminderService = {
     return res.data!;
   },
 
-  /**
-   * Get reminders for a specific medication
-   */
+  // Récupère les rappels d'un médicament spécifique
   async getMedicationReminders(
     medicationId: string,
     query?: RemindersListQuery,
@@ -356,10 +339,8 @@ export const reminderService = {
     return res.data!;
   },
 
-  /**
-   * Create multiple reminders at once
-   * ✅ Planifie les notifications pour chaque rappel
-   */
+  // Crée plusieurs rappels en même temps
+  // Planifie les notifications pour chaque rappel
   async createBulkReminders(
     patientId: string,
     reminders: Omit<CreateReminderRequest, "patientId">[],
@@ -373,30 +354,32 @@ export const reminderService = {
 
     const createdReminders = res.data!.reminders;
 
-    // ✅ Planifier les notifications pour chaque rappel
-    for (const reminder of createdReminders) {
-      if (reminder.scheduledDate && reminder.scheduledTime) {
-        const scheduledDate = new Date(
-          reminder.scheduledDate + "T" + reminder.scheduledTime,
-        );
+    // Planifier les notifications pour chaque rappel
+    for (let i = 0; i < createdReminders.length; i++) {
+      const reminder = createdReminders[i];
+      const originalData = reminders[i];
 
-        if (scheduledDate > new Date()) {
-          await notificationService.scheduleReminderNotification(
-            String(reminder.id),
-            reminder.medicationName || reminder.name || "Médicament",
-            reminder.dosage || reminder.medicationDosage || "",
-            scheduledDate,
-          );
+      if (originalData.scheduledDate && originalData.scheduledTime) {
+        let scheduledDate = new Date(
+          originalData.scheduledDate + "T" + originalData.scheduledTime,
+        );
+        if (scheduledDate <= new Date()) {
+          scheduledDate = new Date(Date.now() + 60000);
         }
+        await notificationService.scheduleTreatmentReminder({
+          treatmentId: String(reminder.id),
+          treatmentName: originalData.medicationName || "Médicament",
+          reminderTime: scheduledDate,
+        });
       }
     }
 
     return createdReminders;
   },
 
-  /**
-   * Mark specific reminders as read
-   */
+  // ── Notifications ───────────────────────────────────────────────────────────────
+
+  // Marque un rappel comme lus
   async markAsRead(reminderIds: string[]): Promise<void> {
     const res = await apiClient.post(API_ENDPOINTS.REMINDERS.MARK_READ, {
       reminderIds,
@@ -405,28 +388,24 @@ export const reminderService = {
       throw new Error(res.error ?? "Failed to mark reminders as read");
   },
 
-  /**
-   * Mark all reminders as read
-   */
+  // Marque tous les rappels comme lus
   async markAllAsRead(): Promise<void> {
     const res = await apiClient.post(API_ENDPOINTS.REMINDERS.MARK_ALL_READ);
     if (!res.success)
       throw new Error(res.error ?? "Failed to mark all reminders as read");
   },
 
-  /**
-   * Annuler tous les rappels pour un médicament spécifique
-   */
+  // Annule tous les rappels pour un médicament spécifique
   async cancelRemindersForMedication(medicationId: string): Promise<void> {
     try {
       const reminders = await this.getMedicationReminders(medicationId);
 
       for (const reminder of reminders.items) {
-        await notificationService.cancel(String(reminder.id));
+        await notificationService.cancelNotification(String(reminder.id));
       }
 
       console.log(
-        `✅ Tous les rappels annulés pour le médicament ${medicationId}`,
+        `Tous les rappels annulés pour le médicament ${medicationId}`,
       );
     } catch (error) {
       console.error(`❌ Erreur lors de l'annulation des rappels:`, error);

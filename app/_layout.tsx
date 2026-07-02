@@ -1,11 +1,12 @@
-// app/_layout.tsx
 import "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
+import messaging from "@react-native-firebase/messaging";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router, useSegments } from "expo-router";
 import { View, ActivityIndicator, LogBox } from "react-native";
+import * as Device from "expo-device";
 import { useEffect, useRef } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import {
@@ -17,7 +18,10 @@ import {
 } from "@expo-google-fonts/dm-sans";
 import { queryClient } from "../src/lib/query.client";
 import { useAuthStore } from "../src/store";
-import { notificationService } from "@/services/notification.service";
+import {
+  notificationService,
+  inAppNotificationService,
+} from "@/services/notifications";
 import { useNotificationBootstrapper } from "../src/hooks/useNotificationBootstrapper";
 
 // Prevent splash screen from auto-hiding
@@ -25,6 +29,47 @@ SplashScreen.preventAutoHideAsync();
 
 // Ignore cosmetic warnings
 LogBox.ignoreLogs(["Couldn't find the scrollable node handle id!"]);
+
+// ─── Types ──────────────────────────────────────────────────────────────
+
+interface DeviceInfo {
+  brand: string | null;
+  modelName: string | null;
+  osName: string | null;
+  osVersion: string | null;
+  deviceType: string | null;
+  isDevice: boolean;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
+
+/**
+ * Récupère les informations du device
+ */
+const getDeviceInfo = async (): Promise<DeviceInfo> => {
+  return {
+    brand: Device.brand,
+    modelName: Device.modelName,
+    osName: Device.osName,
+    osVersion: Device.osVersion,
+    deviceType: String(Device.deviceType),
+    isDevice: Device.isDevice,
+  };
+};
+
+/**
+ * Vérifie si les notifications sont autorisées
+ */
+const checkNotificationPermissions = async (): Promise<boolean> => {
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === "granted";
+  } catch {
+    return false;
+  }
+};
+
+// ─── Root Navigator ──────────────────────────────────────────────────────
 
 /**
  * Root navigator: handles auth-based routing and registers modal screens.
@@ -59,7 +104,7 @@ function RootNavigator() {
   if (!isHydrated) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator />
+        <ActivityIndicator size="large" />
       </View>
     );
   }
@@ -68,29 +113,12 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(main)" />
-
-      {/* Modales */}
-      <Stack.Screen
-        name="(modals)/notifications"
-        options={{ presentation: "modal", headerShown: false }}
-      />
-      <Stack.Screen
-        name="(modals)/notification-settings"
-        options={{ presentation: "modal", headerShown: false }}
-      />
-
-      {/* Modal de validation de rappel */}
-      <Stack.Screen
-        name="(modals)/reminder-validation"
-        options={{
-          presentation: "transparentModal",
-          headerShown: false,
-          animation: "slide_from_bottom",
-        }}
-      />
+      <Stack.Screen name="(modals)" />
     </Stack>
   );
 }
+
+// ─── Root Layout ─────────────────────────────────────────────────────────
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -100,17 +128,24 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
 
-  // Correction : initialiser les refs avec null
+  // ─── Refs ──────────────────────────────────────────────────────────────
+
   const notificationListener = useRef<Notifications.Subscription>(null);
   const responseListener = useRef<Notifications.Subscription>(null);
   const notificationBootstrapped = useRef(false);
+
+  // ─── Effets ─────────────────────────────────────────────────────────────
 
   // Initialisation des notifications
   useEffect(() => {
     const setupNotifications = async () => {
       try {
-        // Configurer les catégories de notifications (iOS)
-        await notificationService.setupNotificationCategories();
+        // Vérifier les permissions
+        const hasPermission = await checkNotificationPermissions();
+        if (!hasPermission) {
+          console.log("📢 Demandes de permission de notification...");
+          await Notifications.requestPermissionsAsync();
+        }
 
         // Configurer le handler pour les notifications en foreground
         Notifications.setNotificationHandler({
@@ -123,25 +158,55 @@ export default function RootLayout() {
           }),
         });
 
-        // Enregistrer le service de notifications (permissions + token)
+        // Enregistrer le service de notifications
         await notificationService.register();
+
+        // Récupérer le token FCM
+        const fcmToken = await notificationService.getFCMToken();
+
+        // Enregistrer le device (si token disponible)
+        if (fcmToken) {
+          const deviceInfo = await getDeviceInfo();
+          await notificationService.registerDevice(fcmToken, deviceInfo);
+        }
+
+        // Configurer les catégories iOS
+        await notificationService.setupNotificationCategories();
+
+        // Configurer le handler de messages en arrière-plan (Firebase)
+        messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+          console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
+          // Traiter la notification en arrière-plan si nécessaire
+          // notificationService.handleBackgroundNotification(remoteMessage);
+        });
 
         notificationBootstrapped.current = true;
         console.log("Notifications initialisées avec succès");
       } catch (error) {
-        console.error("Erreur d'initialisation des notifications:", error);
+        console.error("❌ Erreur d'initialisation des notifications:", error);
+        // Ne pas bloquer l'application en cas d'erreur
       }
     };
 
     setupNotifications();
 
-    //Écouter les notifications reçues en foreground
+    // Cleanup
+    return () => {
+      notificationBootstrapped.current = false;
+    };
+  }, []);
+
+  // Listeners de notifications
+  useEffect(() => {
+    // Écouter les notifications reçues en foreground
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
         console.log("📥 Notification reçue en foreground:", notification);
 
         const { title, body, data } = notification.request.content;
 
+        // Ajouter à l'inbox
+        /*
         notificationService.addToInbox({
           id: notification.request.identifier,
           title: title || "",
@@ -150,16 +215,16 @@ export default function RootLayout() {
           read: false,
           createdAt: new Date().toISOString(),
         });
+        */
       });
 
-    //Écouter les réponses aux notifications (tap/action)
+    // Écouter les réponses aux notifications (tap/action)
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
         console.log("📱 Réponse à la notification:", response);
 
-        setTimeout(() => {
-          notificationService.handleNotificationAction(response);
-        }, 300);
+        // Pas de délai fixe, traiter immédiatement
+        notificationService.handleNotificationAction(response);
       });
 
     // Cleanup
@@ -173,8 +238,11 @@ export default function RootLayout() {
     };
   }, []);
 
+  // Masquer le SplashScreen quand les fonts sont chargées
   useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
   }, [loaded]);
 
   if (!loaded) return null;

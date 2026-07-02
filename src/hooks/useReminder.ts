@@ -10,7 +10,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { reminderService } from "@/services/reminder.service";
-import { notificationService } from "@/services/notification.service";
 import type {
   CreateReminderRequest,
   UpdateReminderRequest,
@@ -345,6 +344,7 @@ export const useReminders = (query?: RemindersListQuery) => {
     usePatientReminders,
     useMedicationReminders,
     getReminder,
+    getReminderFromCache,
 
     // Mutations
     createReminder: createReminderMutation.mutate,

@@ -387,7 +387,7 @@ export default function RemindersScreen({ onStore }: Props) {
   const user = useAuthStore((state) => state.user);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const unreadNotificationCount = useNotificationStore(
-    (state) => state.unreadCount,
+    (state) => state.unreadCount ?? 0,
   );
 
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("ALL");

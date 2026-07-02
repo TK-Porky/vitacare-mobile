@@ -233,6 +233,7 @@ export interface CreateReminderRequest {
 
 export interface UpdateReminderRequest {
   medicationId?: string;
+  medicationName?: string;
   scheduledDate?: string; // ISO date string
   scheduledTime?: string; // HH:mm format
   status?: "PENDING" | "TAKEN" | "SNOOZED" | "MISSED" | "CANCELLED";

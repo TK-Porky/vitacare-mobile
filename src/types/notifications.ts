@@ -36,6 +36,7 @@ export interface ReminderNotificationData {
   medicationName: string;
   dosage: string;
   scheduledTime: string;
+  minutes?: number;
   action?: "take" | "snooze" | "skip";
 }
 

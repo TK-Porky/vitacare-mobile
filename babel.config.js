@@ -8,9 +8,6 @@ module.exports = function (api) {
     plugins: [
       [
         'react-native-iconify/babel',
-        {
-          icons: ['mynaui:mobile', 'mynaui:mail', 'mynaui:phone'],
-        },
       ],
       'react-native-reanimated/plugin',
     ],
