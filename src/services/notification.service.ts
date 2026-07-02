@@ -1,24 +1,15 @@
-/**
- * NotificationService
- *
- * Responsibilities:
- *   1. Request / verify OS notification permissions
- *   2. Register for Expo push notifications and obtain a push token
- *   3. Schedule local notifications (treatment & appointment reminders)
- *   4. Handle foreground notification events
- *   5. Persist notifications to AsyncStorage (in-app inbox)
- *   6. Sync with Zustand store for real-time state management
- */
-
+// services/notification.service.ts
 import * as ExpoNotifications from "expo-notifications";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
+import { router } from "expo-router";
+import { Platform, Alert } from "react-native";
 import {
   NotificationData,
   NotificationCategory,
   NotificationPreferences,
   NotificationMetadata,
+  ReminderNotificationData,
   PaginatedResponse,
   ApiResponse,
   BackendPaginatedResponse,
@@ -60,26 +51,25 @@ interface CachedInboxData {
 // ── Service ───────────────────────────────────────────────────────────────
 
 class NotificationService {
+  private static instance: NotificationService;
   private _pushToken: string | null = null;
   private _isRegistered = false;
   private _cleanupInterval: NodeJS.Timeout | null = null;
 
+  static getInstance(): NotificationService {
+    if (!NotificationService.instance) {
+      NotificationService.instance = new NotificationService();
+    }
+    return NotificationService.instance;
+  }
+
   // ── Permissions & registration ─────────────────────────────────────────
 
-  /**
-   * Request permissions, register the device with Expo Push Service,
-   * and persist the token.
-   * Must be called early in the app lifecycle (e.g., in _layout.tsx).
-   *
-   * Returns the Expo push token string, or null if permissions were denied.
-   */
   async register(): Promise<string | null> {
     if (this._isRegistered) {
       return this._pushToken;
     }
 
-    // setNotificationHandler must be called lazily — calling it at module level
-    // throws in Expo Go SDK 53+ on Android.
     try {
       ExpoNotifications.setNotificationHandler({
         handleNotification: async () => ({
@@ -118,7 +108,6 @@ class NotificationService {
       return null;
     }
 
-    // Android: create notification channels
     if (Platform.OS === "android") {
       try {
         await ExpoNotifications.setNotificationChannelAsync(
@@ -158,7 +147,8 @@ class NotificationService {
       await AsyncStorage.setItem(STORAGE_KEY_PUSH_TOKEN, this._pushToken);
       this._isRegistered = true;
 
-      // Démarrer le nettoyage périodique
+      await this.setupNotificationCategories();
+
       this.startCleanupJob();
 
       return this._pushToken;
@@ -169,6 +159,261 @@ class NotificationService {
       return null;
     }
   }
+
+  // ── Gestion des notifications de rappel ──────────────────────────────
+
+  handleReminderNotification(data: ReminderNotificationData): void {
+    console.log("🔔 Notification de rappel ouverte:", data);
+
+    if (!data.reminderId) {
+      console.warn("❌ Pas de reminderId dans la notification");
+      return;
+    }
+
+    router.push({
+      pathname: "/(modals)/reminder-validation",
+      params: {
+        reminderId: data.reminderId,
+        medicationName: data.medicationName || "Médicament",
+        dosage: data.dosage || "",
+        scheduledTime: data.scheduledTime || new Date().toISOString(),
+        fromNotification: "true",
+      },
+    });
+  }
+
+  /**
+   * Programme une notification de rappel avec actions
+   */
+  async scheduleReminderNotification(
+    reminderId: string,
+    medicationName: string,
+    dosage: string,
+    scheduledTime: Date,
+  ): Promise<string | null> {
+    try {
+      let triggerDate = scheduledTime;
+      if (triggerDate <= new Date()) {
+        console.warn(
+          "⏰ La date de rappel est déjà passée, reprogrammation...",
+        );
+        triggerDate = new Date(Date.now() + 60 * 1000);
+      }
+
+      console.log(
+        `📅 Programmation du rappel pour: ${triggerDate.toLocaleString()}`,
+      );
+
+      // ✅ Correction: actions doit être au niveau du contenu, mais Expo ne supporte pas actions sur Android
+      // Les actions sont gérées via les catégories iOS ou via la réponse à la notification
+      const identifier = await ExpoNotifications.scheduleNotificationAsync({
+        content: {
+          title: "💊 Rappel de médicament",
+          body: `N'oubliez pas de prendre ${medicationName}${dosage ? ` (${dosage})` : ""}`,
+          data: {
+            reminderId,
+            medicationName,
+            dosage,
+            scheduledTime: triggerDate.toISOString(),
+            type: "treatment_reminder",
+          },
+          sound: true,
+          priority: ExpoNotifications.AndroidNotificationPriority.HIGH,
+          // ✅ categoryIdentifier est supporté sur iOS et Android (Expo)
+          categoryIdentifier: "reminder",
+        },
+        trigger: {
+          type: ExpoNotifications.SchedulableTriggerInputTypes.DATE,
+          date: triggerDate,
+        },
+      });
+
+      console.log(`✅ Notification programmée: ${identifier}`);
+      return identifier;
+    } catch (error) {
+      console.error("❌ Erreur de programmation:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Configure les catégories de notifications pour iOS
+   */
+  async setupNotificationCategories(): Promise<void> {
+    if (Platform.OS === "ios") {
+      try {
+        // ✅ Correction: utiliser setNotificationCategoryAsync avec les bonnes options
+        await ExpoNotifications.setNotificationCategoryAsync("reminder", [
+          {
+            identifier: "take",
+            buttonTitle: "✅ Pris",
+            options: {
+              isDestructive: false,
+              isAuthenticationRequired: false,
+            },
+          },
+          {
+            identifier: "snooze",
+            buttonTitle: "⏰ Snooze 15min",
+            options: {
+              isDestructive: false,
+              isAuthenticationRequired: false,
+            },
+          },
+          {
+            identifier: "skip",
+            buttonTitle: "❌ Ignorer",
+            options: {
+              isDestructive: true,
+              isAuthenticationRequired: false,
+            },
+          },
+        ]);
+        console.log("✅ Catégories de notification configurées");
+      } catch (error) {
+        console.error("❌ Erreur de configuration des catégories:", error);
+      }
+    }
+  }
+
+  /**
+   * Gère les actions des notifications
+   */
+  async handleNotificationAction(
+    response: ExpoNotifications.NotificationResponse,
+  ): Promise<void> {
+    const { actionIdentifier, notification } = response;
+
+    // ✅ Correction: typer correctement les données avec un cast sécurisé
+    const data = notification.request.content.data as Record<string, unknown>;
+
+    // ✅ Construction sécurisée de ReminderNotificationData
+    const reminderData: ReminderNotificationData = {
+      reminderId: (data.reminderId as string) || "",
+      medicationName: (data.medicationName as string) || "Médicament",
+      dosage: (data.dosage as string) || "",
+      scheduledTime: (data.scheduledTime as string) || new Date().toISOString(),
+      action: (actionIdentifier as "take" | "snooze" | "skip") || undefined,
+    };
+
+    console.log(`📱 Action de notification: ${actionIdentifier}`, reminderData);
+
+    if (!reminderData.reminderId) {
+      console.warn("⚠️ Pas de reminderId dans la notification");
+      router.push("/(main)/(tabs)/medications");
+      return;
+    }
+
+    switch (actionIdentifier) {
+      case "take":
+        await this.handleTakeAction(reminderData);
+        break;
+      case "snooze":
+        await this.handleSnoozeAction(reminderData);
+        break;
+      case "skip":
+        await this.handleSkipAction(reminderData);
+        break;
+      default:
+        this.handleReminderNotification(reminderData);
+        break;
+    }
+  }
+
+  private async handleTakeAction(
+    data: ReminderNotificationData,
+  ): Promise<void> {
+    console.log("✅ Prise confirmée:", data.reminderId);
+
+    try {
+      const response = await apiClient.patch<ApiResponse>(
+        `/reminders/${data.reminderId}/take`,
+        {
+          takenAt: new Date().toISOString(),
+        },
+      );
+
+      if (!response.success) {
+        throw new Error(response.message || "Erreur lors du marquage");
+      }
+
+      await this.cancel(data.reminderId);
+
+      Alert.alert(
+        "✅ Prise confirmée",
+        `${data.medicationName} a été marqué comme pris.`,
+        [{ text: "OK" }],
+      );
+    } catch (error) {
+      console.error("❌ Erreur:", error);
+      Alert.alert("Erreur", "Impossible de marquer le rappel comme pris.");
+    }
+  }
+
+  private async handleSnoozeAction(
+    data: ReminderNotificationData,
+  ): Promise<void> {
+    console.log("⏰ Snooze:", data.reminderId);
+
+    try {
+      const response = await apiClient.patch<ApiResponse>(
+        `/reminders/${data.reminderId}/snooze`,
+        {
+          minutes: 15,
+        },
+      );
+
+      if (!response.success) {
+        throw new Error(response.message || "Erreur lors du report");
+      }
+
+      await ExpoNotifications.cancelScheduledNotificationAsync(data.reminderId);
+
+      const newTime = new Date(Date.now() + 15 * 60 * 1000);
+      await this.scheduleReminderNotification(
+        data.reminderId,
+        data.medicationName,
+        data.dosage,
+        newTime,
+      );
+
+      Alert.alert("⏰ Rappel reporté", `Vous serez notifié dans 15 minutes.`, [
+        { text: "OK" },
+      ]);
+    } catch (error) {
+      console.error("❌ Erreur de snooze:", error);
+      Alert.alert("Erreur", "Impossible de reporter le rappel.");
+    }
+  }
+
+  private async handleSkipAction(
+    data: ReminderNotificationData,
+  ): Promise<void> {
+    console.log("❌ Ignoré:", data.reminderId);
+
+    try {
+      const response = await apiClient.patch<ApiResponse>(
+        `/reminders/${data.reminderId}/skip`,
+      );
+
+      if (!response.success) {
+        throw new Error(response.message || "Erreur lors de l'ignorance");
+      }
+
+      await this.cancel(data.reminderId);
+
+      Alert.alert(
+        "❌ Rappel ignoré",
+        `Le rappel pour ${data.medicationName} a été ignoré.`,
+        [{ text: "OK" }],
+      );
+    } catch (error) {
+      console.error("❌ Erreur:", error);
+      Alert.alert("Erreur", "Impossible d'ignorer le rappel.");
+    }
+  }
+
+  // ── Getters ─────────────────────────────────────────────────────────────
 
   get pushToken(): string | null {
     return this._pushToken;
@@ -237,7 +482,7 @@ class NotificationService {
     useNotificationStore.getState().updatePreferences(updated);
   }
 
-  // ── Inbox (in-app notification center) ────────────────────────────────
+  // ── Inbox ──────────────────────────────────────────────────────────────
 
   async getInbox(
     page: number = 1,
@@ -288,19 +533,15 @@ class NotificationService {
         },
       };
 
-      // Mettre en cache
       await this.cacheInbox(paginatedData);
 
-      // Mettre à jour le store Zustand
       if (page === 1) {
         const unreadCount = paginatedData.data.filter((n) => !n.read).length;
         useNotificationStore.getState().setInbox(paginatedData.data);
         useNotificationStore.getState().setUnreadCount(unreadCount);
       } else {
-        // Append pour les pages suivantes
         const currentInbox = useNotificationStore.getState().inbox;
         const combined = [...currentInbox, ...paginatedData.data];
-        // Éviter les doublons par id
         const unique = combined.filter(
           (item, index, self) =>
             index === self.findIndex((t) => t.id === item.id),
@@ -312,7 +553,6 @@ class NotificationService {
     } catch (error) {
       console.error("[NotificationService] Error fetching inbox:", error);
 
-      // Fallback vers le cache si disponible
       const cached = await this.getCachedInbox();
       if (cached) {
         console.log("[NotificationService] Using cached inbox data");
@@ -327,35 +567,28 @@ class NotificationService {
     try {
       const inbox = await this.getInboxData();
 
-      // Vérifier si la notification existe déjà
       const existingIndex = inbox.findIndex((n) => n.id === notification.id);
       if (existingIndex !== -1) {
-        // Mettre à jour si elle existe
         inbox[existingIndex] = { ...inbox[existingIndex], ...notification };
       } else {
-        // Ajouter si elle n'existe pas
         inbox.unshift(notification);
       }
 
-      // Trier par date décroissante
       inbox.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
 
-      // Limiter à MAX_INBOX_SIZE
       const limitedInbox = inbox.slice(0, MAX_INBOX_SIZE);
       await AsyncStorage.setItem(
         STORAGE_KEY_INBOX,
         JSON.stringify(limitedInbox),
       );
 
-      // Mettre à jour le store Zustand
       const unreadCount = limitedInbox.filter((n) => !n.read).length;
       useNotificationStore.getState().setInbox(limitedInbox);
       useNotificationStore.getState().setUnreadCount(unreadCount);
 
-      // Mettre à jour le badge
       await this.updateBadge();
     } catch (error) {
       console.error("[NotificationService] Error adding to inbox:", error);
@@ -365,10 +598,8 @@ class NotificationService {
 
   async markAsRead(id: string): Promise<void> {
     try {
-      // Appel API
       await apiClient.patch<ApiResponse>(`/notifications/${id}/read`);
 
-      // Mise à jour locale
       const inbox = await this.getInboxData();
       const updated = inbox.map((n) =>
         n.id === id
@@ -377,12 +608,10 @@ class NotificationService {
       );
       await AsyncStorage.setItem(STORAGE_KEY_INBOX, JSON.stringify(updated));
 
-      // Mettre à jour le store Zustand
       const unreadCount = updated.filter((n) => !n.read).length;
       useNotificationStore.getState().setInbox(updated);
       useNotificationStore.getState().setUnreadCount(unreadCount);
 
-      // Mettre à jour le badge
       await this.updateBadge();
     } catch (error) {
       console.error("[NotificationService] Error marking as read:", error);
@@ -392,10 +621,8 @@ class NotificationService {
 
   async markAllAsRead(): Promise<void> {
     try {
-      // Appel API
       await apiClient.post<ApiResponse>("/notifications/read-all");
 
-      // Mise à jour locale
       const inbox = await this.getInboxData();
       const now = new Date().toISOString();
       const updated = inbox.map((n) => ({
@@ -405,11 +632,9 @@ class NotificationService {
       }));
       await AsyncStorage.setItem(STORAGE_KEY_INBOX, JSON.stringify(updated));
 
-      // Mettre à jour le store Zustand
       useNotificationStore.getState().setInbox(updated);
       useNotificationStore.getState().setUnreadCount(0);
 
-      // Mettre à jour le badge
       await this.updateBadge();
     } catch (error) {
       console.error("[NotificationService] Error marking all as read:", error);
@@ -419,20 +644,16 @@ class NotificationService {
 
   async deleteFromInbox(id: string): Promise<void> {
     try {
-      // Appel API
       await apiClient.delete<ApiResponse>(`/notifications/${id}`);
 
-      // Mise à jour locale
       const inbox = await this.getInboxData();
       const updated = inbox.filter((n) => n.id !== id);
       await AsyncStorage.setItem(STORAGE_KEY_INBOX, JSON.stringify(updated));
 
-      // Mettre à jour le store Zustand
       const unreadCount = updated.filter((n) => !n.read).length;
       useNotificationStore.getState().setInbox(updated);
       useNotificationStore.getState().setUnreadCount(unreadCount);
 
-      // Mettre à jour le badge
       await this.updateBadge();
     } catch (error) {
       console.error("[NotificationService] Error deleting from inbox:", error);
@@ -442,17 +663,13 @@ class NotificationService {
 
   async deleteAll(): Promise<void> {
     try {
-      // Appel API
       await apiClient.delete<ApiResponse>("/notifications");
 
-      // Mise à jour locale
       await AsyncStorage.removeItem(STORAGE_KEY_INBOX);
 
-      // Mettre à jour le store Zustand
       useNotificationStore.getState().setInbox([]);
       useNotificationStore.getState().setUnreadCount(0);
 
-      // Mettre à jour le badge
       await this.updateBadge();
     } catch (error) {
       console.error("[NotificationService] Error deleting all:", error);
@@ -537,7 +754,6 @@ class NotificationService {
       const unreadCount = await this.getUnreadCount();
       await ExpoNotifications.setBadgeCountAsync(unreadCount);
     } catch (error) {
-      // Silencieux pour les appareils qui ne supportent pas les badges
       if (__DEV__) {
         console.warn("[NotificationService] Failed to update badge:", error);
       }
@@ -549,10 +765,8 @@ class NotificationService {
   private startCleanupJob(): void {
     if (this._cleanupInterval) return;
 
-    // Nettoyer immédiatement
     this.cleanupExpiredNotifications();
 
-    // Puis une fois par jour
     this._cleanupInterval = setInterval(
       () => {
         this.cleanupExpiredNotifications();
@@ -575,7 +789,6 @@ class NotificationService {
       if (filtered.length < inbox.length) {
         await AsyncStorage.setItem(STORAGE_KEY_INBOX, JSON.stringify(filtered));
 
-        // Mettre à jour le store Zustand
         const unreadCount = filtered.filter((n) => !n.read).length;
         useNotificationStore.getState().setInbox(filtered);
         useNotificationStore.getState().setUnreadCount(unreadCount);
@@ -595,10 +808,6 @@ class NotificationService {
 
   // ── Local notification scheduling ─────────────────────────────────────
 
-  /**
-   * Schedule a local notification (treatment / appointment reminder).
-   * Returns the Expo notification identifier, or null on failure.
-   */
   async schedule({
     title,
     body,
@@ -614,7 +823,6 @@ class NotificationService {
   }): Promise<string | null> {
     const prefs = await this.getPreferences();
 
-    // Respect user preferences
     if (type === "appointment_reminder" && !prefs.appointmentReminders)
       return null;
     if (type === "treatment_reminder" && !prefs.treatmentReminders) return null;
@@ -646,7 +854,6 @@ class NotificationService {
       return null;
     }
 
-    // Also persist to inbox
     await this.addToInbox({
       id: identifier,
       title,
@@ -660,7 +867,6 @@ class NotificationService {
     return identifier;
   }
 
-  /** Cancel a previously scheduled notification by its identifier. */
   async cancel(identifier: string): Promise<void> {
     try {
       await ExpoNotifications.cancelScheduledNotificationAsync(identifier);
@@ -670,14 +876,9 @@ class NotificationService {
     await this.deleteFromInbox(identifier);
   }
 
-  /**
-   * Cancel a notification by a data key/value pair (e.g. treatmentId, appointmentId).
-   * Recherche dans la boîte de réception et annule la notification programmée correspondante.
-   */
   async cancelByDataKey(key: string, value: string): Promise<void> {
     const inbox = await this.getInboxData();
     const match = inbox.find((n) => {
-      // Chercher dans les métadonnées si disponibles
       if (n.id && n.id.includes(value)) return true;
       return false;
     });
@@ -686,7 +887,6 @@ class NotificationService {
     }
   }
 
-  /** Cancel ALL scheduled notifications (e.g. on logout). */
   async cancelAll(resetPreferences: boolean = false): Promise<void> {
     try {
       await ExpoNotifications.cancelAllScheduledNotificationsAsync();
@@ -694,11 +894,9 @@ class NotificationService {
       /* Expo Go */
     }
 
-    // Effacer l'inbox et le cache
     await AsyncStorage.removeItem(STORAGE_KEY_INBOX);
     await AsyncStorage.removeItem(STORAGE_KEY_INBOX_CACHE);
 
-    // Réinitialiser les préférences si demandé
     if (resetPreferences) {
       await AsyncStorage.removeItem(STORAGE_KEY_PREFERENCES);
       useNotificationStore
@@ -706,14 +904,11 @@ class NotificationService {
         .updatePreferences(DEFAULT_NOTIFICATION_PREFERENCES);
     }
 
-    // Réinitialiser le store Zustand
     useNotificationStore.getState().setInbox([]);
     useNotificationStore.getState().setUnreadCount(0);
 
-    // Mettre à jour le badge
     await this.updateBadge();
 
-    // Arrêter le nettoyage périodique
     if (this._cleanupInterval) {
       clearInterval(this._cleanupInterval);
       this._cleanupInterval = null;
@@ -722,7 +917,6 @@ class NotificationService {
 
   // ── Convenience schedulers ─────────────────────────────────────────────
 
-  /** Schedule a reminder N minutes before an appointment. */
   async scheduleAppointmentReminder({
     appointmentId,
     doctorName,
@@ -738,7 +932,7 @@ class NotificationService {
     const lead = leadTimeMinutes ?? prefs.reminderLeadTimeMinutes;
     const triggerDate = new Date(appointmentDate.getTime() - lead * 60_000);
 
-    if (triggerDate <= new Date()) return null; // already passed
+    if (triggerDate <= new Date()) return null;
 
     return this.schedule({
       title: "Rappel de rendez-vous",
@@ -749,7 +943,6 @@ class NotificationService {
     });
   }
 
-  /** Schedule a daily treatment reminder. */
   async scheduleTreatmentReminder({
     treatmentId,
     treatmentName,
@@ -770,10 +963,6 @@ class NotificationService {
 
   // ── Event listeners ────────────────────────────────────────────────────
 
-  /**
-   * Listen for notifications received while the app is foregrounded.
-   * Automatically saves to inbox and updates Zustand store.
-   */
   addForegroundListener(
     callback?: (notification: ExpoNotifications.Notification) => void,
   ): ExpoNotifications.Subscription {
@@ -795,15 +984,10 @@ class NotificationService {
         },
       );
     } catch {
-      // Expo Go SDK 53+ — return a no-op subscription
       return { remove: () => {} };
     }
   }
 
-  /**
-   * Listen for taps on notifications (foreground or background).
-   * Use this to deep-link into the relevant screen.
-   */
   addResponseListener(
     callback: (response: ExpoNotifications.NotificationResponse) => void,
   ): ExpoNotifications.Subscription {
@@ -816,9 +1000,6 @@ class NotificationService {
     }
   }
 
-  // ── Cleanup ────────────────────────────────────────────────────────────
-
-  /** Cleanup all resources (called on app unmount) */
   destroy(): void {
     if (this._cleanupInterval) {
       clearInterval(this._cleanupInterval);
@@ -829,4 +1010,4 @@ class NotificationService {
 
 // ── Export singleton ──────────────────────────────────────────────────────
 
-export const notificationService = new NotificationService();
+export const notificationService = NotificationService.getInstance();

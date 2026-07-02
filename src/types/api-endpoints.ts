@@ -21,7 +21,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN_PHONE: "/auth/patient/login/phone",
     LOGIN_EMAIL: "/auth/patient/login/email",
-    LOGIN_GOOGLE: "/auth/login/google",
+    LOGIN_GOOGLE: "/auth/patient/login/google",
     REGISTER_PHONE: "/auth/patient/register/phone",
     REGISTER_EMAIL: "/auth/patient/register/email",
     LOGOUT: "/auth/patient/logout",
@@ -144,6 +144,7 @@ export const API_ENDPOINTS = {
     SNOOZE: "/reminders/snooze",
     UPCOMING: "/reminders/upcoming",
     TODAY: "/reminders/today",
+    SKIP: "/reminders/skip",
     BULK_CREATE: "/reminders/bulk",
     MARK_READ: "/reminders/mark-read",
     MARK_ALL_READ: "/reminders/mark-all-read",

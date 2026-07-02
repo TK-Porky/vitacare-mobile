@@ -52,10 +52,6 @@ export const useAuth = () => {
 
       // Met à jour ton store
       await store.loginWithGoogle({
-        uid: user.uid,
-        email: user.email ?? "",
-        displayName: user.displayName ?? "",
-        photoURL: user.photoURL ?? "",
         idToken: firebaseToken,
       });
     } catch (error: any) {

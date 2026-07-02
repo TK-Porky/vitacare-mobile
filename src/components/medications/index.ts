@@ -1,10 +1,11 @@
 export { MedicationItem } from "./MedicationItem";
 export { ObservanceCard } from "./ObservanceCard";
 export { AddReminderBottomSheet } from "./AddReminderBottomSheet";
-export type {
-  ReminderData,
-  AddReminderBottomSheetRef,
-} from "./AddReminderBottomSheet/types";
+export * from "./AddReminderBottomSheet/FieldInput";
+export * from "./AddReminderBottomSheet/InlineDropdown";
+export * from "./AddReminderBottomSheet/TimePickerInline";
+export * from "./AddReminderBottomSheet/types";
+export { EditReminderBottomSheet } from "./EditReminderBottomSheet";
 export {
   DrugDetailBottomSheet,
   type DrugDetailBottomSheetRef,

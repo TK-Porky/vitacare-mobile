@@ -1,12 +1,18 @@
-import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Image, Platform } from 'react-native';
-import { AppBottomSheet, AppBottomSheetRef } from '../generics/AppBottomSheet';
-import { PhoneInput } from '../inputs/PhoneInput';
-import { PrimaryButton } from '../buttons/PrimaryButton';
-import { PaymentResultModal } from './PaymentResultModal';
-import { colors, fontFamily, fontSize } from '../../themes';
-import { paymentService } from '../../services/payment.service';
-import type { PaymentSheetRef } from './MomoPaymentSheet';
+import React, {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import { View, Text, StyleSheet, Image, Platform } from "react-native";
+import { AppBottomSheet, AppBottomSheetRef } from "../generics/AppBottomSheet";
+import { PhoneInput } from "../inputs/PhoneInput";
+import { PrimaryButton } from "../buttons/PrimaryButton";
+import { PaymentResultModal } from "./PaymentResultModal";
+import { colors, fontFamily, fontSize } from "../../themes";
+import { paymentService } from "../../services/payment.service";
+import type { PaymentSheetRef } from "./MomoPaymentSheet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,25 +24,31 @@ type Props = {
 
 type ModalState =
   | { visible: false }
-  | { visible: true; type: 'success' }
-  | { visible: true; type: 'error'; message: string };
+  | { visible: true; type: "success" }
+  | { visible: true; type: "error"; message: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmt = (n: number) =>
-  `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} XCFA`;
+  `${Math.round(n)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, " ")} XCFA`;
+
+const formatPhone = useCallback((phone: string) => {
+  return phone.replace(/\s/g, "");
+}, []);
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
   ({ appointmentId, amount, onSuccess }, ref) => {
     const sheetRef = useRef<AppBottomSheetRef>(null);
-    const [phone, setPhone]           = useState('');
+    const [phone, setPhone] = useState("");
     const [processing, setProcessing] = useState(false);
-    const [modal, setModal]           = useState<ModalState>({ visible: false });
+    const [modal, setModal] = useState<ModalState>({ visible: false });
 
     useImperativeHandle(ref, () => ({
-      open:  () => sheetRef.current?.open(),
+      open: () => sheetRef.current?.open(),
       close: () => sheetRef.current?.close(),
     }));
 
@@ -46,31 +58,35 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
         const result = await paymentService.initiatePayment({
           appointmentId,
           amount,
-          paymentMethod: 'ORANGE_MONEY_CM',
-          phoneNumber: phone,
+          paymentMethod: "ORANGE_MONEY_CM",
+          phoneNumber: formatPhone(phone),
         });
         setProcessing(false);
-        if (result.paymentStatus === 'SUCCESS' || result.paymentStatus === 'PROCESSING') {
-          setModal({ visible: true, type: 'success' });
+        if (
+          result.paymentStatus === "SUCCESS" ||
+          result.paymentStatus === "PROCESSING"
+        ) {
+          setModal({ visible: true, type: "success" });
         } else {
           setModal({
             visible: true,
-            type: 'error',
-            message: result.failureReason || 'Paiement refusé. Veuillez réessayer.',
+            type: "error",
+            message:
+              result.failureReason || "Paiement refusé. Veuillez réessayer.",
           });
         }
       } catch (err: any) {
         setProcessing(false);
         setModal({
           visible: true,
-          type: 'error',
-          message: err?.message || 'Erreur de paiement. Veuillez réessayer.',
+          type: "error",
+          message: err?.message || "Erreur de paiement. Veuillez réessayer.",
         });
       }
     };
 
     const handlePrimary = () => {
-      if (modal.visible && modal.type === 'success') {
+      if (modal.visible && modal.type === "success") {
         setModal({ visible: false });
         sheetRef.current?.close();
         onSuccess();
@@ -84,7 +100,7 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
       sheetRef.current?.close();
     };
 
-    const isValid = phone.replace(/\D/g, '').length >= 9;
+    const isValid = phone.replace(/\D/g, "").length >= 9;
 
     return (
       <>
@@ -92,14 +108,14 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
           ref={sheetRef}
           scrollable
           onClose={() => {
-            setPhone('');
+            setPhone("");
             setModal({ visible: false });
           }}
         >
           {/* ── Header ── */}
           <View style={styles.header}>
             <Image
-              source={require('../../../assets/OMIcon.png')}
+              source={require("../../../assets/OMIcon.png")}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -115,7 +131,9 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
 
           {/* ── Phone field ── */}
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Numéro de téléphone Orange Money</Text>
+            <Text style={styles.fieldLabel}>
+              Numéro de téléphone Orange Money
+            </Text>
             <PhoneInput
               value={phone}
               onChangeText={setPhone}
@@ -126,14 +144,17 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
           {/* ── USSD notice ── */}
           <View style={styles.notice}>
             <Text style={styles.noticeText}>
-              Vous recevrez une demande de confirmation USSD sur le numéro renseigné. Assurez-vous d'avoir un solde suffisant.
+              Vous recevrez une demande de confirmation USSD sur le numéro
+              renseigné. Assurez-vous d'avoir un solde suffisant.
             </Text>
           </View>
 
           {/* ── Pay button ── */}
           <View style={styles.buttonWrap}>
             <PrimaryButton
-              label={processing ? 'Traitement en cours…' : `Payer ${fmt(amount)}`}
+              label={
+                processing ? "Traitement en cours…" : `Payer ${fmt(amount)}`
+              }
               fullWidth
               isLoading={processing}
               isDisabled={!isValid || processing}
@@ -144,9 +165,11 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
 
         <PaymentResultModal
           visible={modal.visible}
-          type={modal.visible ? modal.type : 'success'}
+          type={modal.visible ? modal.type : "success"}
           amount={amount}
-          errorMessage={modal.visible && modal.type === 'error' ? modal.message : undefined}
+          errorMessage={
+            modal.visible && modal.type === "error" ? modal.message : undefined
+          }
           onPrimary={handlePrimary}
           onSecondary={handleSecondary}
         />
@@ -155,13 +178,13 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
   },
 );
 
-OrangePaymentSheet.displayName = 'OrangePaymentSheet';
+OrangePaymentSheet.displayName = "OrangePaymentSheet";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 8,
     paddingBottom: 24,
     gap: 6,
@@ -183,9 +206,9 @@ const styles = StyleSheet.create({
   },
 
   amountPill: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderRadius: 14,
     paddingVertical: 16,
@@ -217,7 +240,7 @@ const styles = StyleSheet.create({
   },
 
   notice: {
-    backgroundColor: '#FF690018',
+    backgroundColor: "#FF690018",
     borderRadius: 12,
     padding: 14,
     marginTop: 4,
@@ -233,6 +256,6 @@ const styles = StyleSheet.create({
   buttonWrap: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    paddingBottom: Platform.OS === "ios" ? 36 : 24,
   },
 });

@@ -204,7 +204,6 @@ export const authService = {
         },
       );
 
-      console.log("✅ Login response:", res);
       return await handleBackendAuthResponse(res);
     } catch (error) {
       throw new Error(mapAuthError(error));
@@ -220,24 +219,13 @@ export const authService = {
    * @param data - Google login data from OAuth
    * @returns Auth result
    */
-  async loginWithGoogle(data: GoogleLoginData): Promise<AuthResult> {
+  async loginWithGoogle(idToken: string): Promise<AuthResult> {
     try {
-      const credential = GoogleAuthProvider.credential(data.idToken);
-      const userCredential = await signInWithCredential(auth, credential);
-      const firebaseToken = await getIdToken(userCredential.user);
-
       const res = await apiClient.post<BackendAuthResponse>(
         API_ENDPOINTS.AUTH.LOGIN_GOOGLE,
-        {
-          uid: data.uid,
-          email: data.email,
-          displayName: data.displayName,
-          photoURL: data.photoURL,
-          firebaseToken,
-        },
+        { idToken },
       );
 
-      console.log("✅ Google login response:", res);
       return await handleBackendAuthResponse(res);
     } catch (error) {
       throw new Error(mapAuthError(error));

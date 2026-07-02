@@ -54,13 +54,7 @@ interface AuthState {
   sendOtp: (phone: string, fullName?: string) => Promise<void>;
   verifyOtp: (code: string, fullName?: string) => Promise<void>;
   loginWithEmail: (data: LoginEmailInput) => Promise<void>;
-  loginWithGoogle: (data: {
-    uid: string;
-    email: string;
-    displayName: string;
-    photoURL: string;
-    idToken: string;
-  }) => Promise<void>;
+  loginWithGoogle: (data: { idToken: string }) => Promise<void>;
   register: (
     data: RegisterInput,
     verifier?: ApplicationVerifier,
@@ -217,29 +211,12 @@ export const useAuthStore = create<AuthState>()(
       /**
        * Login with Google (Firebase + Backend)
        */
-      loginWithGoogle: async ({
-        uid,
-        email,
-        displayName,
-        photoURL,
-        idToken,
-      }) => {
+      loginWithGoogle: async ({ idToken }) => {
         set({ isLoading: true, error: null });
         try {
-          // ✅ Send Google user data to backend
-          const response = await apiClient.post<{
-            user: UserProfile;
-            tokens: { accessToken: string; refreshToken: string };
-          }>("/auth/google", { uid, email, displayName, photoURL, idToken });
-
-          if (response.success && response.data) {
-            const { user, tokens } = response.data;
-            await saveTokens(tokens);
-            set({ user, accessToken: tokens.accessToken, error: null });
-            router.replace("/(main)");
-          } else {
-            throw new Error(response.message || "Échec de la connexion Google");
-          }
+          const response = await authService.loginWithGoogle(idToken);
+          await handleAuthResult(response, set);
+          router.replace("/(main)");
         } catch (e: any) {
           set({ error: e?.message ?? "Erreur lors de la connexion Google." });
         } finally {
@@ -259,7 +236,6 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
 
-          // ✅ Email registration with Firebase
           const result = await authService.register(data);
           console.log("API Register result : ", result);
           if (result && !("requiresOtp" in result)) {
@@ -348,9 +324,7 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         set({ isLoading: true });
         try {
-          // ✅ Logout from Firebase
           await signOut(auth);
-          // ✅ Logout from backend
           await authService.logout();
         } catch {
           // Continue with local cleanup even if API fails

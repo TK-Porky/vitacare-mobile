@@ -1,3 +1,4 @@
+// hooks/useReminders.ts
 /**
  * Reminder hooks for managing medication intake reminders
  *
@@ -15,6 +16,7 @@ import type {
   UpdateReminderRequest,
   RemindersListQuery,
 } from "@/types/api-requests";
+import { ReminderResponse } from "@/types";
 
 // Query keys for caching and invalidation
 export const reminderKeys = {
@@ -61,17 +63,6 @@ export const useReminders = (query?: RemindersListQuery) => {
       };
     },
   });
-
-  /**
-   * Get a specific reminder by ID
-   */
-  const useReminder = (reminderId: string) => {
-    return useQuery({
-      queryKey: reminderKeys.detail(reminderId),
-      queryFn: () => reminderService.getReminder(reminderId),
-      enabled: !!reminderId,
-    });
-  };
 
   /**
    * Get reminder summary statistics
@@ -139,104 +130,119 @@ export const useReminders = (query?: RemindersListQuery) => {
 
   /**
    * Create a new reminder
+   * ✅ La notification est gérée par reminderService.createReminder
    */
   const createReminderMutation = useMutation({
     mutationFn: (data: CreateReminderRequest) =>
       reminderService.createReminder(data),
     onSuccess: (created) => {
-      // Planifier une notification locale pour le rappel de traitement
-      const [hours, mins] = created.scheduledHour.split(":").map(Number);
-      const reminderTime = new Date();
-      reminderTime.setHours(hours, mins, 0, 0);
-      if (reminderTime <= new Date()) {
-        reminderTime.setDate(reminderTime.getDate() + 1);
-      }
-      notificationService.scheduleTreatmentReminder({
-        treatmentId: String(created.id),
-        treatmentName: created.medicationName,
-        reminderTime,
-      });
-
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
       queryClient.invalidateQueries({ queryKey: reminderKeys.summary() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.upcoming() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.today() });
     },
   });
 
   /**
    * Update an existing reminder
+   * ✅ La notification est gérée par reminderService.updateReminder
    */
   const updateReminderMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateReminderRequest }) =>
       reminderService.updateReminder(id, data),
     onSuccess: (data, variables) => {
-      // Update the specific reminder in cache
       queryClient.setQueryData(reminderKeys.detail(variables.id), data);
-      // Invalidate lists
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
       queryClient.invalidateQueries({ queryKey: reminderKeys.summary() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.upcoming() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.today() });
     },
   });
 
   /**
    * Delete a reminder
+   * ✅ La notification est gérée par reminderService.deleteReminder
    */
   const deleteReminderMutation = useMutation({
     mutationFn: (id: string) => reminderService.deleteReminder(id),
     onSuccess: (_, id) => {
-      // Annuler la notification locale associée
-      notificationService.cancelByDataKey("treatmentId", id);
-
       queryClient.removeQueries({ queryKey: reminderKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
       queryClient.invalidateQueries({ queryKey: reminderKeys.summary() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.upcoming() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.today() });
     },
   });
 
   /**
    * Mark a reminder as taken
+   * ✅ La notification est gérée par reminderService.markAsTaken
    */
   const markAsTakenMutation = useMutation({
     mutationFn: ({ id, takenAt }: { id: string; takenAt?: string }) =>
       reminderService.markAsTaken(id, takenAt),
     onSuccess: (data, variables) => {
-      // Update the specific reminder in cache
       queryClient.setQueryData(reminderKeys.detail(variables.id), data);
-      // Invalidate lists and summary
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
       queryClient.invalidateQueries({ queryKey: reminderKeys.summary() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.upcoming() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.today() });
     },
   });
 
   /**
    * Snooze a reminder
+   * ✅ La notification est gérée par reminderService.snoozeReminder
    */
   const snoozeReminderMutation = useMutation({
     mutationFn: ({ id, minutes }: { id: string; minutes: number }) =>
       reminderService.snoozeReminder(id, minutes),
     onSuccess: (data, variables) => {
-      // Reporter la notification locale
-      const [hours, mins] = data.scheduledHour.split(":").map(Number);
-      const reminderTime = new Date();
-      reminderTime.setHours(
-        hours + Math.floor(variables.minutes / 60),
-        mins + (variables.minutes % 60),
-        0,
-        0,
-      );
-      notificationService.scheduleTreatmentReminder({
-        treatmentId: String(data.id),
-        treatmentName: data.medicationName,
-        reminderTime,
-      });
-
       queryClient.setQueryData(reminderKeys.detail(variables.id), data);
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
       queryClient.invalidateQueries({ queryKey: reminderKeys.summary() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.upcoming() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.today() });
     },
   });
 
   /**
+   * ✅ Skip a reminder (mark as missed)
+   * Nouvelle mutation pour ignorer un rappel
+   */
+  const skipReminderMutation = useMutation({
+    mutationFn: (id: string) => reminderService.skipReminder(id),
+    onSuccess: (data, id) => {
+      queryClient.setQueryData(reminderKeys.detail(id), data);
+      queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.summary() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.upcoming() });
+      queryClient.invalidateQueries({ queryKey: reminderKeys.today() });
+    },
+  });
+
+  /**
+   * ✅ Récupérer un rappel depuis le cache (pas d'appel API)
+   * Utilise les données déjà chargées dans le cache
+   */
+  const getReminderFromCache = (
+    reminderId: string,
+  ): ReminderResponse | undefined => {
+    // Récupérer les données du cache pour la liste des rappels
+    const queryKey = reminderKeys.list(query);
+    const cachedData = queryClient.getQueryData<{
+      items: ReminderResponse[];
+      pagination: any;
+      summary: any;
+    }>(queryKey);
+
+    if (!cachedData) return undefined;
+    return cachedData.items.find((r) => String(r.id) === reminderId);
+  };
+
+  /**
    * Create multiple reminders at once
+   * La notification est gérée par reminderService.createBulkReminders
    */
   const createBulkRemindersMutation = useMutation({
     mutationFn: ({
@@ -247,10 +253,47 @@ export const useReminders = (query?: RemindersListQuery) => {
       reminders: Omit<CreateReminderRequest, "patientId">[];
     }) => reminderService.createBulkReminders(patientId, reminders),
     onSuccess: () => {
-      // Invalidate all reminders queries
       queryClient.invalidateQueries({ queryKey: reminderKeys.all });
     },
   });
+
+  /**
+   * Récupérer un rappel par ID (soit du cache, soit avec une requête si nécessaire)
+   * Mais ici on n'a pas d'endpoint individuel, donc on utilise le cache
+   */
+  const getReminder = async (id: string): Promise<ReminderResponse> => {
+    // Essayer de récupérer depuis le cache
+    const cached = getReminderFromCache(id);
+    if (cached) {
+      return cached;
+    }
+
+    // Si pas en cache, on rafraîchit la liste
+    await queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
+    const newData = await queryClient.fetchQuery({
+      queryKey: reminderKeys.list(query),
+      queryFn: async () => {
+        const result = await reminderService.getReminders(query);
+        return {
+          items: result.items || [],
+          pagination: result.pagination || {
+            total: 0,
+            page: 1,
+            limit: 20,
+            totalPages: 0,
+          },
+          summary: result.summary || { pending: 0, taken: 0, missed: 0 },
+        };
+      },
+    });
+
+    const found = newData.items.find((r: { id: any }) => String(r.id) === id);
+    if (found) {
+      return found;
+    }
+
+    throw new Error(`Rappel avec l'ID ${id} non trouvé`);
+  };
 
   /**
    * Mark specific reminders as read
@@ -259,7 +302,6 @@ export const useReminders = (query?: RemindersListQuery) => {
     mutationFn: (reminderIds: string[]) =>
       reminderService.markAsRead(reminderIds),
     onSuccess: () => {
-      // Invalidate lists
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
     },
   });
@@ -270,10 +312,17 @@ export const useReminders = (query?: RemindersListQuery) => {
   const markAllAsReadMutation = useMutation({
     mutationFn: () => reminderService.markAllAsRead(),
     onSuccess: () => {
-      // Invalidate lists
       queryClient.invalidateQueries({ queryKey: reminderKeys.lists() });
     },
   });
+
+  /**
+   * ✅ Annuler tous les rappels pour un médicament
+   */
+  const cancelRemindersForMedication = async (medicationId: string) => {
+    await reminderService.cancelRemindersForMedication(medicationId);
+    queryClient.invalidateQueries({ queryKey: reminderKeys.all });
+  };
 
   // ---------------------------------------------------------------------------
   // Return
@@ -290,12 +339,12 @@ export const useReminders = (query?: RemindersListQuery) => {
     refetch: remindersQuery.refetch,
 
     // Individual query hooks (to be used in components)
-    useReminder,
     useSummary,
     useUpcomingReminders,
     useTodayReminders,
     usePatientReminders,
     useMedicationReminders,
+    getReminder,
 
     // Mutations
     createReminder: createReminderMutation.mutate,
@@ -323,6 +372,12 @@ export const useReminders = (query?: RemindersListQuery) => {
     isSnoozing: snoozeReminderMutation.isPending,
     snoozeError: snoozeReminderMutation.error,
 
+    // ✅ Skip reminder mutation
+    skipReminder: skipReminderMutation.mutate,
+    skipReminderAsync: skipReminderMutation.mutateAsync,
+    isSkipping: skipReminderMutation.isPending,
+    skipError: skipReminderMutation.error,
+
     createBulkReminders: createBulkRemindersMutation.mutate,
     createBulkRemindersAsync: createBulkRemindersMutation.mutateAsync,
     isCreatingBulk: createBulkRemindersMutation.isPending,
@@ -337,5 +392,8 @@ export const useReminders = (query?: RemindersListQuery) => {
     markAllAsReadAsync: markAllAsReadMutation.mutateAsync,
     isMarkingAllAsRead: markAllAsReadMutation.isPending,
     markAllAsReadError: markAllAsReadMutation.error,
+
+    // ✅ Cancel reminders for medication
+    cancelRemindersForMedication,
   };
 };

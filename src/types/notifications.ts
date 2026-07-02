@@ -1,4 +1,3 @@
-import { PaginatedResponse } from "./api-responses";
 export type NotificationCategory =
   | "appointment_reminder"
   | "appointment_confirmed"
@@ -32,11 +31,19 @@ export interface NotificationData {
   scheduledFor?: string;
 }
 
+export interface ReminderNotificationData {
+  reminderId: string;
+  medicationName: string;
+  dosage: string;
+  scheduledTime: string;
+  action?: "take" | "snooze" | "skip";
+}
+
 export interface NotificationMetadata {
   appointmentId?: string;
   treatmentId?: string;
   doctorName?: string;
   treatmentName?: string;
   appointmentTime?: string;
-  [key: string]: unknown; // Pour les données supplémentaires
+  [key: string]: unknown;
 }

@@ -229,7 +229,7 @@ const LimitBanner = ({ onUpgrade }: { onUpgrade?: () => void }) => (
 );
 
 /**
- * Reminder card component - ✅ Adapté à la structure API
+ * Reminder card component
  */
 const ReminderCard = ({
   item,
@@ -281,8 +281,6 @@ const ReminderCard = ({
   };
 
   const isActionable = item.status === "PENDING" || item.status === "SNOOZED";
-
-  // ✅ Utiliser les bonnes propriétés de l'API
   const medicationName = item.medicationName || item.name || "Médicament";
   const dosage = item.medicationDosage || item.dosage || "";
   const time = item.scheduledHour || item.time || "Heure non définie";
@@ -539,7 +537,7 @@ export default function RemindersScreen({ onStore }: Props) {
 
   const handleViewReminder = useCallback(
     (id: string) => {
-      router.push(`/reminders/${id}`);
+      router.push(`/medications/reminders/${id}`);
     },
     [router],
   );
@@ -668,13 +666,6 @@ export default function RemindersScreen({ onStore }: Props) {
             ))
           )}
         </View>
-
-        {/* Pagination Info */}
-        {pagination && reminderList.length > 0 && (
-          <Text style={styles.paginationText}>
-            Affichage {reminderList.length} sur {pagination.total} rappels
-          </Text>
-        )}
       </ScrollView>
 
       {/* FAB */}
@@ -710,7 +701,6 @@ export default function RemindersScreen({ onStore }: Props) {
 // ================================================================================== //
 
 const styles = StyleSheet.create({
-  // ... styles existants inchangés
   safe: {
     flex: 1,
     backgroundColor: colors.white,

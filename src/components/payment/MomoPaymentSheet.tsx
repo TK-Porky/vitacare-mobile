@@ -3,6 +3,7 @@ import React, {
   useImperativeHandle,
   useRef,
   useState,
+  useCallback,
 } from "react";
 import { View, Text, StyleSheet, Image, Platform } from "react-native";
 import {
@@ -40,6 +41,10 @@ const fmt = (n: number) =>
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, " ")} XCFA`;
 
+const formatPhone = useCallback((phone: string) => {
+  return phone.replace(/\s/g, "");
+}, []);
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
@@ -61,7 +66,7 @@ export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
           appointmentId,
           amount,
           paymentMethod: "MTN_MOMO_CM",
-          phoneNumber: phone,
+          phoneNumber: formatPhone(phone),
         });
         setProcessing(false);
         if (
