@@ -130,7 +130,8 @@ export type AppointmentStatus =
   | "CANCELLED"
   | "NO_SHOW"
   | "PAID"
-  | "RESCHEDULED";
+  | "RESCHEDULED"
+  | "PAYMENT_PENDING";
 
 export interface AppointmentResponse {
   id: number;

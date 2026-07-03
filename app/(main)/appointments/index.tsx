@@ -1,3 +1,4 @@
+// app/(main)/(tabs)/appointments.tsx
 import { useRef, useState, useCallback } from "react";
 import {
   StyleSheet,
@@ -6,6 +7,7 @@ import {
   View,
   Text,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -25,12 +27,23 @@ import {
 import { Calendar } from "lucide-react-native";
 import { useAppointments } from "@/hooks";
 import { toSheetData, isUpcoming } from "@/utils/mapper";
+import {
+  MomoPaymentSheet,
+  OrangePaymentSheet,
+  CardPaymentSheet,
+} from "@/components/payment";
+import type { PaymentSheetRef } from "@/components/payment/MomoPaymentSheet";
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function AppointmentScreen() {
   const router = useRouter();
   const appointmentRef = useRef<AppointmentDetailBottomSheetRef>(null);
+
+  // Refs pour les sheets de paiement
+  const momoSheetRef = useRef<PaymentSheetRef>(null);
+  const orangeSheetRef = useRef<PaymentSheetRef>(null);
+  const cardSheetRef = useRef<PaymentSheetRef>(null);
 
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const [selectedItem, setSelectedItem] = useState<Appointment | undefined>();
@@ -47,6 +60,7 @@ export default function AppointmentScreen() {
     fetchAll,
     isCancelling,
     cancelAppointment,
+    markAppointmentAsPaid,
   } = useAppointments();
 
   const displayed = appointments.filter((a) =>
@@ -79,6 +93,45 @@ export default function AppointmentScreen() {
   const handleShowOnMap = useCallback(() => {
     router.push("/home/map" as never);
   }, [router]);
+
+  // ── Gestion du paiement ──────────────────────────────────────────────────────
+
+  const handlePay = useCallback(() => {
+    if (!selectedItem) return;
+    // Ouvrir le sheet de paiement correspondant
+    const paymentProvider = selectedItem.paymentProvider || "mobile_money";
+    switch (paymentProvider) {
+      case "mobile_money":
+        momoSheetRef.current?.open();
+        break;
+      case "orange_money":
+        orangeSheetRef.current?.open();
+        break;
+      case "card":
+        cardSheetRef.current?.open();
+        break;
+      default:
+        Alert.alert("Erreur", "Moyen de paiement non reconnu");
+    }
+  }, [selectedItem]);
+
+  const handlePaymentSuccess = useCallback(async () => {
+    if (!selectedAppointmentId) return;
+    try {
+      await markAppointmentAsPaid(selectedAppointmentId);
+      Alert.alert("Succès", "Paiement effectué avec succès !");
+      // Rafraîchir la liste
+      refresh();
+      appointmentRef.current?.close();
+      setSelectedItem(undefined);
+      setSelectedAppointmentId(undefined);
+    } catch (error) {
+      Alert.alert(
+        "Erreur",
+        "Impossible de marquer le paiement comme effectué.",
+      );
+    }
+  }, [selectedAppointmentId, markAppointmentAsPaid, refresh]);
 
   // Affichage d'erreur
   if (error && !isLoading) {
@@ -149,6 +202,7 @@ export default function AppointmentScreen() {
         )}
       </ScrollView>
 
+      {/* ── BottomSheet de détail avec paiement ── */}
       <AppointmentDetailBottomSheet
         ref={appointmentRef}
         appointment={selectedItem}
@@ -157,7 +211,34 @@ export default function AppointmentScreen() {
         onBookAgain={handleReservation}
         onCancel={handleCancel}
         onShowOnMap={handleShowOnMap}
-        /*isCancelling={isCancelling}*/
+        onPay={handlePay}
+        isCancelling={isCancelling}
+      />
+
+      {/* ── Sheets de paiement ── */}
+      <MomoPaymentSheet
+        ref={momoSheetRef}
+        appointmentId={
+          selectedAppointmentId ? Number(selectedAppointmentId) : 0
+        }
+        amount={selectedItem?.total || 0}
+        onSuccess={handlePaymentSuccess}
+      />
+      <OrangePaymentSheet
+        ref={orangeSheetRef}
+        appointmentId={
+          selectedAppointmentId ? Number(selectedAppointmentId) : 0
+        }
+        amount={selectedItem?.total || 0}
+        onSuccess={handlePaymentSuccess}
+      />
+      <CardPaymentSheet
+        ref={cardSheetRef}
+        appointmentId={
+          selectedAppointmentId ? Number(selectedAppointmentId) : 0
+        }
+        amount={selectedItem?.total || 0}
+        onSuccess={handlePaymentSuccess}
       />
     </SafeAreaView>
   );
@@ -178,7 +259,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 12,
     paddingBottom: 20,
-    flex: 1,
+    flexGrow: 1,
   },
   empty: {
     flex: 1,

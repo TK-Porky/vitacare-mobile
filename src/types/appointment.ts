@@ -15,6 +15,9 @@ export interface Appointment {
   dateTime?: string;
   status: AppointmentStatus;
   paymentMethod: string;
+  paymentProvider: string;
+  paymentStatus?: string;
+  isCancelled?: boolean;
   badge?: string | null;
   total?: number;
   currency?: string;

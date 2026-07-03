@@ -154,4 +154,11 @@ export const appointmentService = {
     );
     return unwrapBackendData<AppointmentResponse>(res);
   },
+
+  async markAsPaid(id: number | string): Promise<void> {
+    const res = await apiClient.patch(API_ENDPOINTS.APPOINTMENTS.MARK_PAID(id));
+    if (!res.success) {
+      throw new Error(res.error ?? "Failed to mark appointment as paid");
+    }
+  },
 };

@@ -1,4 +1,3 @@
-// components/appointments/AppointmentDetailBottomSheet.tsx
 import React, { forwardRef, useImperativeHandle, useRef, memo } from "react";
 import {
   View,
@@ -29,6 +28,7 @@ type ActionVariant = "reschedule" | "book_again";
 type Props = {
   appointment?: Appointment;
   actionVariant?: ActionVariant;
+  isCancelling?: boolean;
   onReschedule?: () => void;
   onCancel?: () => void;
   onBookAgain?: () => void;
@@ -36,6 +36,7 @@ type Props = {
   onShowOnMap?: () => void;
   onDoctorPress?: () => void;
   onClose?: () => void;
+  onPay?: () => void;
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -52,6 +53,11 @@ const STATUS_CONFIG: Record<
   IN_PROGRESS: { label: "En cours", bg: "#E8F0FE", color: "#1A56DB" },
   RESCHEDULED: { label: "Reporté", bg: "#FFF0F0", color: "#B91C1C" },
   COMPLETED: { label: "Terminé", bg: "#E8FFF0", color: "#1A7F3C" },
+  PAYMENT_PENDING: {
+    label: "En attente de paiement",
+    bg: "#FEF3C7",
+    color: "#D97706",
+  },
 };
 
 const DEFAULT_STATUS = {
@@ -132,6 +138,7 @@ export const AppointmentDetailBottomSheet = forwardRef<
     {
       appointment,
       actionVariant = "reschedule",
+      isCancelling = false,
       onReschedule,
       onCancel,
       onBookAgain,
@@ -139,6 +146,7 @@ export const AppointmentDetailBottomSheet = forwardRef<
       onShowOnMap,
       onDoctorPress,
       onClose,
+      onPay,
     },
     ref,
   ) => {
@@ -383,23 +391,42 @@ export const AppointmentDetailBottomSheet = forwardRef<
           <Text style={styles.bodyText}>Aucune facture disponible</Text>
         )}
 
-        {/* ── Actions ── */}
         <View style={styles.actionsRow}>
-          {actionVariant === "reschedule" ? (
+          {status === "PAYMENT_PENDING" ? (
+            <>
+              <PrimaryButton
+                label="Payer maintenant"
+                variant="solid"
+                size="md"
+                fullWidth={false}
+                onPress={onPay}
+                style={styles.rescheduleButton}
+                isDisabled={isCancelling}
+              />
+              <GrayButton
+                label="Annuler"
+                onPress={handleCancel}
+                style={styles.cancelButton}
+                disabled={isCancelling}
+              />
+            </>
+          ) : actionVariant === "reschedule" ? (
             <>
               <PrimaryButton
                 label="Réprogrammer"
                 variant="solid"
                 size="md"
-                fullWidth={statusCfg.label === "Annulé"}
+                fullWidth={true}
                 onPress={handleReschedule}
                 style={styles.rescheduleButton}
+                isDisabled={isCancelling}
               />
               {statusCfg.label !== "Annulé" && (
                 <GrayButton
                   label="Annuler"
                   onPress={handleCancel}
                   style={styles.cancelButton}
+                  disabled={isCancelling}
                 />
               )}
             </>
@@ -407,10 +434,11 @@ export const AppointmentDetailBottomSheet = forwardRef<
             <PrimaryButton
               label="Réserver à nouveau"
               variant="solid"
-              fullWidth
+              fullWidth={false}
               size="md"
               onPress={handleBookAgain}
               style={styles.bookAgainButton}
+              isDisabled={isCancelling}
             />
           )}
 

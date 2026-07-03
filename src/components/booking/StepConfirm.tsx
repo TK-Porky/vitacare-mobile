@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, fontFamily, fontSize } from "../../themes";
+import { colors, fontFamily, fontSize } from "@/themes";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,13 +125,21 @@ const OptionCard = ({
 
 const MtnIcon = () => (
   <View style={styles.logoBox}>
-    <Image source={require("../../../assets/MomoIcon.png")} style={styles.logoImage} resizeMode="contain" />
+    <Image
+      source={require("../../../assets/MomoIcon.png")}
+      style={styles.logoImage}
+      resizeMode="contain"
+    />
   </View>
 );
 
 const OrangeIcon = () => (
   <View style={styles.logoBox}>
-    <Image source={require("../../../assets/OMIcon.png")} style={styles.logoImage} resizeMode="contain" />
+    <Image
+      source={require("../../../assets/OMIcon.png")}
+      style={styles.logoImage}
+      resizeMode="contain"
+    />
   </View>
 );
 
@@ -159,9 +167,7 @@ export const StepConfirm = ({
   onChange,
 }: Props) => {
   const consultationFee = provider.priceXCFA;
-  const inAppDiscount = Math.round(consultationFee * 0.03);
-  const taxes = Math.round(consultationFee * 0.03);
-  const total = consultationFee - inAppDiscount + taxes;
+  const total = consultationFee; // Pas de calcul complexe ici, le paiement se fera plus tard
 
   return (
     <ScrollView
@@ -175,7 +181,6 @@ export const StepConfirm = ({
 
       {/* ── Provider card ───────────────────────────────────────────────── */}
       <View style={styles.providerCard}>
-        
         <View style={styles.providerSection}>
           <Image source={{ uri: provider.avatarUri }} style={styles.avatar} />
           <View>
@@ -185,7 +190,6 @@ export const StepConfirm = ({
         </View>
 
         <View style={styles.detailsSection}>
-
           <Divider />
 
           <View style={styles.details}>
@@ -197,7 +201,7 @@ export const StepConfirm = ({
                   : "Date à sélectionner"}
               </Text>
             </View>
-            
+
             <View style={styles.detailsRight}>
               <TouchableOpacity
                 style={styles.changerBtn}
@@ -212,7 +216,16 @@ export const StepConfirm = ({
           <Divider />
 
           <View style={styles.detailCol}>
-            <Text style={styles.detailLabel}>Prix</Text>
+            <Text style={styles.detailLabel}>Motif</Text>
+            <Text style={styles.detailValue}>
+              {booking.reason || "Consultation générale"}
+            </Text>
+          </View>
+
+          <Divider />
+
+          <View style={styles.detailCol}>
+            <Text style={styles.detailLabel}>Prix estimé</Text>
             <Text style={styles.detailValue}>
               {formatPrice(consultationFee)}
             </Text>
@@ -221,11 +234,8 @@ export const StepConfirm = ({
           <Divider />
 
           <View style={styles.detailCol}>
-            <Text style={styles.detailLabel}>Location</Text>
-            <Text
-              style={[styles.detailValue]}
-              numberOfLines={1}
-            >
+            <Text style={styles.detailLabel}>Lieu</Text>
+            <Text style={[styles.detailValue]} numberOfLines={1}>
               {provider.location}
             </Text>
           </View>
@@ -235,25 +245,25 @@ export const StepConfirm = ({
           <View style={styles.detailCol}>
             <Text style={styles.cancelTitle}>Annulation Gratuite</Text>
             <Text style={styles.cancelBody}>
-              Annuler avant le *** pour un remboursement totale.{" "}
+              Annuler avant le rendez-vous pour un remboursement total.{" "}
               <Text
-              style={styles.cancelLink}
-              onPress={() =>
-                Alert.alert(
-                  "Politique d'utilisation",
-                  "Les conditions d'annulation complètes s'appliquent selon les termes de réservation VitaCare.",
-                )
-              }
-            >
-              Politique d'utilisation
+                style={styles.cancelLink}
+                onPress={() =>
+                  Alert.alert(
+                    "Politique d'utilisation",
+                    "Les conditions d'annulation complètes s'appliquent selon les termes de réservation VitaCare.",
+                  )
+                }
+              >
+                Politique d'utilisation
+              </Text>
             </Text>
-          </Text>
           </View>
         </View>
       </View>
 
-      {/* ── Payment method ──────────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Méthodes de paiements</Text>
+      {/* ── Paiement ────────────────────────────────────────────────────── */}
+      <Text style={styles.sectionTitle}>Mode de paiement</Text>
       <View style={styles.cardGroup}>
         <OptionCard
           selected={booking.paymentMethod === "now"}
@@ -267,87 +277,63 @@ export const StepConfirm = ({
               />
             </View>
           }
-          title={`Payer ${formatPrice(total)} dès maintenant`}
-          subtitle="Améliore vos chances d'être prioritaire"
+          title="Payer en ligne"
+          subtitle="Paiement sécurisé après validation du praticien"
         />
         <OptionCard
           selected={booking.paymentMethod === "later"}
           onPress={() => onChange({ paymentMethod: "later" })}
           iconSlot={
             <View style={styles.logoBox}>
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={colors.ink}
-              />
+              <Ionicons name="person-outline" size={20} color={colors.ink} />
             </View>
           }
-          title="Payer à la consultation"
+          title="Payer sur place"
+          subtitle="Règlement au cabinet le jour du rendez-vous"
         />
       </View>
 
-      {/* ── Payment provider ────────────────────────────────────────────── */}
+      {/* ── Choix du fournisseur (si paiement en ligne) ────────────────── */}
       {booking.paymentMethod === "now" && (
-      <>
-        <Text style={styles.sectionTitle}>Moyens de paiements</Text>
-        <View style={styles.cardGroup}>
-          <OptionCard
-            selected={booking.paymentProvider === "mobile_money"}
-            onPress={() => onChange({ paymentProvider: "mobile_money" })}
-            iconSlot={<MtnIcon />}
-            title="Mobile Money"
-          />
-          <OptionCard
-            selected={booking.paymentProvider === "orange_money"}
-            onPress={() => onChange({ paymentProvider: "orange_money" })}
-            iconSlot={<OrangeIcon />}
-            title="Orange Money"
-          />
-          {/*
-          <OptionCard
-            selected={booking.paymentProvider === "card"}
-            onPress={() => onChange({ paymentProvider: "card" })}
-            iconSlot={<CardIcon active={booking.paymentProvider === "card"} />}
-            title="Carte bancaire"
-            subtitle="Numéro de compte *2456"
+        <>
+          <Text style={styles.sectionTitle}>Moyen de paiement</Text>
+          <View style={styles.cardGroup}>
+            <OptionCard
+              selected={booking.paymentProvider === "mobile_money"}
+              onPress={() => onChange({ paymentProvider: "mobile_money" })}
+              iconSlot={<MtnIcon />}
+              title="Mobile Money"
             />
-          */}
-        </View>
-      </>)}
+            <OptionCard
+              selected={booking.paymentProvider === "orange_money"}
+              onPress={() => onChange({ paymentProvider: "orange_money" })}
+              iconSlot={<OrangeIcon />}
+              title="Orange Money"
+            />
+            <OptionCard
+              selected={booking.paymentProvider === "card"}
+              onPress={() => onChange({ paymentProvider: "card" })}
+              iconSlot={
+                <CardIcon active={booking.paymentProvider === "card"} />
+              }
+              title="Carte bancaire"
+            />
+          </View>
+        </>
+      )}
 
-      {/* ── Invoice ─────────────────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Facture</Text>
-      <View style={styles.invoiceSection}>
-        <View style={styles.invoiceRow}>
-          <Text style={styles.invoiceLabel}>Consultation</Text>
-          <Text style={styles.invoiceValue}>
-            {formatPrice(consultationFee)}
-          </Text>
-        </View>
-        <View style={styles.invoiceRow}>
-          <Text style={styles.invoiceLabel}>Code de réduction</Text>
-          <Text style={styles.invoiceDiscount}>
-            -{formatPrice(inAppDiscount)}
-          </Text>
-        </View>
-
-        <Divider />
-
-        <View style={styles.invoiceRow}>
-          <Text style={styles.invoiceSubLabel}>Prix Estimé</Text>
-          <Text style={styles.invoiceSubValue}>
-            {formatPrice(consultationFee)}
-          </Text>
-        </View>
-        <View style={styles.invoiceRow}>
-          <Text style={styles.invoiceSubLabel}>Taxes</Text>
-          <Text style={styles.invoiceSubValue}>{formatPrice(taxes)}</Text>
-        </View>
-
-        <View style={styles.invoiceTotalRow}>
-          <Text style={styles.invoiceTotalLabel}>Total</Text>
-          <Text style={styles.invoiceTotalValue}>{formatPrice(total)}</Text>
-        </View>
+      {/* ── Note explicative ────────────────────────────────────────────── */}
+      <View style={styles.noteBox}>
+        <Ionicons
+          name="information-circle-outline"
+          size={20}
+          color={colors.primary}
+        />
+        <Text style={styles.noteText}>
+          {booking.paymentMethod === "now"
+            ? "Vous recevrez une demande de paiement après validation du praticien."
+            : "Le paiement sera effectué au cabinet le jour du rendez-vous."}
+        </Text>
       </View>
 
       <View style={{ height: 32 }} />
@@ -375,9 +361,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 16,
-    backgroundColor: colors.ltsurface,
+    backgroundColor: colors.surface,
     borderRadius: 16,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   providerSection: {
     width: "100%",
@@ -393,7 +381,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   providerName: {
-    width: '100%',
+    width: "100%",
     fontFamily: fontFamily.bold,
     fontSize: fontSize.lg,
     color: colors.ink,
@@ -401,7 +389,7 @@ const styles = StyleSheet.create({
   providerSpecialty: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
-    color: colors.inkMuted,
+    color: colors.inkLight,
   },
 
   // ── Appointment details ──
@@ -409,6 +397,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 12,
     marginBottom: 28,
+    width: "100%",
   },
   details: {
     flexDirection: "row",
@@ -418,17 +407,13 @@ const styles = StyleSheet.create({
   },
   detailsLeft: {
     flexDirection: "column",
-    gap: 12,
+    gap: 4,
+    flex: 1,
   },
   detailsRight: {
     flexDirection: "column",
     gap: 4,
     alignItems: "flex-end",
-  },
-  detailsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
   },
   detailsTitle: {
     fontFamily: fontFamily.bold,
@@ -459,14 +444,15 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 4,
     alignItems: "flex-start",
+    width: "100%",
   },
   detailLabel: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.md,
-    color: colors.ink,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
   },
   detailValue: {
-    fontFamily: fontFamily.regular,
+    fontFamily: fontFamily.semiBold,
     fontSize: fontSize.md,
     color: colors.ink,
   },
@@ -478,14 +464,14 @@ const styles = StyleSheet.create({
   },
   cancelBody: {
     fontFamily: fontFamily.regular,
-    fontSize: fontSize.md,
-    color: colors.ink,
-    lineHeight: 16,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 18,
   },
   cancelLink: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.md,
-    color: colors.ink,
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.sm,
+    color: colors.primary,
     textDecorationLine: "underline",
   },
 
@@ -501,7 +487,7 @@ const styles = StyleSheet.create({
   // ── Option cards ──
   cardGroup: {
     gap: 12,
-    marginBottom: 28,
+    marginBottom: 20,
   },
   optionCard: {
     flexDirection: "row",
@@ -517,7 +503,7 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
   },
   optionIconBox: {
-    // icon slot renders its own box
+    // icon slot
   },
   logoBox: {
     width: 32,
@@ -529,10 +515,6 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 28,
     height: 28,
-  },
-  logoText: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.xs,
   },
   optionBody: {
     flex: 1,
@@ -549,7 +531,7 @@ const styles = StyleSheet.create({
   optionSubtitle: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
-    color: colors.ink,
+    color: colors.inkLight,
   },
   radio: {
     width: 22,
@@ -570,55 +552,23 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
 
-  // ── Invoice ──
-  invoiceSection: {
-    flexDirection: "column",
+  // ── Note ──
+  noteBox: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
+    backgroundColor: colors.primary + "08",
+    borderWidth: 1,
+    borderColor: colors.primary + "30",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
   },
-  invoiceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 5,
-  },
-  invoiceLabel: {
+  noteText: {
+    flex: 1,
     fontFamily: fontFamily.regular,
-    fontSize: fontSize.base,
-    color: colors.ink,
-  },
-  invoiceValue: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.base,
-    color: colors.ink,
-  },
-  invoiceDiscount: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.base,
-    color: colors.primary,
-  },
-  invoiceSubLabel: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.base,
-    color: colors.ink,
-  },
-  invoiceSubValue: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.base,
-    color: colors.ink,
-  },
-  invoiceTotalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  invoiceTotalLabel: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.lg,
-    color: colors.ink,
-  },
-  invoiceTotalValue: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.lg,
-    color: colors.primary,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 18,
   },
 });

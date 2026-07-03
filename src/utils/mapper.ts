@@ -62,6 +62,8 @@ export function toSheetData(item: Appointment) {
     address: item.address,
     locationSuffix: item.address,
     paymentMethod: item.paymentMethod ?? defaultPayment,
+    paymentProvider: item.paymentProvider ?? "",
+    paymentStatus: item.paymentStatus ?? "",
     invoiceLines: item.invoiceLines ?? [],
     total: item.total ?? undefined,
     currency: item.currency ?? "XAF",

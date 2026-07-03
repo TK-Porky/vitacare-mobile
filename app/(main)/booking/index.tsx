@@ -1,3 +1,4 @@
+// app/(main)/booking/index.tsx
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
@@ -19,10 +20,6 @@ import { StepTime } from "@/components/booking/StepTime";
 import { StepReason } from "@/components/booking/StepReason";
 import { StepConfirm } from "@/components/booking/StepConfirm";
 import { PrimaryButton } from "@/components/buttons/PrimaryButton";
-import { MomoPaymentSheet } from "@/components/payment/MomoPaymentSheet";
-import { OrangePaymentSheet } from "@/components/payment/OrangePaymentSheet";
-import { CardPaymentSheet } from "@/components/payment/CardPaymentSheet";
-import type { PaymentSheetRef } from "@/components/payment/MomoPaymentSheet";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { apiClient } from "@/lib/api.client";
 import { API_ENDPOINTS } from "@/types/api-endpoints";
@@ -124,14 +121,6 @@ export default function BookingScreen() {
   );
   const [slotsLoading, setSlotsLoading] = useState(false);
 
-  // Payment sheet refs
-  const momoSheetRef = useRef<PaymentSheetRef>(null);
-  const orangeSheetRef = useRef<PaymentSheetRef>(null);
-  const cardSheetRef = useRef<PaymentSheetRef>(null);
-
-  // Store created appointment ID for payment
-  const createdAppointmentId = useRef<number | null>(null);
-
   const patchBooking = useCallback((patch: Partial<BookingData>) => {
     setBooking((prev) => {
       const next = { ...prev, ...patch };
@@ -197,22 +186,11 @@ export default function BookingScreen() {
   };
 
   const navigateToSuccess = useCallback(
-    (appointmentId: number) => {
+    (appointmentId: number, isPaymentOnline: boolean) => {
       const dateLabel = booking.date
         ? `${DAYS[booking.date.getDay()]}, ${booking.date.getDate()} ${MONTHS[booking.date.getMonth()]} ${booking.date.getFullYear()}`
         : "";
       const timeLabel = booking.time?.replace(":", "h") ?? "";
-
-      const PAYMENT_LABELS: Record<string, string> = {
-        now_mobile_money: "Payé via Mobile Money (MTN)",
-        now_orange_money: "Payé via Orange Money",
-        now_card: "Payé par carte bancaire",
-        later: "Paiement à la consultation",
-      };
-      const key =
-        booking.paymentMethod === "later"
-          ? "later"
-          : `now_${booking.paymentProvider}`;
 
       router.push({
         pathname: "/(main)/booking/booking-success",
@@ -223,7 +201,8 @@ export default function BookingScreen() {
           avatarUri: provider.avatarUri,
           date: dateLabel,
           time: timeLabel,
-          paymentLabel: PAYMENT_LABELS[key],
+          paymentMode: isPaymentOnline ? "en ligne" : "sur place",
+          status: "en attente de validation",
           location: provider.location,
         },
       } as never);
@@ -251,8 +230,8 @@ export default function BookingScreen() {
         reason: booking.reason || "Consultation générale",
         paymentMethod:
           booking.paymentMethod === "now" ? booking.paymentProvider : "later",
+        // On envoie le mode de paiement choisi, mais on ne paie pas maintenant
       });
-      createdAppointmentId.current = appointment.id;
 
       // Planifier une notification locale pour le rappel RDV
       const [hours, mins] = booking.time!.split(":").map(Number);
@@ -264,44 +243,23 @@ export default function BookingScreen() {
         appointmentDate,
       });
 
-      setIsSubmitting(false);
-
-      if (booking.paymentMethod === "later") {
-        navigateToSuccess(appointment.id);
-      } else {
-        if (booking.paymentProvider === "mobile_money")
-          momoSheetRef.current?.open();
-        else if (booking.paymentProvider === "orange_money")
-          orangeSheetRef.current?.open();
-        else cardSheetRef.current?.open();
-      }
+      // Rediriger vers l'écran de succès avec le statut "en attente de validation"
+      const isOnline = booking.paymentMethod === "now";
+      navigateToSuccess(appointment.id, isOnline);
     } catch (err: any) {
-      setIsSubmitting(false);
       Alert.alert(
         "Erreur",
         err?.message || "Impossible de créer le rendez-vous.",
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
-  const handlePaymentSuccess = useCallback(() => {
-    if (createdAppointmentId.current) {
-      navigateToSuccess(createdAppointmentId.current);
-    }
-  }, [navigateToSuccess]);
 
   const handleBack = () => {
     if (step > 1) setStep((s) => s - 1);
     else router.back();
   };
-
-  // Computed total (same formula as StepConfirm)
-  const paymentTotal = (() => {
-    const fee = provider.priceXCFA;
-    const discount = Math.round(fee * 0.03);
-    const taxes = Math.round(fee * 0.02);
-    return fee - discount + taxes;
-  })();
 
   const isLastStep = step === TOTAL_STEPS;
 
@@ -339,7 +297,7 @@ export default function BookingScreen() {
       {/* ── Progress ────────────────────────────────────────────────────────── */}
       {!isLastStep && <ProgressBar step={step} total={TOTAL_STEPS} />}
 
-      {/* ── Provider card (steps 1–3 only; step 4 renders it inside StepConfirm) ── */}
+      {/* ── Provider card ── */}
       {!isLastStep && (
         <View style={styles.providerCard}>
           <Image source={{ uri: provider.avatarUri }} style={styles.avatar} />
@@ -350,7 +308,7 @@ export default function BookingScreen() {
         </View>
       )}
 
-      {/* ── Date preview (step 1 only, when a date has been selected) ──────── */}
+      {/* ── Date preview ── */}
       {step === 1 && booking.date !== null && (
         <View style={styles.datePreview}>
           <Ionicons name="calendar-outline" size={18} color={colors.primary} />
@@ -425,30 +383,10 @@ export default function BookingScreen() {
 
       {isLastStep && (
         <Text style={styles.terms}>
-          En confirmant, j'ai lu et approuvé les{" "}
-          <Text style={styles.termsLink}>Termes de Réservation.</Text>
+          En confirmant, vous acceptez que votre demande soit envoyée au
+          praticien. Vous recevrez une notification dès qu'il aura validé.
         </Text>
       )}
-
-      {/* ── Payment sheets ──────────────────────────────────────────────────── */}
-      <MomoPaymentSheet
-        ref={momoSheetRef}
-        appointmentId={createdAppointmentId.current ?? 0}
-        amount={paymentTotal}
-        onSuccess={handlePaymentSuccess}
-      />
-      <OrangePaymentSheet
-        ref={orangeSheetRef}
-        appointmentId={createdAppointmentId.current ?? 0}
-        amount={paymentTotal}
-        onSuccess={handlePaymentSuccess}
-      />
-      <CardPaymentSheet
-        ref={cardSheetRef}
-        appointmentId={createdAppointmentId.current ?? 0}
-        amount={paymentTotal}
-        onSuccess={handlePaymentSuccess}
-      />
     </SafeAreaView>
   );
 }
@@ -460,8 +398,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
-
-  // ── Header ──
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -484,8 +420,6 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 36,
   },
-
-  // ── Provider card ──
   providerCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -516,8 +450,6 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     marginTop: 2,
   },
-
-  // ── Date preview ──
   datePreview: {
     flexDirection: "row",
     alignItems: "center",
@@ -537,15 +469,11 @@ const styles = StyleSheet.create({
     color: colors.primary,
     textTransform: "capitalize",
   },
-
-  // ── Step content ──
   stepContent: {
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 8,
   },
-
-  // ── Footer ──
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -565,19 +493,13 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontFamily: fontFamily.medium,
   },
-
-  // ── Terms ──
   terms: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
-    color: colors.ink,
+    color: colors.inkLight,
     textAlign: "center",
     paddingHorizontal: 24,
     marginBottom: 8,
     lineHeight: 18,
-  },
-  termsLink: {
-    color: colors.primary,
-    fontFamily: fontFamily.semiBold,
   },
 });

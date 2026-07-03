@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+// hooks/useAppointments.ts
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Alert } from "react-native";
 import { Appointment } from "@/types";
 import { appointmentService } from "@/services";
@@ -11,7 +12,12 @@ export const useAppointments = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isFetching = useRef(false);
+
   const fetchAll = useCallback(async (refresh = false) => {
+    if (isFetching.current) return;
+    isFetching.current = true;
+
     if (refresh) {
       setIsRefreshing(true);
     } else {
@@ -33,6 +39,7 @@ export const useAppointments = () => {
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
+      isFetching.current = false;
     }
   }, []);
 
@@ -76,8 +83,34 @@ export const useAppointments = () => {
     [fetchAll],
   );
 
+  const markAppointmentAsPaid = useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        await appointmentService.markAsPaid(Number(id));
+        await fetchAll();
+        return true;
+      } catch (error) {
+        console.error("Erreur lors du marquage du paiement :", error);
+        Alert.alert(
+          "Erreur",
+          "Impossible de marquer le paiement comme effectué.",
+        );
+        return false;
+      }
+    },
+    [fetchAll],
+  );
+
   useEffect(() => {
-    fetchAll();
+    let mounted = true;
+    const load = async () => {
+      if (!mounted) return;
+      await fetchAll();
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
   }, [fetchAll]);
 
   return {
@@ -89,5 +122,6 @@ export const useAppointments = () => {
     fetchAll,
     isCancelling,
     cancelAppointment,
+    markAppointmentAsPaid, // ✅ Exposée
   };
 };
