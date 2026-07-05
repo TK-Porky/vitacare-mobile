@@ -1,2 +1,2 @@
 export * from "./ErrorScreen";
-export * from "./Support/SupportContactBottomSheet";
+export * from "../supports/SupportContactBottomSheet";

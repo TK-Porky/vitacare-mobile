@@ -29,7 +29,7 @@ export default function MainLayout() {
           }}
         />
         <Stack.Screen
-          name="medications/reminders"
+          name="reminders"
           options={{
             presentation: "modal",
             animation: "slide_from_bottom",
@@ -42,7 +42,7 @@ export default function MainLayout() {
 
         {/* ── Reminder detail & validation screens ── */}
         <Stack.Screen
-          name="medications/reminders/[id]"
+          name="reminders/[id]"
           options={{
             animation: "slide_from_right",
             headerShown: false,
@@ -58,7 +58,7 @@ export default function MainLayout() {
           }}
         />
         <Stack.Screen
-          name="medications/reminders/validate"
+          name="reminders/validate"
           options={{
             presentation: "transparentModal",
             headerShown: false,

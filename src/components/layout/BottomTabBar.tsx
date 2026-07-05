@@ -1,10 +1,10 @@
-import React from "react";
-import { View, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, usePathname } from "expo-router";
 import { colors, fontFamily, fontSize } from "../../themes";
+import { useNotificationStore } from "@/store";
 
 interface TabItem {
   name: string;
@@ -12,12 +12,13 @@ interface TabItem {
   icon: keyof typeof Ionicons.glyphMap;
   iconActive: keyof typeof Ionicons.glyphMap;
   label: string;
+  badge?: boolean;
 }
 
 const TABS: TabItem[] = [
   {
-    name: "index",
-    path: "/(main)/(tabs)/",
+    name: "home",
+    path: "/(main)/(tabs)/home",
     icon: "home-outline",
     iconActive: "home",
     label: "Accueil",
@@ -35,6 +36,7 @@ const TABS: TabItem[] = [
     icon: "calendar-outline",
     iconActive: "calendar",
     label: "RDV",
+    badge: true,
   },
   {
     name: "medications",
@@ -55,15 +57,12 @@ const TABS: TabItem[] = [
 export function BottomTabBar() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const unreadCount = useNotificationStore((state) => state.unreadCount ?? 0);
 
   const isActive = (tab: TabItem): boolean => {
-    if (tab.name === "fab") return false;
-
-    // Normalize pathname: remove trailing slashes
     const normalizedPath = pathname.replace(/\/$/, "");
 
     if (tab.name === "index") {
-      // Index tab: active for root paths
       return (
         normalizedPath === "" ||
         normalizedPath === "/" ||
@@ -72,7 +71,6 @@ export function BottomTabBar() {
       );
     }
 
-    // Other tabs: check if pathname ends with tab name
     return normalizedPath.endsWith(`/${tab.name}`);
   };
 
@@ -91,6 +89,8 @@ export function BottomTabBar() {
     >
       {TABS.map((tab) => {
         const active = isActive(tab);
+        const showBadge = tab.badge && unreadCount > 0;
+
         return (
           <TouchableOpacity
             key={tab.name}
@@ -99,11 +99,20 @@ export function BottomTabBar() {
             activeOpacity={0.7}
           >
             {active && <View style={styles.indicator} />}
-            <Ionicons
-              name={active ? tab.iconActive : tab.icon}
-              size={22}
-              color={active ? colors.primary : colors.inkLight}
-            />
+            <View style={styles.iconWrapper}>
+              <Ionicons
+                name={active ? tab.iconActive : tab.icon}
+                size={22}
+                color={active ? colors.primary : colors.inkLight}
+              />
+              {showBadge && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
               {tab.label}
             </Text>
@@ -117,7 +126,7 @@ export function BottomTabBar() {
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    justifyContent: "center", // Align items centered for larger displays (tablets)
+    justifyContent: "center",
     alignItems: "center",
     backgroundColor: colors.white,
     borderTopWidth: 1,
@@ -131,16 +140,19 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     flex: 1,
-    maxWidth: 100, // Keeps an elegant look on wide screens (tablets)
+    maxWidth: 100,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 6,
     paddingHorizontal: 8,
     position: "relative",
   },
+  iconWrapper: {
+    position: "relative",
+  },
   tabLabel: {
     fontFamily: fontFamily.medium,
-    fontSize: fontSize.xs, // Dynamic 10px standard size
+    fontSize: fontSize.xs,
     fontWeight: "500",
     color: colors.inkFaint,
     marginTop: 4,
@@ -152,12 +164,29 @@ const styles = StyleSheet.create({
   },
   indicator: {
     position: "absolute",
-    top: -10, // Places the indicator precisely covering the top border of the tab bar
+    top: -10,
     left: "20%",
     right: "20%",
     height: 3,
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
     backgroundColor: colors.primary,
+  },
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -10,
+    backgroundColor: colors.error || "#DC2626",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontFamily: fontFamily.bold,
   },
 });

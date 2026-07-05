@@ -1,4 +1,3 @@
-// app/(main)/explore/index.tsx
 import { useRef, useState, useEffect, useCallback } from "react";
 import {
   View,

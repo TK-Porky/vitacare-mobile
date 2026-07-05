@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,11 @@ import {
   ScrollView,
   StatusBar,
   Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, fontFamily, fontSize } from '../../../src/themes';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, fontFamily, fontSize } from "@/themes";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -26,31 +26,74 @@ type Provider = {
 };
 
 const ALL_PROVIDERS: Provider[] = [
-  { id: '1', name: 'Dr. Aminou Ousman',   specialty: 'Généraliste',  avatarUri: 'https://randomuser.me/api/portraits/men/32.jpg' },
-  { id: '2', name: 'Dr. Mariama Siantou', specialty: 'Pédiatre',     avatarUri: 'https://randomuser.me/api/portraits/women/44.jpg' },
-  { id: '3', name: 'Dr. Christian Mba',   specialty: 'Ophtalmologue', avatarUri: 'https://randomuser.me/api/portraits/men/15.jpg' },
-  { id: '4', name: 'Dr. Aïssatou Diallo', specialty: 'Cardiologue',   avatarUri: 'https://randomuser.me/api/portraits/women/68.jpg' },
-  { id: '5', name: 'Dr. Sylvain Nkoulou', specialty: 'Dermatologue',  avatarUri: 'https://randomuser.me/api/portraits/men/52.jpg' },
-  { id: '6', name: 'Dr. Fatou Camara',    specialty: 'Gynécologue',   avatarUri: 'https://randomuser.me/api/portraits/women/23.jpg' },
-  { id: '7', name: 'Dr. Ibrahima Baldé',  specialty: 'Chirurgien',    avatarUri: 'https://randomuser.me/api/portraits/men/71.jpg' },
+  {
+    id: "1",
+    name: "Dr. Aminou Ousman",
+    specialty: "Généraliste",
+    avatarUri: "https://randomuser.me/api/portraits/men/32.jpg",
+  },
+  {
+    id: "2",
+    name: "Dr. Mariama Siantou",
+    specialty: "Pédiatre",
+    avatarUri: "https://randomuser.me/api/portraits/women/44.jpg",
+  },
+  {
+    id: "3",
+    name: "Dr. Christian Mba",
+    specialty: "Ophtalmologue",
+    avatarUri: "https://randomuser.me/api/portraits/men/15.jpg",
+  },
+  {
+    id: "4",
+    name: "Dr. Aïssatou Diallo",
+    specialty: "Cardiologue",
+    avatarUri: "https://randomuser.me/api/portraits/women/68.jpg",
+  },
+  {
+    id: "5",
+    name: "Dr. Sylvain Nkoulou",
+    specialty: "Dermatologue",
+    avatarUri: "https://randomuser.me/api/portraits/men/52.jpg",
+  },
+  {
+    id: "6",
+    name: "Dr. Fatou Camara",
+    specialty: "Gynécologue",
+    avatarUri: "https://randomuser.me/api/portraits/women/23.jpg",
+  },
+  {
+    id: "7",
+    name: "Dr. Ibrahima Baldé",
+    specialty: "Chirurgien",
+    avatarUri: "https://randomuser.me/api/portraits/men/71.jpg",
+  },
 ];
 
 const ALL_SUGGESTIONS = [
-  'Maux de gorge',
+  "Maux de gorge",
   "Maux d'estomac",
-  'Maux de tête',
-  'Fièvre',
-  'Douleur',
-  'Toux',
-  'Grippe',
-  'Allergie',
-  'Urgences',
-  'Pédiatrie',
+  "Maux de tête",
+  "Fièvre",
+  "Douleur",
+  "Toux",
+  "Grippe",
+  "Allergie",
+  "Urgences",
+  "Pédiatrie",
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const SuggestionChip = ({ label, query, onPress }: { label: string; query: string; onPress: () => void }) => {
+const SuggestionChip = ({
+  label,
+  query,
+  onPress,
+}: {
+  label: string;
+  query: string;
+  onPress: () => void;
+}) => {
   const lower = label.toLowerCase();
   const q = query.toLowerCase();
   const idx = q.length > 0 ? lower.indexOf(q) : -1;
@@ -62,7 +105,9 @@ const SuggestionChip = ({ label, query, onPress }: { label: string; query: strin
       ) : (
         <Text style={styles.chipLabel}>
           {label.slice(0, idx)}
-          <Text style={styles.chipLabelBold}>{label.slice(idx, idx + query.length)}</Text>
+          <Text style={styles.chipLabelBold}>
+            {label.slice(idx, idx + query.length)}
+          </Text>
           {label.slice(idx + query.length)}
         </Text>
       )}
@@ -86,28 +131,36 @@ const ProviderRow = ({ item }: { item: Provider }) => (
 export default function ExploreSearchScreen() {
   const router = useRouter();
   const inputRef = useRef<TextInput>(null);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
 
   const suggestions = useMemo(() => {
     if (query.trim().length === 0) return ALL_SUGGESTIONS.slice(0, 6);
-    return ALL_SUGGESTIONS.filter(s => s.toLowerCase().includes(query.toLowerCase()));
+    return ALL_SUGGESTIONS.filter((s) =>
+      s.toLowerCase().includes(query.toLowerCase()),
+    );
   }, [query]);
 
   const results = useMemo(() => {
     if (query.trim().length === 0) return ALL_PROVIDERS;
     const q = query.toLowerCase();
     return ALL_PROVIDERS.filter(
-      p => p.name.toLowerCase().includes(q) || p.specialty.toLowerCase().includes(q)
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.specialty.toLowerCase().includes(q),
     );
   }, [query]);
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <SafeAreaView style={styles.root} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
       {/* ── Search header ── */}
       <View style={styles.searchHeader}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={8}
+        >
           <Ionicons name="arrow-back" size={22} color={colors.ink} />
         </TouchableOpacity>
         <View style={styles.inputWrap}>
@@ -124,7 +177,7 @@ export default function ExploreSearchScreen() {
             autoCorrect={false}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')} hitSlop={8}>
+            <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
               <Ionicons name="close-circle" size={18} color={colors.inkMuted} />
             </TouchableOpacity>
           )}
@@ -133,7 +186,7 @@ export default function ExploreSearchScreen() {
 
       <FlatList
         data={results}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => <ProviderRow item={item} />}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -149,7 +202,7 @@ export default function ExploreSearchScreen() {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.chipsRow}
                 >
-                  {suggestions.map(s => (
+                  {suggestions.map((s) => (
                     <SuggestionChip
                       key={s}
                       label={s}
@@ -168,7 +221,9 @@ export default function ExploreSearchScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="search-outline" size={40} color={colors.inkFaint} />
-            <Text style={styles.emptyText}>Aucun résultat pour « {query} »</Text>
+            <Text style={styles.emptyText}>
+              Aucun résultat pour « {query} »
+            </Text>
           </View>
         }
       />
@@ -186,8 +241,8 @@ const styles = StyleSheet.create({
 
   // ── Header ──
   searchHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
@@ -200,12 +255,12 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 10 : 7,
+    paddingVertical: Platform.OS === "ios" ? 10 : 7,
     gap: 8,
   },
   input: {
@@ -243,10 +298,10 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 7,
-    backgroundColor: 'rgba(17, 199, 147, 0.1)',
+    backgroundColor: "rgba(17, 199, 147, 0.1)",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(17, 199, 147, 0.3)',
+    borderColor: "rgba(17, 199, 147, 0.3)",
   },
   chipLabel: {
     fontFamily: fontFamily.medium,
@@ -260,8 +315,8 @@ const styles = StyleSheet.create({
 
   // ── Provider rows ──
   providerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
@@ -291,7 +346,7 @@ const styles = StyleSheet.create({
 
   // ── Empty ──
   empty: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 60,
     gap: 12,
   },
