@@ -223,7 +223,7 @@ export default function LoginEmailScreen() {
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
               <>
-                <Ionicons name="logo-google" size={20} color="#4285F4" />
+                <Ionicons name="logo-google" size={20} color="#f44242ff" />
                 <Text style={styles.googleText}>Continuer avec Google</Text>
               </>
             )}

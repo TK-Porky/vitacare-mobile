@@ -8,63 +8,77 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Keyboard,
+  KeyboardEvent,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import {
-  PasswordInput,
-  HelperText,
-  PhoneInput,
-  NameInput,
-  EmailInput,
-} from "@/components";
+import { HelperText, NameInput } from "@/components";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { colors, fontFamily, fontSize } from "@/themes";
-import { isValidCMPhone } from "@/utils";
 import { useAuth } from "@/hooks";
 import { useAuthStore } from "@/store";
+import { RegisterModeToggle } from "@/components/auth/register/RegisterModeToggle";
+import { RegisterContactField } from "@/components/auth/register/RegisterContactField";
+import { RegisterPasswordFields } from "@/components/auth/register/RegisterPasswordFields";
+import {
+  validateRegisterForm,
+  RegisterMode,
+  ValidationErrors,
+} from "@/utils/register-validation";
 
-// ================================================================================== //
-// Types
-// ================================================================================== //
-type RegisterMode = "phone" | "email";
-
-// ================================================================================== //
-// Main
-// ================================================================================== //
 export default function RegisterScreen() {
-  // ================================================================================== //
-  // States
-  // ================================================================================== //
+  // ── States ──────────────────────────────────────────────────────────────
   const [mode, setMode] = useState<RegisterMode>("email");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [countryCode, setCountryCode] = useState("+237");
+  const [countryCode] = useState("+237");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+  const [localErrors, setLocalErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ================================================================================== //
-  // Hooks
-  // ================================================================================== //
+  // ✅ Hauteur du clavier actuellement visible, ajoutée dynamiquement au
+  // paddingBottom du ScrollView. Sans ça, le ScrollView ignore la place
+  // que prend le clavier et il devient impossible de scroller assez bas
+  // pour faire apparaître les champs/boutons cachés derrière.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // ── Hooks ──────────────────────────────────────────────────────────────
   const { register, isRegistering } = useAuth();
   const storeError = useAuthStore((state) => state.error);
   const clearStoreError = useAuthStore((state) => state.clearError);
 
-  // ================================================================================== //
-  // Effects
-  // ================================================================================== //
+  // ── Effects ─────────────────────────────────────────────────────────────
   useEffect(() => {
     clearStoreError();
   }, []);
 
-  // ================================================================================== //
-  // Functions
-  // ================================================================================== //
+  useEffect(() => {
+    // iOS déclenche "Will" un peu avant l'animation, ce qui donne un rendu
+    // plus fluide. Android n'a que "Did".
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e: KeyboardEvent) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // ── Callbacks ──────────────────────────────────────────────────────────
 
   const clearError = useCallback(
     (key: string) => {
@@ -88,48 +102,24 @@ export default function RegisterScreen() {
     [clearStoreError],
   );
 
-  const validate = useCallback(() => {
-    const newErrors: Record<string, string> = {};
-
-    if (!fullName.trim()) {
-      newErrors.fullName = "Le nom complet est requis.";
-    } else if (fullName.trim().split(" ").length < 2) {
-      newErrors.fullName = "Veuillez entrer votre nom et prénom.";
-    }
-
-    if (mode === "phone") {
-      if (!isValidCMPhone(phone)) {
-        newErrors.contact = "Numéro de téléphone invalide.";
-      }
-    } else {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        newErrors.contact = "Adresse email invalide.";
-      }
-
-      if (password.length < 8) {
-        newErrors.password = "Minimum 8 caractères.";
-      } else if (password.includes(" ")) {
-        newErrors.password = "Le mot de passe ne doit pas contenir d'espaces.";
-      }
-
-      if (password !== confirmPassword) {
-        newErrors.confirmPassword = "Les mots de passe ne correspondent pas.";
-      } else if (confirmPassword && confirmPassword.includes(" ")) {
-        newErrors.confirmPassword =
-          "Le mot de passe ne doit pas contenir d'espaces.";
-      }
-    }
-
-    setLocalErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [fullName, mode, phone, email, password, confirmPassword]);
-
   const formatPhone = useCallback((countryCode: string, phone: string) => {
     return countryCode + phone.replace(/\s/g, "");
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (!validate()) {
+    const formData = {
+      fullName,
+      mode,
+      phone,
+      email,
+      password,
+      confirmPassword,
+    };
+
+    const errors = validateRegisterForm(formData);
+    setLocalErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
       if (Platform.OS === "ios") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
@@ -170,15 +160,15 @@ export default function RegisterScreen() {
       setIsSubmitting(false);
     }
   }, [
-    validate,
-    clearStoreError,
-    register,
     fullName,
     mode,
     phone,
     email,
     password,
     confirmPassword,
+    countryCode,
+    register,
+    clearStoreError,
   ]);
 
   const handleBack = useCallback(() => {
@@ -200,25 +190,24 @@ export default function RegisterScreen() {
     router.push("/privacy");
   }, []);
 
-  // ================================================================================== //
-  // Render
-  // ================================================================================== //
-
-  const errorMessage = storeError;
   const isEmailMode = mode === "email";
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-    >
+    <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          // ✅ On ajoute la hauteur du clavier par-dessus le padding de base,
+          // ce qui garantit qu'on peut toujours scroller jusqu'à voir le
+          // dernier champ / bouton juste au-dessus du clavier.
+          {
+            paddingBottom: styles.scrollContent.paddingBottom + keyboardHeight,
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        {/* ── Header ── */}
         <AuthHeader
           title="Créer un compte"
           subtitle="Rejoignez VitaCare et prenez soin de votre santé"
@@ -226,7 +215,6 @@ export default function RegisterScreen() {
           onBack={handleBack}
         />
 
-        {/* ── Form ── */}
         <View style={styles.form}>
           {/* Nom complet */}
           <View style={styles.fieldWrapper}>
@@ -247,134 +235,50 @@ export default function RegisterScreen() {
             )}
           </View>
 
-          {/* Mode d'inscription */}
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.label}>
-              Mode d'inscription <Text style={styles.required}>*</Text>
-            </Text>
-            <View style={styles.toggle}>
-              {(["phone", "email"] as RegisterMode[]).map((m) => (
-                <TouchableOpacity
-                  key={m}
-                  style={[
-                    styles.toggleBtn,
-                    mode === m && styles.toggleBtnActive,
-                  ]}
-                  onPress={() => handleModeChange(m)}
-                  activeOpacity={0.7}
-                  accessibilityLabel={`S'inscrire par ${m === "phone" ? "téléphone" : "email"}`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: mode === m }}
-                >
-                  <Ionicons
-                    name={m === "phone" ? "call-outline" : "mail-outline"}
-                    size={16}
-                    color={mode === m ? colors.black : colors.inkLight}
-                  />
-                  <Text
-                    style={[
-                      styles.toggleLabel,
-                      mode === m && styles.toggleLabelActive,
-                    ]}
-                  >
-                    {m === "phone" ? "Téléphone" : "Email"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          {/* Contact field */}
+          <RegisterContactField
+            mode={mode}
+            phone={phone}
+            email={email}
+            countryCode={countryCode}
+            onPhoneChange={(text) => {
+              setPhone(text);
+              clearError("contact");
+            }}
+            onEmailChange={(text) => {
+              setEmail(text);
+              clearError("contact");
+            }}
+            error={localErrors.contact}
+          />
 
-          {/* Contact (Phone ou Email) */}
-          <View style={styles.fieldWrapper}>
-            <Text style={styles.label}>
-              {mode === "phone" ? "Numéro de téléphone" : "Adresse email"}
-              <Text style={styles.required}> *</Text>
-            </Text>
-            {mode === "phone" ? (
-              <PhoneInput
-                countryCode={countryCode}
-                value={phone}
-                onChangeText={(text) => {
-                  setPhone(text);
-                  clearError("contact");
-                }}
-                placeholder="6 XX XX XX XX"
-                error={!!localErrors.contact}
-              />
-            ) : (
-              <EmailInput
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  clearError("contact");
-                }}
-                placeholder="exemple@email.com"
-                error={!!localErrors.contact}
-              />
-            )}
-            {localErrors.contact && (
-              <HelperText message={localErrors.contact} type="error" />
-            )}
-          </View>
-
-          {/* Champs Email uniquement */}
+          {/* Password fields (email mode only) */}
           {isEmailMode && (
-            <>
-              <View style={styles.fieldWrapper}>
-                <Text style={styles.label}>
-                  Mot de passe <Text style={styles.required}>*</Text>
-                </Text>
-                <PasswordInput
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    clearError("password");
-                  }}
-                  placeholder="Minimum 8 caractères"
-                  error={!!localErrors.password}
-                />
-                {localErrors.password && (
-                  <HelperText message={localErrors.password} type="error" />
-                )}
-                <Text style={styles.hint}>
-                  • Minimum 8 caractères
-                  {"\n"}• Sans espaces
-                </Text>
-              </View>
-
-              <View style={styles.fieldWrapper}>
-                <Text style={styles.label}>
-                  Confirmer le mot de passe{" "}
-                  <Text style={styles.required}>*</Text>
-                </Text>
-                <PasswordInput
-                  value={confirmPassword}
-                  onChangeText={(text) => {
-                    setConfirmPassword(text);
-                    clearError("confirmPassword");
-                  }}
-                  placeholder="Confirmez votre mot de passe"
-                  error={!!localErrors.confirmPassword}
-                />
-                {localErrors.confirmPassword && (
-                  <HelperText
-                    message={localErrors.confirmPassword}
-                    type="error"
-                  />
-                )}
-              </View>
-            </>
+            <RegisterPasswordFields
+              password={password}
+              confirmPassword={confirmPassword}
+              onPasswordChange={(text) => {
+                setPassword(text);
+                clearError("password");
+              }}
+              onConfirmPasswordChange={(text) => {
+                setConfirmPassword(text);
+                clearError("confirmPassword");
+              }}
+              passwordError={localErrors.password}
+              confirmPasswordError={localErrors.confirmPassword}
+            />
           )}
         </View>
 
-        {/* ── Actions ── */}
+        {/* Actions */}
         <View style={styles.actions}>
           <AuthButton
             label={isEmailMode ? "Créer mon compte" : "Continuer"}
             onPress={handleSubmit}
             variant="primary"
             fullWidth
-            loading={isRegistering}
+            loading={isRegistering || isSubmitting}
             size="lg"
             icon={
               <Ionicons
@@ -386,13 +290,12 @@ export default function RegisterScreen() {
               />
             }
           />
-
-          {errorMessage && (
-            <HelperText message={errorMessage as string} type="error" />
+          {storeError && (
+            <HelperText message={storeError as string} type="error" />
           )}
         </View>
 
-        {/* ── Footer ── */}
+        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             Vous avez déjà un compte ?{" "}
@@ -400,8 +303,6 @@ export default function RegisterScreen() {
               Se connecter
             </Text>
           </Text>
-
-          {/* Légal */}
           <Text style={styles.legal}>
             En continuant, vous acceptez nos{" "}
             <Text style={styles.legalLink} onPress={handleTerms}>
@@ -415,13 +316,9 @@ export default function RegisterScreen() {
           </Text>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
-
-// ================================================================================== //
-// Styles
-// ================================================================================== //
 
 const styles = StyleSheet.create({
   root: {
@@ -435,8 +332,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: Platform.OS === "ios" ? 60 : 40,
   },
-
-  // Form
   form: {
     marginTop: 24,
     gap: 20,
@@ -452,52 +347,10 @@ const styles = StyleSheet.create({
   required: {
     color: colors.error || "#E53935",
   },
-  hint: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-    color: colors.inkLight,
-    lineHeight: 16,
-    marginTop: 2,
-  },
-
-  // Toggle
-  toggle: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 3,
-    gap: 3,
-  },
-  toggleBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  toggleBtnActive: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.black,
-  },
-  toggleLabel: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    color: colors.inkLight,
-  },
-  toggleLabelActive: {
-    color: colors.black,
-  },
-
-  // Actions
   actions: {
     marginTop: 24,
     gap: 12,
   },
-
-  // Footer
   footer: {
     marginTop: 24,
     gap: 24,
@@ -510,11 +363,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.inkLight,
   },
-  footerLink: {
-    fontFamily: fontFamily.semiBold,
-    color: colors.primary,
-  },
-
   legal: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
