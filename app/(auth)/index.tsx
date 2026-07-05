@@ -153,19 +153,6 @@ export default function LandingScreen() {
         <View style={styles.secondaryRow}>
           <TouchableOpacity
             style={styles.secondaryBtn}
-            onPress={() => handleNavigate("/(auth)/login-phone")}
-            activeOpacity={0.7}
-            accessibilityLabel="Continuer avec téléphone"
-            accessibilityRole="button"
-          >
-            <Ionicons name="call-outline" size={17} color={colors.primary} />
-            <Text style={styles.secondaryText}>
-              Se connecter via numéro de téléphone
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryBtn}
             onPress={() => handleNavigate("/(auth)/register")}
             activeOpacity={0.7}
             accessibilityLabel="Créer un compte"

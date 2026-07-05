@@ -126,7 +126,7 @@ const OptionCard = ({
 const MtnIcon = () => (
   <View style={styles.logoBox}>
     <Image
-      source={require("../../../assets/MomoIcon.png")}
+      source={require("@assets/images/icons/MomoIcon.png")}
       style={styles.logoImage}
       resizeMode="contain"
     />
@@ -136,7 +136,7 @@ const MtnIcon = () => (
 const OrangeIcon = () => (
   <View style={styles.logoBox}>
     <Image
-      source={require("../../../assets/OMIcon.png")}
+      source={require("@assets/images/icons/OMIcon.png")}
       style={styles.logoImage}
       resizeMode="contain"
     />

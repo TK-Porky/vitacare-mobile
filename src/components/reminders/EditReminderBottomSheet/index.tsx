@@ -1,4 +1,3 @@
-// components/modals/EditReminderBottomSheet/index.tsx
 import React, {
   forwardRef,
   useImperativeHandle,

@@ -122,7 +122,7 @@ export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
           {/* ── Header ── */}
           <View style={styles.header}>
             <Image
-              source={require("@assets/MomoIcon.png")}
+              source={require("@assets/images/icons/MomoIcon.png")}
               style={styles.logo}
               resizeMode="contain"
             />

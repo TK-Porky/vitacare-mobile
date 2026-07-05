@@ -6,13 +6,16 @@ import React, {
   useState,
 } from "react";
 import { View, Text, StyleSheet, Image, Platform } from "react-native";
-import { AppBottomSheet, AppBottomSheetRef } from "../generics/AppBottomSheet";
-import { PhoneInput } from "../inputs/PhoneInput";
-import { PrimaryButton } from "../buttons/PrimaryButton";
-import { PaymentResultModal } from "./PaymentResultModal";
-import { colors, fontFamily, fontSize } from "../../themes";
-import { paymentService } from "../../services/payment.service";
-import type { PaymentSheetRef } from "./MomoPaymentSheet";
+import {
+  AppBottomSheet,
+  AppBottomSheetRef,
+} from "@/components/generics/AppBottomSheet";
+import { PhoneInput } from "@/components/inputs/PhoneInput";
+import { PrimaryButton } from "@/components/buttons/PrimaryButton";
+import { PaymentResultModal } from "@/components/payment/PaymentResultModal";
+import { colors, fontFamily, fontSize } from "@/themes";
+import { paymentService } from "@/services/payment.service";
+import type { PaymentSheetRef } from "@/components/payment/MomoPaymentSheet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -115,7 +118,7 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
           {/* ── Header ── */}
           <View style={styles.header}>
             <Image
-              source={require("../../../assets/OMIcon.png")}
+              source={require("@assets/images/icons/OMIcon.png")}
               style={styles.logo}
               resizeMode="contain"
             />
