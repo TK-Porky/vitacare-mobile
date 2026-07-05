@@ -1,118 +1,44 @@
-// screens/medications/MedecineScreen.tsx (updated to use the store)
-
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "expo-router";
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   StatusBar,
-  Image,
-  ImageBackground,
   ActivityIndicator,
   Alert,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { colors, fontFamily, fontSize } from "../../../src/themes";
-import { SectionHeader, AppHeader } from "../../../src/components";
+import { colors } from "@/themes";
+import { SectionHeader, AppHeader } from "@/components";
 import {
   DrugDetailBottomSheet,
   DrugDetailBottomSheetRef,
-} from "../../../src/components/medications";
-import { useMedicationStore } from "../../../src/store/medication.store";
-import { useReminders } from "../../../src/hooks";
-import { useAuthStore } from "../../../src/store/auth.store";
-import { StoreMedicationResponse } from "../../../src/types/api-responses";
+} from "@/components/medications";
+import { CategoryCard } from "@/components/medications/CategoryCard";
+import { DrugCard } from "@/components/medications/DrugCard";
+import { HeroBanner } from "@/components/medications/HeroBanner";
+import { EmptyState } from "@/components/medications/EmptyState";
+import { ErrorBanner } from "@/components/medications/ErrorBanner";
+import { useMedicationStore } from "@/store/medication.store";
+import { useReminders } from "@/hooks";
+import { useAuthStore } from "@/store/auth.store";
+import { StoreMedicationResponse } from "@/types/api-responses";
+import { MedicationScreenProps } from "@/types/medications";
 
 // ================================================================================== //
-// Types
-// ================================================================================== //
-type Props = {
-  onReminders?: () => void;
-};
-
-// ================================================================================== //
-// Components
+// Constants
 // ================================================================================== //
 
-/**
- * Category card component
- */
-function CategoryCard({ item, onPress }: { item: any; onPress?: () => void }) {
-  return (
-    <TouchableOpacity
-      style={styles.categoryCard}
-      activeOpacity={0.85}
-      onPress={onPress}
-    >
-      <Image
-        source={{ uri: item.imageUri }}
-        style={styles.categoryImage}
-        resizeMode="cover"
-      />
-      <View style={styles.categoryLabelRow}>
-        <Text style={styles.categoryLabel}>{item.label}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-/**
- * Drug card component
- */
-function DrugCard({
-  item,
-  onPress,
-  hasReminder,
-}: {
-  item: StoreMedicationResponse;
-  onPress?: (drug: StoreMedicationResponse) => void;
-  hasReminder?: boolean;
-}) {
-  return (
-    <TouchableOpacity
-      style={styles.drugCard}
-      activeOpacity={0.85}
-      onPress={() => onPress?.(item)}
-    >
-      <View style={styles.drugImageContainer}>
-        <Image
-          source={{ uri: item.imageUrl || "https://via.placeholder.com/150" }}
-          style={styles.drugImage}
-          resizeMode="cover"
-        />
-        {hasReminder && (
-          <View style={styles.reminderBadge}>
-            <Text style={styles.reminderBadgeText}>🔔</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.drugInfo}>
-        <Text style={styles.drugCategory}>
-          {item.dosageForm || "Médicament"}
-        </Text>
-        <Text style={styles.drugName} numberOfLines={2}>
-          {item.name}
-        </Text>
-        {item.referencePrice != null && (
-          <Text style={styles.drugPrice}>{item.referencePrice} FCFA</Text>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-}
+const HERO_IMAGE_URL =
+  "https://www.pharma-gdd.com/media/cache/resolve/slide_original/7508386a20565f5cbc526eee8b3c9f39edeecd576ee90cb3dbb5ce5ac3fe9566b67813d6.jpg";
 
 // ================================================================================== //
 // Main
 // ================================================================================== //
-export default function MedecineScreen({ onReminders }: Props) {
-  // ================================================================================== //
-  // Hooks & State
-  // ================================================================================== //
+
+export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDrug, setSelectedDrug] =
@@ -136,8 +62,8 @@ export default function MedecineScreen({ onReminders }: Props) {
   const user = useAuthStore((state) => state.user);
   const { createReminder } = useReminders();
 
-  // ── Categories dérivées des dosageForm ──
-  const categories = React.useMemo(() => {
+  // ── Categories ──
+  const categories = useMemo(() => {
     const forms = new Set<string>();
     medications.forEach((m) => {
       if (m.dosageForm) forms.add(m.dosageForm);
@@ -149,118 +75,118 @@ export default function MedecineScreen({ onReminders }: Props) {
     }));
   }, [medications]);
 
-  // ================================================================================== //
-  // Effects
-  // ================================================================================== //
-
+  // ── Effects ──
   useEffect(() => {
     fetchMedications();
   }, []);
 
-  // ================================================================================== //
-  // Functions
-  // ================================================================================== //
+  // ── Handlers ──
 
-  /**
-   * Handle search
-   */
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
+  const handleSearch = useCallback(
+    async (query: string) => {
+      setSearchQuery(query);
+      if (!query.trim()) {
+        clearSearch();
+        return;
+      }
+      await searchMedications(query);
+    },
+    [searchMedications, clearSearch],
+  );
 
-    if (!query.trim()) {
-      clearSearch();
-      return;
-    }
-
-    await searchMedications(query);
-  };
-
-  /**
-   * Handle search submission
-   */
-  const handleSearchSubmit = async () => {
+  const handleSearchSubmit = useCallback(async () => {
     if (searchQuery.trim()) {
       await searchMedications(searchQuery);
     }
-  };
+  }, [searchQuery, searchMedications]);
 
-  /**
-   * Handle drug card press
-   */
-  const handleDrugPress = (drug: StoreMedicationResponse) => {
+  const handleDrugPress = useCallback((drug: StoreMedicationResponse) => {
     setSelectedDrug(drug);
     drugSheetRef.current?.open();
-  };
+  }, []);
 
-  /**
-   * Handle adding drug to reminders
-   */
-  const handleAddToReminder = async (drug: StoreMedicationResponse) => {
-    if (!user) {
-      Alert.alert("Erreur", "Vous devez être connecté pour ajouter un rappel");
-      return;
-    }
+  const handleAddToReminder = useCallback(
+    async (drug: StoreMedicationResponse) => {
+      if (!user) {
+        Alert.alert(
+          "Erreur",
+          "Vous devez être connecté pour ajouter un rappel",
+        );
+        return;
+      }
 
-    try {
-      await createReminder({
-        name: drug.name,
-        dosage: drug.dosage,
-        times: ["08:00"],
-        notes: drug.dosageForm ? `Forme: ${drug.dosageForm}` : undefined,
-      });
+      try {
+        await createReminder({
+          name: drug.name,
+          dosage: drug.dosage!,
+          times: ["08:00"],
+          notes: drug.dosageForm ? `Forme: ${drug.dosageForm}` : undefined,
+        });
 
-      Alert.alert(
-        "Succès",
-        `Le rappel pour ${drug.name} a été ajouté avec succès !`,
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              drugSheetRef.current?.close();
-              if (onReminders) onReminders();
+        Alert.alert(
+          "Succès",
+          `Le rappel pour ${drug.name} a été ajouté avec succès !`,
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                drugSheetRef.current?.close();
+                if (onReminders) onReminders();
+              },
             },
-          },
-        ],
-      );
-    } catch (error) {
-      Alert.alert(
-        "Erreur",
-        error instanceof Error
-          ? error.message
-          : "Impossible d'ajouter le rappel",
-      );
-    }
-  };
+          ],
+        );
+      } catch (error) {
+        Alert.alert(
+          "Erreur",
+          error instanceof Error
+            ? error.message
+            : "Impossible d'ajouter le rappel",
+        );
+      }
+    },
+    [user, createReminder, onReminders],
+  );
 
-  /**
-   * Handle category press
-   */
-  const handleCategoryPress = (category: string) => {
-    fetchMedications({ searchQuery: category });
-  };
+  const handleCategoryPress = useCallback(
+    (category: string) => {
+      fetchMedications({ searchQuery: category });
+    },
+    [fetchMedications],
+  );
 
-  /**
-   * Handle retry on error
-   */
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     clearError();
     if (isSearching && searchQuery) {
       searchMedications(searchQuery);
     } else {
       fetchMedications();
     }
-  };
+  }, [
+    clearError,
+    isSearching,
+    searchQuery,
+    searchMedications,
+    fetchMedications,
+  ]);
 
-  // ================================================================================== //
-  // Render Helpers
-  // ================================================================================== //
+  const handleRefresh = useCallback(() => {
+    clearSearch();
+    setSearchQuery("");
+    fetchMedications();
+  }, [clearSearch, fetchMedications]);
+
+  const handleClearSearch = useCallback(() => {
+    clearSearch();
+    setSearchQuery("");
+  }, [clearSearch]);
+
+  // ── Render Helpers ──
 
   const displayedMedications = isSearching ? searchResults : medications;
   const isEmpty = !isLoading && displayedMedications.length === 0;
 
-  // ================================================================================== //
-  // Render
-  // ================================================================================== //
+  // ── Render ──
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -276,16 +202,7 @@ export default function MedecineScreen({ onReminders }: Props) {
         onSearchFocus={() => {}}
       />
 
-      {/** 
-      {error && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>{error}</Text>
-          <TouchableOpacity onPress={handleRetry}>
-            <Text style={styles.errorBannerAction}>Réessayer</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      */}
+      {error && <ErrorBanner message={error} onRetry={handleRetry} />}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -293,37 +210,23 @@ export default function MedecineScreen({ onReminders }: Props) {
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
-            onRefresh={() => {
-              clearSearch();
-              setSearchQuery("");
-              fetchMedications();
-            }}
+            onRefresh={handleRefresh}
             colors={[colors.primary]}
             tintColor={colors.primary}
           />
         }
       >
-        {/* ── Hero Banner ── */}
-        <TouchableOpacity activeOpacity={0.9} style={styles.heroBannerWrapper}>
-          <ImageBackground
-            source={{
-              uri: "https://www.pharma-gdd.com/media/cache/resolve/slide_original/7508386a20565f5cbc526eee8b3c9f39edeecd576ee90cb3dbb5ce5ac3fe9566b67813d6.jpg",
-            }}
-            style={styles.heroBanner}
-            imageStyle={styles.heroBannerImage}
-          >
-            <View style={styles.heroBannerOverlay}>
-              <Text style={styles.heroTitle}>Espace Médicaments</Text>
-              <Text style={styles.heroSubtitle}>
-                {isSearching
-                  ? `Résultats pour "${searchQuery}"`
-                  : "Découvrez nos médicaments classés par catégorie."}
-              </Text>
-            </View>
-          </ImageBackground>
-        </TouchableOpacity>
+        <HeroBanner
+          title="Espace Médicaments"
+          subtitle={
+            isSearching
+              ? `Résultats pour "${searchQuery}"`
+              : "Découvrez nos médicaments classés par catégorie."
+          }
+          imageUrl={HERO_IMAGE_URL}
+        />
 
-        {/* ── Categories (only show when not searching) ── */}
+        {/* Categories */}
         {!isSearching && (
           <>
             <SectionHeader title="Catégories" onSeeAll={() => {}} />
@@ -343,7 +246,7 @@ export default function MedecineScreen({ onReminders }: Props) {
           </>
         )}
 
-        {/* ── Medications Grid ── */}
+        {/* Medications Grid */}
         <SectionHeader
           title={isSearching ? "Résultats" : "Médicaments disponibles"}
           onSeeAll={() => {}}
@@ -354,27 +257,10 @@ export default function MedecineScreen({ onReminders }: Props) {
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : isEmpty ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="medkit-outline" size={48} color={colors.inkLight} />
-            <Text style={styles.emptyText}>
-              {isSearching
-                ? "Aucun médicament trouvé"
-                : "Aucun médicament disponible"}
-            </Text>
-            {isSearching && (
-              <TouchableOpacity
-                style={styles.clearSearchButton}
-                onPress={() => {
-                  clearSearch();
-                  setSearchQuery("");
-                }}
-              >
-                <Text style={styles.clearSearchButtonText}>
-                  Effacer la recherche
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <EmptyState
+            isSearching={isSearching}
+            onClearSearch={handleClearSearch}
+          />
         ) : (
           <View style={styles.drugsGrid}>
             {displayedMedications.map((drug) => (
@@ -386,7 +272,7 @@ export default function MedecineScreen({ onReminders }: Props) {
         <View style={{ height: 24 }} />
       </ScrollView>
 
-      {/* ── Drug Detail Bottom Sheet ── */}
+      {/* Drug Detail Bottom Sheet */}
       <DrugDetailBottomSheet
         ref={drugSheetRef}
         drug={selectedDrug}
@@ -402,6 +288,7 @@ export default function MedecineScreen({ onReminders }: Props) {
 // ================================================================================== //
 // Styles
 // ================================================================================== //
+
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
@@ -415,116 +302,10 @@ const styles = StyleSheet.create({
     padding: 40,
     alignItems: "center",
   },
-  emptyContainer: {
-    padding: 40,
-    alignItems: "center",
-  },
-  emptyText: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.md,
-    color: colors.inkLight,
-    marginTop: 12,
-    textAlign: "center",
-  },
-  clearSearchButton: {
-    marginTop: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  clearSearchButtonText: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    color: colors.ink,
-  },
-  errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#FEE2E2",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#FECACA",
-  },
-  errorBannerText: {
-    flex: 1,
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-    color: "#DC2626",
-  },
-  errorBannerAction: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    marginLeft: 12,
-  },
-  heroBannerWrapper: {
-    marginTop: 4,
-    marginBottom: 24,
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "rgba(0,0,0,0.1)",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  heroBanner: {
-    height: 160,
-    justifyContent: "flex-end",
-  },
-  heroBannerImage: {
-    borderRadius: 20,
-  },
-  heroBannerOverlay: {
-    backgroundColor: "rgba(10, 30, 20, 0.5)",
-    padding: 8,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  heroTitle: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize.xl,
-    color: colors.white,
-    marginBottom: 6,
-  },
-  heroSubtitle: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
-    color: "rgba(255,255,255,0.9)",
-    lineHeight: 18,
-  },
   categoriesRow: {
     gap: 12,
     marginBottom: 24,
     marginTop: 12,
-  },
-  categoryCard: {
-    width: 120,
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  categoryImage: {
-    width: "100%",
-    height: 80,
-    backgroundColor: colors.surface,
-  },
-  categoryLabelRow: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  categoryLabel: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.medium,
-    color: colors.ink,
   },
   drugsGrid: {
     flexDirection: "row",
@@ -532,57 +313,5 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     rowGap: 16,
     marginTop: 12,
-  },
-  drugCard: {
-    width: "48%",
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.border,
-    position: "relative",
-  },
-  drugImageContainer: {
-    width: "100%",
-    height: 120,
-    backgroundColor: colors.surface,
-    position: "relative",
-  },
-  drugImage: {
-    width: "100%",
-    height: "100%",
-  },
-  reminderBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: "rgba(46, 204, 113, 0.9)",
-    borderRadius: 12,
-    padding: 4,
-    paddingHorizontal: 8,
-  },
-  reminderBadgeText: {
-    fontSize: 12,
-  },
-  drugInfo: {
-    padding: 12,
-  },
-  drugCategory: {
-    fontSize: fontSize.xs,
-    fontFamily: fontFamily.regular,
-    color: colors.inkLight,
-    marginBottom: 4,
-  },
-  drugName: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.semiBold,
-    color: colors.ink,
-    marginBottom: 6,
-    lineHeight: 18,
-  },
-  drugPrice: {
-    fontSize: fontSize.sm,
-    fontFamily: fontFamily.bold,
-    color: colors.primary,
   },
 });

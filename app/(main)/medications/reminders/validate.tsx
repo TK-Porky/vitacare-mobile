@@ -1,5 +1,4 @@
-// app/(main)/reminders/validate.tsx
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -20,12 +19,6 @@ import { PrimaryButton } from "@/components/buttons/PrimaryButton";
 import { GrayButton } from "@/components/buttons/GrayButton";
 import { useReminders } from "@/hooks";
 import { ReminderResponse } from "@/types/api-responses";
-
-// ================================================================================== //
-// Types
-// ================================================================================== //
-
-type ReminderStatus = "PENDING" | "TAKEN" | "MISSED" | "SNOOZED";
 
 // ================================================================================== //
 // Main
@@ -179,7 +172,6 @@ export default function ReminderValidateScreen() {
     );
   }
 
-  // ✅ Récupérer les informations depuis le rappel ou les params
   const displayName =
     reminder?.medicationName ||
     reminder?.name ||

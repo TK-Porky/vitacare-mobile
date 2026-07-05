@@ -1,4 +1,3 @@
-// app/(main)/booking/index.tsx
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,

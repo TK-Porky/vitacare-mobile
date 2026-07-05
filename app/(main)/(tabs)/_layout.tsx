@@ -1,7 +1,7 @@
-import { Slot } from 'expo-router';
-import { View, StyleSheet } from 'react-native';
-import { colors } from '../../../src/themes';
-import { BottomTabBar } from '../../../src/components';
+import { Slot } from "expo-router";
+import { View, StyleSheet } from "react-native";
+import { colors } from "@/themes";
+import { BottomTabBar } from "@/components";
 
 export default function TabsLayout() {
   return (

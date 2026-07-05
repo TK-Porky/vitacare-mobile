@@ -1,4 +1,3 @@
-// app/(main)/profile/index.tsx
 import React, { useState, useCallback, useEffect } from "react";
 import {
   View,

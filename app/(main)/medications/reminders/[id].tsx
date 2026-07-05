@@ -1,4 +1,3 @@
-// app/(main)/reminders/[id].tsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
@@ -22,7 +21,7 @@ import { ReminderResponse } from "@/types/api-responses";
 import {
   EditReminderBottomSheet,
   EditReminderBottomSheetRef,
-} from "@/components/medications/EditReminderBottomSheet";
+} from "@/components/reminders/EditReminderBottomSheet";
 
 type ReminderStatus = "PENDING" | "TAKEN" | "MISSED" | "SNOOZED";
 
