@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { TopBar } from "@/components";
-import { notificationService } from "@/services/notification.service";
+import { notificationService } from "@/services/notifications.service";
 import { useProfileStore } from "@/store/profile.store";
 import { useAuthStore } from "@/store/auth.store";
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as ExpoNotifications from "expo-notifications";
 import { useRouter } from "expo-router";
-import { notificationService } from "@/services/notification.service";
+import { notificationService } from "@/services/notifications.service";
 import type { NotificationData } from "@/types";
 import { Alert } from "react-native";
 

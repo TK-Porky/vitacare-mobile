@@ -7,6 +7,7 @@ import {
   Dimensions,
   Platform,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -104,6 +105,11 @@ export default function LandingScreen() {
   // Écran d'accueil normal
   return (
     <View style={styles.container}>
+      <StatusBar
+        translucent
+        backgroundColor={colors.white}
+        barStyle="dark-content"
+      />
       {/* ── Illustration avec Lottie ── */}
       <View style={styles.illustrationArea}>
         {/* Animation Lottie principale */}

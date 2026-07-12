@@ -4,7 +4,7 @@ import { colors } from "@/themes";
 // ─── Options communes ────────────────────────────────────────────────────────
 
 const HEADER_OPTIONS = {
-  headerShown: true,
+  headerShown: false,
   headerBackTitle: "Retour",
   headerStyle: {
     backgroundColor: colors.white,

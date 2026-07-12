@@ -3,10 +3,9 @@ import {
   View,
   Text,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableOpacity,
+  StatusBar,
   Alert,
   Keyboard,
   KeyboardEvent,
@@ -20,7 +19,6 @@ import { AuthButton } from "@/components/auth/AuthButton";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useAuth } from "@/hooks";
 import { useAuthStore } from "@/store";
-import { RegisterModeToggle } from "@/components/auth/register/RegisterModeToggle";
 import { RegisterContactField } from "@/components/auth/register/RegisterContactField";
 import { RegisterPasswordFields } from "@/components/auth/register/RegisterPasswordFields";
 import {
@@ -194,6 +192,11 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.root}>
+      <StatusBar
+        translucent
+        backgroundColor={colors.white}
+        barStyle="dark-content"
+      />
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,

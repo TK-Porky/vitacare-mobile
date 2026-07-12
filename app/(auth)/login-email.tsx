@@ -1,4 +1,3 @@
-// app/(auth)/login-email.tsx
 import { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -9,6 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -120,6 +120,11 @@ export default function LoginEmailScreen() {
       style={styles.root}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
+      <StatusBar
+        translucent
+        backgroundColor={colors.white}
+        barStyle="dark-content"
+      />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -207,7 +212,7 @@ export default function LoginEmailScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* ✅ Google Sign-In avec Firebase */}
+          {/* Google Sign-In avec Firebase */}
           <TouchableOpacity
             style={[
               styles.googleButton,

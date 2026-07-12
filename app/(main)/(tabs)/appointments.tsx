@@ -14,7 +14,10 @@ import { useAppointments } from "@/hooks";
 import { toSheetData } from "@/utils/mapper";
 import { AppointmentListView } from "@/components/appointments/AppointmentListView";
 import { AppointmentErrorView } from "@/components/appointments/AppointmentErrorView";
-import { PaymentSheetManager } from "@/components/appointments/PaymentSheetManager";
+import {
+  PaymentSheetManager,
+  PaymentSheetManagerRef,
+} from "@/components/appointments/PaymentSheetManager";
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -39,11 +42,7 @@ export default function AppointmentScreen() {
     markAppointmentAsPaid,
   } = useAppointments();
 
-  // ── Gestionnaire de paiement ──
-  const paymentManager = useRef<{
-    handlePay: (provider: string) => void;
-    sheets: React.ReactNode;
-  } | null>(null);
+  const paymentManager = useRef<PaymentSheetManagerRef>(null);
 
   const handleCardPress = useCallback((item: Appointment) => {
     setSelectedItem(toSheetData(item));

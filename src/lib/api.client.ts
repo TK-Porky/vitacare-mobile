@@ -7,28 +7,62 @@
 import { fetch } from "expo/fetch";
 import { File as ExpoFile } from "expo-file-system";
 import * as SecureStore from "expo-secure-store";
-import { API_CONFIG } from "../types/api-endpoints";
-import { ApiResponse } from "../types/api-responses";
+import { API_CONFIG } from "@/types/api-endpoints";
+import { ApiResponse } from "@/types/api-responses";
 
-// Types
+// ─── Types ──────────────────────────────────────────────────────────────────
+
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+export enum AppErrorType {
+  NETWORK_ERROR = "NETWORK_ERROR",
+  TIMEOUT = "TIMEOUT",
+  API_ERROR = "API_ERROR",
+  UNKNOWN = "UNKNOWN",
+}
+
+export interface MappedError {
+  type: AppErrorType;
+  message: string;
+  technicalLog: string;
+  statusCode?: number;
+}
+
+export class AppError extends Error {
+  type: AppErrorType;
+  statusCode?: number;
+  originalError?: unknown;
+
+  constructor(
+    message: string,
+    type: AppErrorType,
+    statusCode?: number,
+    originalError?: unknown,
+  ) {
+    super(message);
+    this.type = type;
+    this.statusCode = statusCode;
+    this.originalError = originalError;
+    this.name = "AppError";
+    Object.setPrototypeOf(this, AppError.prototype);
+  }
+}
 
 interface RequestConfig extends Omit<RequestInit, "method"> {
   method: HttpMethod;
   retries?: number;
   retryDelay?: number;
+  skipAuth?: boolean;
 }
 
-interface RequestOptions {
-  endpoint: string;
-  method: HttpMethod;
-  data?: any;
-  params?: Record<string, string | number | boolean>;
-  headers?: Record<string, string>;
-  retries?: number;
-  retryDelay?: number;
-  signal?: AbortSignal;
-}
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: "vitacare_access_token",
+  REFRESH_TOKEN: "vitacare_refresh_token",
+} as const;
+
+// ─── Service ────────────────────────────────────────────────────────────────
 
 class ApiClient {
   private baseURL: string;
@@ -39,76 +73,66 @@ class ApiClient {
   private abortControllers = new Map<string, AbortController>();
   private readonly MAX_RETRIES = 3;
   private readonly BASE_RETRY_DELAY = 1000;
+  private readonly TOKEN_REFRESH_ENDPOINT = "/auth/refresh-token";
 
   constructor() {
-    this.baseURL = `${API_CONFIG.BASE_URL}`;
+    this.baseURL = API_CONFIG.BASE_URL;
     this.defaultHeaders = {
       "Content-Type": "application/json",
       Accept: "application/json",
     };
   }
 
-  /**
-   * Set the logout handler
-   * @param fn The function to call when the user is logged out
-   */
+  // ─── Configuration ──────────────────────────────────────────────────────
+
   setLogoutHandler(fn: () => void) {
     this.onLogout = fn;
   }
 
-  /**
-   * Get the access token from secure storage
-   * @returns The access token or null if not found
-   */
+  // ─── Token Management ──────────────────────────────────────────────────
+
   private async getToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync("vitacare_access_token");
+      return await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
       console.error("[API] Failed to get token:", error);
       return null;
     }
   }
 
-  /**
-   * Get the refresh token from secure storage
-   * @returns The refresh token or null if not found
-   */
   private async getRefreshToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync("vitacare_refresh_token");
+      return await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     } catch (error) {
       console.error("[API] Failed to get refresh token:", error);
       return null;
     }
   }
 
-  /**
-   * Notify all subscribers that the token has been refreshed
-   * @param token The new access token
-   */
+  private async setToken(token: string): Promise<void> {
+    await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, token);
+  }
+
+  private async clearTokens(): Promise<void> {
+    await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+    await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+  }
+
   private onTokenRefreshed(token: string) {
     this.refreshSubscribers.forEach((callback) => callback(token));
     this.refreshSubscribers = [];
   }
 
-  /**
-   * Add a subscriber to be notified when the token is refreshed
-   * @param callback The function to call when the token is refreshed
-   */
   private addRefreshSubscriber(callback: (token: string) => void) {
     this.refreshSubscribers.push(callback);
   }
 
-  /**
-   * Generate a unique request ID for cancellation
-   */
+  // ─── Request Management ────────────────────────────────────────────────
+
   private getRequestId(endpoint: string, method: string): string {
     return `${method}:${endpoint}`;
   }
 
-  /**
-   * Cancel a specific request
-   */
   cancelRequest(endpoint: string, method: HttpMethod = "GET") {
     const id = this.getRequestId(endpoint, method);
     const controller = this.abortControllers.get(id);
@@ -119,9 +143,6 @@ class ApiClient {
     }
   }
 
-  /**
-   * Cancel all pending requests
-   */
   cancelAllRequests() {
     this.abortControllers.forEach((controller, id) => {
       controller.abort();
@@ -130,9 +151,8 @@ class ApiClient {
     this.abortControllers.clear();
   }
 
-  /**
-   * Log request details in development
-   */
+  // ─── Logging ────────────────────────────────────────────────────────────
+
   private logRequest(method: string, url: string, data?: any) {
     if (__DEV__) {
       console.log(`[API] ${method} ${url}`);
@@ -145,51 +165,47 @@ class ApiClient {
     }
   }
 
-  /**
-   * Log response details in development
-   */
   private logResponse(url: string, status: number, data: any) {
     if (__DEV__) {
       console.log(`[API] ${status} ${url}`);
-      console.log(`[API] Response ${status} ${url}`, data);
       if (status >= 400) {
         console.warn("[API] Error Response:", data);
       }
     }
   }
 
-  /**
-   * Calculate delay with exponential backoff
-   */
-  private getRetryDelay(attempt: number, baseDelay: number): number {
-    return Math.min(baseDelay * Math.pow(2, attempt), 10000);
+  // ─── Retry Logic ───────────────────────────────────────────────────────
+
+  private getRetryDelay(attempt: number): number {
+    return Math.min(this.BASE_RETRY_DELAY * Math.pow(2, attempt), 10000);
   }
 
-  /**
-   * Make a request to the API with retry logic
-   */
+  private shouldRetry(statusCode: number): boolean {
+    return statusCode >= 500 || statusCode === 0 || statusCode === 408;
+  }
+
+  // ─── Main Request ──────────────────────────────────────────────────────
+
   private async requestWithRetry<T = any>(
     endpoint: string,
     options: RequestConfig = { method: "GET" },
   ): Promise<ApiResponse<T>> {
     const retries = options.retries ?? this.MAX_RETRIES;
-    const retryDelay = options.retryDelay ?? this.BASE_RETRY_DELAY;
     let lastError: ApiResponse<T> | null = null;
 
     for (let attempt = 0; attempt < retries; attempt++) {
       try {
         const result = await this.request<T>(endpoint, options);
 
-        // Si succès ou erreur non récupérable, retourner immédiatement
-        if (result.success || (result.statusCode && result.statusCode < 500)) {
+        // Succès ou erreur non récupérable
+        if (result.success || !this.shouldRetry(result.statusCode || 0)) {
           return result;
         }
 
-        // Erreur 5xx, on retente
         lastError = result;
 
         if (attempt < retries - 1) {
-          const delay = this.getRetryDelay(attempt, retryDelay);
+          const delay = this.getRetryDelay(attempt);
           console.log(`[API] Retry ${attempt + 1}/${retries} in ${delay}ms`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
@@ -201,7 +217,7 @@ class ApiClient {
         };
 
         if (attempt < retries - 1) {
-          const delay = this.getRetryDelay(attempt, retryDelay);
+          const delay = this.getRetryDelay(attempt);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
@@ -210,9 +226,6 @@ class ApiClient {
     return lastError!;
   }
 
-  /**
-   * Make a request to the API
-   */
   private async request<T = any>(
     endpoint: string,
     options: RequestConfig = { method: "GET" },
@@ -222,80 +235,77 @@ class ApiClient {
       : `${this.baseURL}${endpoint}`;
     const requestId = this.getRequestId(endpoint, options.method);
 
-    // Get the auth state
-    const token = await this.getToken();
+    // ── Headers ──────────────────────────────────────────────────────────
 
-    // Set the headers
     const headers: Record<string, string> = {
       ...this.defaultHeaders,
       ...((options.headers as Record<string, string>) || {}),
     };
 
-    // Ne pas ajouter Content-Type pour FormData (le navigateur gère la boundary)
-    if (!(options.body instanceof FormData)) {
-      headers["Content-Type"] = "application/json";
+    if (!options.skipAuth) {
+      const token = await this.getToken();
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
     }
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+    // ── Body ──────────────────────────────────────────────────────────────
+
+    let body = options.body;
+    if (body && !(body instanceof FormData) && typeof body === "object") {
+      body = JSON.stringify(body);
     }
 
-    // Create AbortController for timeout and cancellation
+    // ── AbortController ──────────────────────────────────────────────────
+
     const controller = new AbortController();
     this.abortControllers.set(requestId, controller);
 
-    // Setup timeout
     const timeoutId = setTimeout(() => {
       controller.abort();
       this.abortControllers.delete(requestId);
     }, API_CONFIG.TIMEOUT || 30000);
 
-    const config: RequestInit = {
-      ...options,
-      headers,
-      signal: controller.signal,
-    };
-
-    // Convert body to JSON if needed
-    if (
-      options.body &&
-      !(options.body instanceof FormData) &&
-      typeof options.body === "object"
-    ) {
-      config.body = JSON.stringify(options.body);
-    }
+    // ── Request ──────────────────────────────────────────────────────────
 
     try {
       this.logRequest(options.method, url, options.body);
 
-      const response = await fetch(url, config);
+      const response = await fetch(url, {
+        method: options.method,
+        headers,
+        body,
+        signal: controller.signal,
+      });
+
       clearTimeout(timeoutId);
       this.abortControllers.delete(requestId);
 
-      // Handle authentication errors (401 or 403)
-      if (response.status === 401 || response.status === 403) {
+      // ── Auth Error ─────────────────────────────────────────────────────
+
+      if (response.status === 401 && !options.skipAuth) {
         return this.handleAuthError<T>(endpoint, options, response);
       }
 
-      // Process response
+      // ── Response ──────────────────────────────────────────────────────
+
       const text = await response.text();
       let data: any = {};
 
       try {
         data = text ? JSON.parse(text) : {};
-      } catch (err) {
+      } catch {
         console.warn("[API] Response is not valid JSON:", text);
       }
 
       this.logResponse(url, response.status, data);
 
-      const body = response.ok ? data : undefined;
       return {
         success: response.ok,
-        data: body?.data ?? body,
-        message: body?.message,
+        data: data?.data ?? data,
+        message: data?.message,
         error: !response.ok
-          ? data.error || data.message || `HTTP Error ${response.status}`
+          ? data?.error || data?.message || `HTTP Error ${response.status}`
           : undefined,
         statusCode: response.status,
       };
@@ -328,32 +338,14 @@ class ApiClient {
     }
   }
 
-  /**
-   * Handle authentication errors with token refresh
-   */
+  // ─── Auth Error Handler ──────────────────────────────────────────────
+
   private async handleAuthError<T = any>(
     endpoint: string,
     options: RequestConfig,
     originalResponse: Response,
   ): Promise<ApiResponse<T>> {
-    // Si ce n'est pas une erreur 401, retourner l'erreur directement
-    if (originalResponse.status !== 401) {
-      const text = await originalResponse.text();
-      let data: any = {};
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch (err) {
-        console.warn("[API] Response is not valid JSON:", text);
-      }
-      return {
-        success: false,
-        error:
-          data.error || data.message || `HTTP Error ${originalResponse.status}`,
-        statusCode: originalResponse.status,
-      };
-    }
-
-    // Si un rafraîchissement est déjà en cours, mettre en file d'attente
+    // Si le rafraîchissement est en cours, mettre en file d'attente
     if (this.isRefreshing) {
       return new Promise((resolve) => {
         this.addRefreshSubscriber((newToken) => {
@@ -368,17 +360,15 @@ class ApiClient {
       });
     }
 
-    // Démarrer le rafraîchissement du token
+    // Démarrer le rafraîchissement
     this.isRefreshing = true;
 
     try {
       const newToken = await this.refreshToken();
       this.isRefreshing = false;
-
-      // Notifier tous les subscribers
       this.onTokenRefreshed(newToken);
 
-      // Retenter la requête originale
+      // Retenter la requête
       const newHeaders = {
         ...options.headers,
         Authorization: `Bearer ${newToken}`,
@@ -386,7 +376,7 @@ class ApiClient {
       return this.request<T>(endpoint, { ...options, headers: newHeaders });
     } catch (error) {
       this.isRefreshing = false;
-      // Token refresh failed - logout user
+      await this.clearTokens();
       this.onLogout?.();
       return {
         success: false,
@@ -396,9 +386,6 @@ class ApiClient {
     }
   }
 
-  /**
-   * Refresh the access token
-   */
   private async refreshToken(): Promise<string> {
     const refreshToken = await this.getRefreshToken();
     if (!refreshToken) {
@@ -406,28 +393,30 @@ class ApiClient {
     }
 
     try {
-      const response = await fetch(`${this.baseURL}/auth/refresh-token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${this.baseURL}${this.TOKEN_REFRESH_ENDPOINT}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ refreshToken }),
         },
-        body: JSON.stringify({ refreshToken }),
-      });
+      );
 
       const text = await response.text();
       let data: any = {};
 
       try {
         data = text ? JSON.parse(text) : {};
-      } catch (err) {
+      } catch {
         console.warn("[API] Refresh response is not valid JSON:", text);
       }
 
-      // Backend wraps in ApiResponse: { success, data: { accessToken, expiresIn } }
-      const accessToken = data.data?.accessToken || data.accessToken;
+      const accessToken = data?.data?.accessToken || data?.accessToken;
 
       if (response.ok && accessToken) {
-        await SecureStore.setItemAsync("vitacare_access_token", accessToken);
+        await this.setToken(accessToken);
         return accessToken;
       }
 
@@ -438,13 +427,8 @@ class ApiClient {
     }
   }
 
-  // ================================================================================== //
-  // HTTP Methods
-  // ================================================================================== //
+  // ─── HTTP Methods ──────────────────────────────────────────────────────
 
-  /**
-   * GET request
-   */
   async get<T = any>(
     endpoint: string,
     params?: Record<string, string | number | boolean>,
@@ -468,9 +452,6 @@ class ApiClient {
     return this.requestWithRetry<T>(url, { ...options, method: "GET" });
   }
 
-  /**
-   * POST request
-   */
   async post<T = any>(
     endpoint: string,
     data?: any,
@@ -483,9 +464,6 @@ class ApiClient {
     });
   }
 
-  /**
-   * PUT request
-   */
   async put<T = any>(
     endpoint: string,
     data?: any,
@@ -498,9 +476,6 @@ class ApiClient {
     });
   }
 
-  /**
-   * PATCH request
-   */
   async patch<T = any>(
     endpoint: string,
     data?: any,
@@ -513,9 +488,6 @@ class ApiClient {
     });
   }
 
-  /**
-   * DELETE request
-   */
   async delete<T = any>(
     endpoint: string,
     data?: any,

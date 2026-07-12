@@ -23,7 +23,7 @@ import { colors, fontFamily, fontSize } from "@/themes";
 import { apiClient } from "@/lib/api.client";
 import { API_ENDPOINTS } from "@/types/api-endpoints";
 import { appointmentService } from "@/services/appointment.service";
-import { notificationService } from "@/services/notification.service";
+import { notificationService } from "@/services/notifications.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

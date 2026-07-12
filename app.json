@@ -9,7 +9,7 @@
       "android"
     ],
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/logo/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
@@ -19,10 +19,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/images/logo/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
+        "POST_NOTIFICATIONS",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -43,12 +44,19 @@
       "expo-secure-store",
       "expo-status-bar",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/logo/adaptive-icon.png",
+          "color": "#22c55e"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#ffffff",
-          "image": "./assets/splash.png",
+          "image": "./assets/images/logo/splash.png",
           "dark": {
-            "image": "./assets/splash.png",
+            "image": "./assets/images/logo/splash.png",
             "backgroundColor": "#000000"
           },
           "imageWidth": 200
@@ -59,6 +67,13 @@
       "@react-native-google-signin/google-signin",
       "expo-web-browser",
       "@react-native-firebase/messaging"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8c02fb68-3a58-4e02-a4c5-e082ab114a0d"
+      }
+    },
+    "owner": "tk-porkys-team"
   }
 }

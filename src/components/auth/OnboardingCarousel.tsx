@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  StatusBar,
 } from "react-native";
 import LottieView from "lottie-react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -78,6 +79,12 @@ export const OnboardingCarousel = ({
 
   return (
     <View style={styles.container}>
+      <StatusBar
+        translucent
+        backgroundColor={colors.white}
+        barStyle="dark-content"
+      />
+
       {/* Bouton Skip */}
       <TouchableOpacity
         onPress={handleSkip}

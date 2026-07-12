@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,28 +8,29 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  NativeModules,
   Linking,
-  AppState,
-  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, Crosshair, User } from "lucide-react-native";
-import LegacyMapView, {
-  UrlTile as LegacyUrlTile,
-  Marker as LegacyMarker,
-  PROVIDER_DEFAULT,
-  Circle,
-} from "react-native-maps";
+import { MapPin, Crosshair } from "lucide-react-native";
+import LegacyMapView, { UrlTile as LegacyUrlTile, Marker as LegacyMarker, Circle } from "react-native-maps";
 import * as Location from "expo-location";
 import { colors, fontFamily, fontSize } from "../../../src/themes";
 import { TopBar, PrimaryButton, SearchInput } from "../../../src/components";
 import { useProfile } from "../../../src/hooks";
 import { useAuthStore } from "../../../src/store";
 
-// ================================================================================== //
-// Constants
-// ================================================================================== //
+let MapComponent: any = null;
+let CameraComponent: any = null;
+let MapLibreMarker: any = null;
+let mapLibreLoaded = false;
+
+try {
+  const MapLibre = require("@maplibre/maplibre-react-native");
+  MapComponent = MapLibre.Map;
+  CameraComponent = MapLibre.Camera;
+  MapLibreMarker = MapLibre.Marker;
+  mapLibreLoaded = true;
+} catch (e) {}
 
 const OSM_STYLE = {
   version: 8,
@@ -42,13 +43,7 @@ const OSM_STYLE = {
     },
   },
   layers: [
-    {
-      id: "osm",
-      type: "raster",
-      source: "osm",
-      minzoom: 0,
-      maxzoom: 19,
-    },
+    { id: "osm", type: "raster", source: "osm", minzoom: 0, maxzoom: 19 },
   ],
 };
 
@@ -59,399 +54,158 @@ const INITIAL_REGION = {
   longitudeDelta: 0.05,
 };
 
-// ================================================================================== //
-// ZOOM_LEVELS — en niveaux numériques pour MapLibre
-// ================================================================================== //
+const ZOOM_LEVELS = { city: 12, street: 16, building: 18, default: 14, user: 15 };
 
-const ZOOM_LEVELS = {
-  city: 12,
-  street: 16,
-  building: 18,
-  default: 14,
-  user: 15,
-};
-
-// ================================================================================== //
-// MapLibre Setup - CORRIGÉ
-// ================================================================================== //
-
-let MapComponent: any = null;
-let CameraComponent: any = null;
-let PointAnnotationComponent: any = null;
-let mapLibreLoaded = false;
-
-try {
-  const isMapLibreAvailable =
-    Platform.OS !== "web" &&
-    (!!NativeModules.MLRNModule || !!NativeModules.MLRNCameraModule);
-
-  if (isMapLibreAvailable) {
-    const MapLibre = require("@maplibre/maplibre-react-native");
-
-    MapComponent = MapLibre.MapView || MapLibre.Map;
-    CameraComponent = MapLibre.Camera;
-    PointAnnotationComponent = MapLibre.PointAnnotation;
-    mapLibreLoaded = !!MapComponent && !!CameraComponent;
-  }
-} catch (e) {
-  console.warn("[MapLibre] Erreur:", e);
-}
-
-// ================================================================================== //
-// Types
-// ================================================================================== //
-
-interface LocationState {
-  address: string;
-  coordinates: {
-    latitude: number;
-    longitude: number;
-  };
-  isGeocoding: boolean;
-  error: string | null;
-  accuracy?: number;
-}
-
-interface UserMarker {
-  id: string;
-  coordinate: {
-    latitude: number;
-    longitude: number;
-  };
-  title?: string;
-  description?: string;
-  isUserLocation?: boolean;
-}
-
-// ================================================================================== //
-// Main Component
-// ================================================================================== //
+const isUsingMapLibre = mapLibreLoaded && Platform.OS !== "ios";
 
 export default function LocationScreen() {
-  // ================================================================================== //
-  // Store & Hooks
-  // ================================================================================== //
-
   const user = useAuthStore((s) => s.user);
   const { updateProfile, isUpdatingProfile } = useProfile();
 
-  // ================================================================================== //
-  // State
-  // ================================================================================== //
-
-  const [locationState, setLocationState] = useState<LocationState>({
-    address: "Recherche de votre position...",
-    coordinates: {
-      latitude: INITIAL_REGION.latitude,
-      longitude: INITIAL_REGION.longitude,
-    },
-    isGeocoding: false,
-    error: null,
+  const [address, setAddress] = useState("Recherche de votre position...");
+  const [coordinates, setCoordinates] = useState({
+    latitude: INITIAL_REGION.latitude,
+    longitude: INITIAL_REGION.longitude,
   });
-
-  const cameraRef = useRef<any>(null);
-  const [cameraKey, setCameraKey] = useState(0);
   const [region, setRegion] = useState(INITIAL_REGION);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMapReady, setIsMapReady] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
-  const [permissionStatus, setPermissionStatus] =
-    useState<Location.PermissionStatus | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [userMarker, setUserMarker] = useState<{
+    coordinate: { latitude: number; longitude: number };
+    title?: string;
+  } | null>(null);
+  const [searchMarkers, setSearchMarkers] = useState<{
+    id: string;
+    coordinate: { latitude: number; longitude: number };
+  }[]>([]);
+  const [locationAccuracy, setLocationAccuracy] = useState(0);
+  const [locationSet, setLocationSet] = useState(false);
 
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [appState, setAppState] = useState(AppState.currentState);
-
-  // Ajoute un ref pour savoir si la carte est prête pour les commandes caméra
+  const mapRef = useRef<any>(null);
+  const cameraRef = useRef<any>(null);
+  const legacyMapRef = useRef<LegacyMapView>(null);
+  const searchInputRef = useRef<any>(null);
   const mapReadyForCamera = useRef(false);
   const pendingCamera = useRef<{
     coords: { latitude: number; longitude: number };
     zoomLevel: number;
   } | null>(null);
 
-  // Nouveaux states pour les markers
-  const [userMarker, setUserMarker] = useState<UserMarker | null>(null);
-  const [selectedMarker, setSelectedMarker] = useState<UserMarker | null>(null);
-  const [mapMarkers, setMapMarkers] = useState<UserMarker[]>([]);
-  const [isTrackingEnabled, setIsTrackingEnabled] = useState(true);
-  const [locationAccuracy, setLocationAccuracy] = useState<number>(0);
-
-  const [cameraSettings, setCameraSettings] = useState({
-    centerCoordinate: [INITIAL_REGION.longitude, INITIAL_REGION.latitude] as [
-      number,
-      number,
-    ],
-    zoomLevel: ZOOM_LEVELS.city,
-    animationDuration: 0,
-    animationMode: "none" as
-      | "none"
-      | "flyTo"
-      | "easeTo"
-      | "linearTo"
-      | "moveTo",
-  });
-  const mapRef = useRef<any>(null);
-  const searchInputRef = useRef<any>(null);
-  const locationSubscription = useRef<Location.LocationSubscription | null>(
-    null,
-  );
-
-  // Animation pour le pulsating marker - CORRIGÉE
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(0.6)).current;
-
-  // ================================================================================== //
-  // Computed
-  // ================================================================================== //
-
-  const hasLocationPermission = permissionStatus === "granted";
-  const isUsingMapLibre = mapLibreLoaded && Platform.OS !== "ios";
-
-  // ================================================================================== //
-  // Effects - ANIMATION CORRIGÉE
-  // ================================================================================== //
-
-  // Pulsing animation for marker - utilisant seulement scale et opacity
   useEffect(() => {
-    const pulseAnimation = Animated.loop(
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.3,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.timing(opacityAnim, {
-            toValue: 0.1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacityAnim, {
-            toValue: 0.6,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]),
-    );
-
-    pulseAnimation.start();
-
-    return () => pulseAnimation.stop();
-  }, [scaleAnim, opacityAnim]);
-
-  useEffect(() => {
-    if (!mapLoaded) return;
-    setTimeout(() => {}, 500);
-  }, [mapLoaded]);
-
-  // ================================================================================== //
-  // Permission Handlers
-  // ================================================================================== //
-
-  const checkPermissions = useCallback(async () => {
-    try {
+    (async () => {
       const { status } = await Location.getForegroundPermissionsAsync();
-      setPermissionStatus(status);
-
-      if (status !== "granted") {
-        setLocationState((prev) => ({
-          ...prev,
-          address: "Permission de localisation refusée",
-          error:
-            "Pour utiliser cette fonctionnalité, veuillez autoriser l'accès à votre position.",
-        }));
-      }
-    } catch (error) {
-      console.error("[Location] Permission check error:", error);
-    }
+      const granted = status === "granted";
+      setHasPermission(granted);
+      if (granted) getCurrentLocation();
+    })();
   }, []);
-
-  const requestPermissions = useCallback(async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      setPermissionStatus(status);
-
-      if (status === "granted") {
-        getCurrentLocation();
-      } else {
-        Alert.alert(
-          "Permission refusée",
-          "Pour utiliser la carte, vous devez autoriser l'accès à votre position.",
-          [
-            { text: "Annuler", style: "cancel" },
-            {
-              text: "Ouvrir les réglages",
-              onPress: () => Linking.openSettings(),
-            },
-          ],
-        );
-      }
-    } catch (error) {
-      console.error("[Location] Permission request error:", error);
-      Alert.alert(
-        "Erreur",
-        "Impossible de demander la permission de localisation.",
-      );
-    }
-  }, []);
-
-  // ================================================================================== //
-  // Location Handlers
-  // ================================================================================== //
 
   const reverseGeocode = useCallback(
     async (coords: { latitude: number; longitude: number }) => {
-      setLocationState((prev) => ({ ...prev, isGeocoding: true }));
-
+      setIsGeocoding(true);
       try {
-        const reverse = await Location.reverseGeocodeAsync(coords);
-        if (reverse.length > 0) {
-          const item = reverse[0];
+        const results = await Location.reverseGeocodeAsync(coords);
+        if (results.length > 0) {
+          const item = results[0];
           const parts = [
-            item.street,
-            item.streetNumber,
-            item.district,
-            item.city,
-            item.region,
-            item.country,
+            item.street, item.streetNumber, item.district,
+            item.city, item.region, item.country,
           ].filter(Boolean);
-
-          const address = parts.join(", ") || "Position détectée";
-
-          setLocationState((prev) => ({
-            ...prev,
-            address,
-            coordinates: coords,
-            isGeocoding: false,
-            error: null,
-          }));
+          setAddress(parts.join(", ") || "Position détectée");
+          setCoordinates(coords);
+          setError(null);
         } else {
-          setLocationState((prev) => ({
-            ...prev,
-            address: "Adresse non trouvée",
-            coordinates: coords,
-            isGeocoding: false,
-          }));
+          setAddress("Adresse non trouvée");
+          setCoordinates(coords);
         }
-      } catch (error) {
-        console.error("[Location] Reverse geocode error:", error);
-        setLocationState((prev) => ({
-          ...prev,
-          address: "Adresse non disponible",
-          isGeocoding: false,
-          error: "Impossible d'obtenir l'adresse correspondante.",
-        }));
+      } catch {
+        setAddress("Adresse non disponible");
+        setError("Impossible d'obtenir l'adresse.");
+      } finally {
+        setIsGeocoding(false);
       }
     },
     [],
   );
 
-  // Dans updateMapLocation
-  const updateMapLocation = useCallback(
-    (
-      coords: { latitude: number; longitude: number },
-      zoomLevel: number = ZOOM_LEVELS.default,
-    ) => {
-      setRegion({
-        ...coords,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
+  const animateToCoords = useCallback(
+    (coords: { latitude: number; longitude: number }, zoomLevel = ZOOM_LEVELS.default) => {
+      const newRegion = { ...coords, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+      setRegion(newRegion);
 
       if (isUsingMapLibre) {
         const execute = () => {
           if (!cameraRef.current) return;
-
-          cameraRef.current.setStop({
-            centerCoordinate: [coords.longitude, coords.latitude],
-            zoomLevel,
-            animationDuration: 800,
-            animationMode: "flyTo",
+          cameraRef.current.flyTo({
+            center: [coords.longitude, coords.latitude],
+            zoom: zoomLevel,
+            duration: 800,
           });
         };
-
-        if (mapReadyForCamera.current) {
-          execute();
-        } else {
-          pendingCamera.current = { coords, zoomLevel };
-        }
+        if (mapReadyForCamera.current) execute();
+        else pendingCamera.current = { coords, zoomLevel };
+      } else if (legacyMapRef.current) {
+        legacyMapRef.current.animateToRegion(newRegion, 500);
       }
     },
-    [isUsingMapLibre],
+    [],
   );
 
   const getCurrentLocation = useCallback(async () => {
     if (isLocating) return;
-
     setIsLocating(true);
-    setLocationState((prev) => ({
-      ...prev,
-      address: "Localisation en cours...",
-      error: null,
-    }));
+    setAddress("Localisation...");
+    setError(null);
 
     try {
       const currentLoc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
-        timeInterval: 5000,
-        distanceInterval: 10,
       });
-
       const coords = {
         latitude: currentLoc.coords.latitude,
         longitude: currentLoc.coords.longitude,
       };
 
       setLocationAccuracy(currentLoc.coords.accuracy || 0);
-
-      const marker: UserMarker = {
-        id: "user-location",
-        coordinate: coords,
-        title: "Ma position",
-        isUserLocation: true,
-      };
-      setUserMarker(marker);
-
-      updateMapLocation(coords, ZOOM_LEVELS.user);
+      setUserMarker({ coordinate: coords, title: "Ma position" });
+      setLocationSet(true);
+      animateToCoords(coords, ZOOM_LEVELS.user);
       await reverseGeocode(coords);
-    } catch (error) {
-      console.error("[Location] Get location error:", error);
-      let errorMessage = "Impossible d'obtenir votre position.";
-      if (error instanceof Error) {
-        if (error.message.includes("timeout")) {
-          errorMessage =
-            "La recherche de position a expiré. Vérifiez votre connexion GPS.";
-        } else if (error.message.includes("provider")) {
-          errorMessage = "Veuillez activer le GPS de votre appareil.";
-        }
-      }
-      setLocationState((prev) => ({
-        ...prev,
-        address: "Position non disponible",
-        error: errorMessage,
-      }));
-      Alert.alert("Erreur de localisation", errorMessage);
+    } catch (err) {
+      const msg =
+        err instanceof Error && err.message.includes("timeout")
+          ? "La recherche a expiré. Vérifiez votre GPS."
+          : "Impossible d'obtenir votre position.";
+      setAddress("Position non disponible");
+      setError(msg);
+      Alert.alert("Erreur", msg);
     } finally {
       setIsLocating(false);
     }
-  }, [isLocating, updateMapLocation, reverseGeocode]);
+  }, [isLocating, animateToCoords, reverseGeocode]);
 
-  // ================================================================================== //
-  // Map Handlers
-  // ================================================================================== //
+  const requestPermissionAndLocate = useCallback(async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status === "granted") {
+      setHasPermission(true);
+      getCurrentLocation();
+    } else {
+      setHasPermission(false);
+      Alert.alert("Permission refusée", "Activez la localisation dans les réglages.", [
+        { text: "Annuler", style: "cancel" },
+        { text: "Réglages", onPress: () => Linking.openSettings() },
+      ]);
+    }
+  }, [getCurrentLocation]);
 
   const handleMapPress = useCallback(
     async (coords: { latitude: number; longitude: number }) => {
-      setIsTrackingEnabled(false);
-      setLocationState((prev) => ({ ...prev, coordinates: coords }));
+      setCoordinates(coords);
+      setLocationSet(true);
       await reverseGeocode(coords);
     },
     [reverseGeocode],
@@ -459,12 +213,10 @@ export default function LocationScreen() {
 
   const handleSearch = useCallback(async () => {
     const query = searchQuery.trim();
-    if (!query) {
-      Alert.alert("Information", "Veuillez saisir une adresse à rechercher.");
-      return;
-    }
+    if (!query) return;
 
-    setLocationState((prev) => ({ ...prev, isGeocoding: true, error: null }));
+    setIsGeocoding(true);
+    setError(null);
 
     try {
       const results = await Location.geocodeAsync(query);
@@ -472,306 +224,78 @@ export default function LocationScreen() {
         const { latitude, longitude } = results[0];
         const coords = { latitude, longitude };
 
-        setIsTrackingEnabled(false);
-        updateMapLocation(coords, ZOOM_LEVELS.building);
-
-        const searchMarker: UserMarker = {
-          id: `search-${Date.now()}`,
-          coordinate: coords,
-          title: query,
-          description: "Résultat de recherche",
-          isUserLocation: false,
-        };
-        setMapMarkers((prev) => [...prev, searchMarker]);
-        setSelectedMarker(searchMarker);
-
+        animateToCoords(coords, ZOOM_LEVELS.building);
+        setSearchMarkers((prev) => [
+          ...prev,
+          { id: `search-${Date.now()}`, coordinate: coords },
+        ]);
         await reverseGeocode(coords);
         setSearchQuery("");
         searchInputRef.current?.blur();
       } else {
-        Alert.alert(
-          "Adresse introuvable",
-          `Aucun résultat trouvé pour "${query}".`,
-        );
+        Alert.alert("Introuvable", `Aucun résultat pour "${query}".`);
       }
-    } catch (error) {
-      console.error("[Location] Geocode error:", error);
-      Alert.alert(
-        "Erreur de recherche",
-        "Impossible de géolocaliser cette adresse.",
-      );
+    } catch {
+      Alert.alert("Erreur", "Impossible de géolocaliser cette adresse.");
     } finally {
-      setLocationState((prev) => ({ ...prev, isGeocoding: false }));
+      setIsGeocoding(false);
     }
-  }, [searchQuery, reverseGeocode, updateMapLocation]);
+  }, [searchQuery, reverseGeocode, animateToCoords]);
 
   const handleCenterOnUser = useCallback(async () => {
-    if (!hasLocationPermission) {
-      await requestPermissions();
+    if (!hasPermission) {
+      await requestPermissionAndLocate();
       return;
     }
-
-    setIsTrackingEnabled(true);
-    await getCurrentLocation();
-
     if (userMarker) {
-      updateMapLocation(userMarker.coordinate, ZOOM_LEVELS.user);
+      animateToCoords(userMarker.coordinate, ZOOM_LEVELS.user);
+    } else {
+      await getCurrentLocation();
     }
-  }, [
-    hasLocationPermission,
-    requestPermissions,
-    getCurrentLocation,
-    userMarker,
-  ]);
+  }, [hasPermission, requestPermissionAndLocate, userMarker, animateToCoords, getCurrentLocation]);
 
   const handleSave = useCallback(async () => {
-    if (
-      !locationState.address ||
-      locationState.address === "Recherche de votre position..."
-    ) {
-      Alert.alert(
-        "Position non définie",
-        "Veuillez sélectionner une position sur la carte avant d'enregistrer.",
-      );
+    if (!locationSet) {
+      Alert.alert("Position non définie", "Sélectionnez une position sur la carte.");
       return;
     }
-
     try {
-      const res = await updateProfile({
+      await updateProfile({
         fullName: user?.fullName ?? "",
         email: user?.email ?? "",
         phoneNumber: user?.phoneNumber ?? "",
-        address: locationState.address,
-        latitude: locationState.coordinates.latitude,
-        longitude: locationState.coordinates.longitude,
+        address,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
       });
-
-      Alert.alert("Succès", "Votre localisation a été mise à jour.");
-    } catch (error) {
-      console.error("[Location] Save error:", error);
-      Alert.alert("Erreur", "Impossible de sauvegarder la localisation.");
+      Alert.alert("Succès", "Localisation mise à jour.");
+    } catch {
+      Alert.alert("Erreur", "Impossible de sauvegarder.");
     }
-  }, [locationState, user, updateProfile]);
+  }, [address, coordinates, user, updateProfile]);
 
-  // ================================================================================== //
-  // Render Helpers - Markers CORRIGÉS
-  // ================================================================================== //
-
-  const renderUserMarker = () => {
-    if (!userMarker) return null;
-
-    if (isUsingMapLibre && PointAnnotationComponent) {
-      return (
-        <PointAnnotationComponent
-          id={userMarker.id}
-          coordinate={[
-            userMarker.coordinate.longitude,
-            userMarker.coordinate.latitude,
-          ]}
-          anchor={{ x: 0.5, y: 0.5 }}
-        >
-          <View style={[styles.customMarker, styles.userMarker]}>
-            <User size={20} color={colors.white} fill={colors.white} />
-          </View>
-        </PointAnnotationComponent>
-      );
+  const onMapReady = useCallback(() => {
+    setIsMapReady(true);
+    mapReadyForCamera.current = true;
+    if (pendingCamera.current && cameraRef.current?.flyTo) {
+      const { coords, zoomLevel } = pendingCamera.current;
+      cameraRef.current.flyTo({
+        center: [coords.longitude, coords.latitude],
+        zoom: zoomLevel,
+        duration: 800,
+      });
+      pendingCamera.current = null;
     }
+  }, []);
 
-    // react-native-maps - CORRIGÉ: utilisation de scale et opacity uniquement
-    return (
-      <>
-        {/* Cercle de précision */}
-        {locationAccuracy > 0 && locationAccuracy < 100 && (
-          <Circle
-            center={userMarker.coordinate}
-            radius={locationAccuracy}
-            strokeWidth={1}
-            strokeColor={colors.primary + "40"}
-            fillColor={colors.primary + "20"}
-          />
-        )}
-
-        {/* Marqueur principal */}
-        <LegacyMarker
-          coordinate={userMarker.coordinate}
-          title={userMarker.title}
-          description={userMarker.description}
-          tracksViewChanges={false}
-        >
-          <View style={[styles.customMarker, styles.userMarker]}>
-            <User size={20} color={colors.white} fill={colors.white} />
-          </View>
-        </LegacyMarker>
-
-        {/* Anneau pulsant - CORRIGÉ: seulement scale et opacity */}
-        <LegacyMarker
-          coordinate={userMarker.coordinate}
-          tracksViewChanges={false}
-        >
-          <Animated.View
-            style={[
-              styles.pulseRing,
-              {
-                transform: [{ scale: scaleAnim }],
-                opacity: opacityAnim,
-              },
-            ]}
-          />
-        </LegacyMarker>
-      </>
-    );
-  };
-
-  const renderSearchMarkers = () => {
-    return mapMarkers.map((marker) => {
-      if (marker.id === "user-location") return null;
-
-      if (isUsingMapLibre && PointAnnotationComponent) {
-        return (
-          <PointAnnotationComponent
-            key={marker.id}
-            id={marker.id}
-            coordinate={[
-              marker.coordinate.longitude,
-              marker.coordinate.latitude,
-            ]}
-            anchor={{ x: 0.5, y: 1.0 }}
-            onSelected={() => setSelectedMarker(marker)}
-          >
-            <View
-              style={[
-                styles.customMarker,
-                selectedMarker?.id === marker.id && styles.selectedMarker,
-              ]}
-            >
-              <MapPin size={24} color={colors.primary} fill={colors.white} />
-            </View>
-          </PointAnnotationComponent>
-        );
+  const handleLegacyMapPress = useCallback(
+    (e: any) => {
+      if (e?.nativeEvent?.coordinate) {
+        handleMapPress(e.nativeEvent.coordinate);
       }
-
-      // react-native-maps
-      return (
-        <LegacyMarker
-          key={marker.id}
-          coordinate={marker.coordinate}
-          title={marker.title}
-          description={marker.description}
-          onPress={() => setSelectedMarker(marker)}
-          tracksViewChanges={false}
-        >
-          <View
-            style={[
-              styles.customMarker,
-              selectedMarker?.id === marker.id && styles.selectedMarker,
-            ]}
-          >
-            <MapPin size={24} color={colors.primary} fill={colors.white} />
-          </View>
-        </LegacyMarker>
-      );
-    });
-  };
-
-  // ================================================================================== //
-  // Render Map
-  // ================================================================================== //
-
-  const renderMap = () => {
-    if (isUsingMapLibre && MapComponent && CameraComponent) {
-      return (
-        <MapComponent
-          ref={mapRef}
-          style={styles.map}
-          mapStyle={OSM_STYLE}
-          onPress={(e: any) => {
-            if (e?.geometry?.coordinates) {
-              const [longitude, latitude] = e.geometry.coordinates;
-              handleMapPress({ latitude, longitude });
-            }
-          }}
-          onDidFinishLoadingMap={() => {
-            setIsMapReady(true);
-            setMapLoaded(true);
-            mapReadyForCamera.current = true;
-
-            // Exécute la commande caméra en attente si elle existe
-            setTimeout(() => {
-              if (pendingCamera.current && cameraRef.current?.setStop) {
-                const { coords, zoomLevel } = pendingCamera.current;
-                cameraRef.current.setStop({
-                  centerCoordinate: [coords.longitude, coords.latitude],
-                  zoomLevel,
-                  animationDuration: 800,
-                  animationMode: "flyTo",
-                });
-                pendingCamera.current = null;
-              }
-            }, 300);
-          }}
-          logoEnabled={false}
-          attributionEnabled={false}
-          compassEnabled={true}
-        >
-          <CameraComponent
-            ref={cameraRef}
-            centerCoordinate={[
-              INITIAL_REGION.longitude,
-              INITIAL_REGION.latitude,
-            ]}
-            zoomLevel={ZOOM_LEVELS.city}
-            animationDuration={0}
-            animationMode="none"
-          />
-
-          {renderUserMarker()}
-          {renderSearchMarkers()}
-        </MapComponent>
-      );
-    } else {
-    }
-
-    // Fallback: react-native-maps
-    return (
-      <LegacyMapView
-        ref={mapRef}
-        style={styles.map}
-        provider={PROVIDER_DEFAULT}
-        region={region}
-        onRegionChangeComplete={(newRegion) => {
-          setRegion(newRegion);
-          setIsTrackingEnabled(false);
-        }}
-        onPress={(e) => {
-          if (e && e.nativeEvent && e.nativeEvent.coordinate) {
-            handleMapPress(e.nativeEvent.coordinate);
-          }
-        }}
-        onMapReady={() => setIsMapReady(true)}
-        showsUserLocation={false}
-        showsMyLocationButton={false}
-        showsCompass={true}
-        rotateEnabled={true}
-        scrollEnabled={true}
-        zoomEnabled={true}
-        moveOnMarkerPress={false}
-      >
-        <LegacyUrlTile
-          urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maximumZ={19}
-          flipY={false}
-          tileSize={256}
-        />
-
-        {renderUserMarker()}
-        {renderSearchMarkers()}
-      </LegacyMapView>
-    );
-  };
-
-  // ================================================================================== //
-  // Main Render
-  // ================================================================================== //
+    },
+    [handleMapPress],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
@@ -783,27 +307,126 @@ export default function LocationScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
       >
         <View style={styles.content}>
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <SearchInput
-              ref={searchInputRef}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
-              placeholder="Rechercher une adresse..."
-              returnKeyType="search"
-              autoCapitalize="none"
-              isLoading={locationState.isGeocoding}
-              showClearButton
-              showSearchButton
-              onClear={() => setSearchQuery("")}
-              onSearch={handleSearch}
-            />
-          </View>
+          <SearchInput
+            ref={searchInputRef}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            placeholder="Rechercher une adresse..."
+            returnKeyType="search"
+            autoCapitalize="none"
+            isLoading={isGeocoding}
+            showClearButton
+            showSearchButton
+            onClear={() => setSearchQuery("")}
+            onSearch={handleSearch}
+          />
 
-          {/* Map */}
           <View style={styles.mapContainer}>
-            {renderMap()}
+            {isUsingMapLibre && MapComponent && CameraComponent ? (
+              <MapComponent
+                ref={mapRef}
+                style={styles.map}
+                mapStyle={OSM_STYLE as any}
+                logo={false}
+                attribution={false}
+                onPress={(e: any) => {
+                  if (e?.geometry?.coordinates) {
+                    const [longitude, latitude] = e.geometry.coordinates;
+                    handleMapPress({ latitude, longitude });
+                  }
+                }}
+                onDidFinishLoadingMap={onMapReady}
+              >
+                <CameraComponent
+                  ref={cameraRef}
+                  initialViewState={{
+                    center: [INITIAL_REGION.longitude, INITIAL_REGION.latitude],
+                    zoom: ZOOM_LEVELS.city,
+                  }}
+                />
+
+                {userMarker && MapLibreMarker && (
+                  <MapLibreMarker
+                    id="user"
+                    lngLat={[userMarker.coordinate.longitude, userMarker.coordinate.latitude]}
+                  >
+                    <View style={styles.userPin}>
+                      <View style={styles.userPinDot} />
+                    </View>
+                  </MapLibreMarker>
+                )}
+
+                {searchMarkers.map((marker) => (
+                  <MapLibreMarker
+                    key={marker.id}
+                    id={marker.id}
+                    lngLat={[marker.coordinate.longitude, marker.coordinate.latitude]}
+                  >
+                    <View style={styles.searchPin}>
+                      <MapPin size={18} color={colors.primary} fill={colors.primary} />
+                    </View>
+                  </MapLibreMarker>
+                ))}
+              </MapComponent>
+            ) : (
+              <LegacyMapView
+                ref={legacyMapRef}
+                style={styles.map}
+                region={region}
+                onRegionChangeComplete={setRegion}
+                onPress={handleLegacyMapPress}
+                onMapReady={() => setIsMapReady(true)}
+                showsUserLocation={false}
+                showsMyLocationButton={false}
+                showsCompass
+                rotateEnabled
+                scrollEnabled
+                zoomEnabled
+                moveOnMarkerPress={false}
+              >
+                <LegacyUrlTile
+                  urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  maximumZ={19}
+                  flipY={false}
+                  tileSize={256}
+                />
+
+                {userMarker && locationAccuracy > 0 && locationAccuracy < 100 && (
+                  <Circle
+                    center={userMarker.coordinate}
+                    radius={locationAccuracy}
+                    strokeWidth={1}
+                    strokeColor={colors.primary + "40"}
+                    fillColor={colors.primary + "20"}
+                  />
+                )}
+
+                {userMarker && (
+                  <LegacyMarker
+                    coordinate={userMarker.coordinate}
+                    title={userMarker.title}
+                    tracksViewChanges={false}
+                  >
+                    <View style={styles.userPin}>
+                      <View style={styles.userPinDot} />
+                    </View>
+                  </LegacyMarker>
+                )}
+
+                {searchMarkers.map((marker) => (
+                  <LegacyMarker
+                    key={marker.id}
+                    coordinate={marker.coordinate}
+                    tracksViewChanges={false}
+                  >
+                    <View style={styles.searchPin}>
+                      <MapPin size={18} color={colors.primary} fill={colors.primary} />
+                    </View>
+                  </LegacyMarker>
+                ))}
+              </LegacyMapView>
+            )}
 
             {!isMapReady && (
               <View style={styles.loaderOverlay}>
@@ -812,96 +435,68 @@ export default function LocationScreen() {
               </View>
             )}
 
-            {/* Center Button */}
             <TouchableOpacity
-              style={[
-                styles.centerButton,
-                isTrackingEnabled && styles.centerButtonActive,
-              ]}
+              style={styles.centerButton}
               onPress={handleCenterOnUser}
               disabled={isLocating}
             >
               {isLocating ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Crosshair
-                  size={20}
-                  color={isTrackingEnabled ? colors.primary : colors.ink}
-                />
+                <Crosshair size={20} color={colors.ink} />
               )}
             </TouchableOpacity>
 
-            {/* Permission Warning */}
-            {!hasLocationPermission && (
+            {hasPermission === false && (
               <TouchableOpacity
                 style={styles.permissionWarning}
-                onPress={requestPermissions}
+                onPress={requestPermissionAndLocate}
               >
                 <Text style={styles.permissionWarningText}>
                   Autoriser la localisation
                 </Text>
               </TouchableOpacity>
             )}
-
-            {/* Tracking Indicator */}
-            {isTrackingEnabled && hasLocationPermission && (
-              <View style={styles.trackingIndicator}>
-                <View style={styles.trackingDot} />
-                <Text style={styles.trackingText}>Suivi GPS actif</Text>
-              </View>
-            )}
           </View>
 
-          {/* Location Info */}
           <TouchableOpacity
-            style={[
-              styles.locationRow,
-              locationState.error && styles.locationRowError,
-            ]}
+            style={[styles.locationRow, error && styles.locationRowError]}
             activeOpacity={0.7}
             onPress={handleCenterOnUser}
           >
             <MapPin
               size={16}
-              color={locationState.error ? colors.error : colors.inkMuted}
+              color={error ? colors.error : colors.inkMuted}
             />
             <View style={styles.locationTextContainer}>
               <Text
-                style={[
-                  styles.locationText,
-                  locationState.error && styles.locationTextError,
-                ]}
+                style={[styles.locationText, error && styles.locationTextError]}
                 numberOfLines={2}
               >
-                {locationState.isGeocoding
-                  ? "Recherche d'adresse..."
-                  : locationState.address}
+                {isGeocoding ? "Recherche d'adresse..." : address}
               </Text>
-              {locationState.error && (
-                <Text style={styles.locationError}>{locationState.error}</Text>
-              )}
+              {error && <Text style={styles.locationError}>{error}</Text>}
             </View>
             {locationAccuracy > 0 && locationAccuracy < 100 && (
-              <Text style={styles.accuracyText}>
-                ±{Math.round(locationAccuracy)}m
-              </Text>
+              <Text style={styles.accuracyText}>±{Math.round(locationAccuracy)}m</Text>
             )}
           </TouchableOpacity>
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <PrimaryButton
             label="Enregistrer la localisation"
             fullWidth
             isLoading={isUpdatingProfile}
             onPress={handleSave}
-            isDisabled={!hasLocationPermission || locationState.isGeocoding}
+            isDisabled={!hasPermission || isGeocoding || !locationSet}
           />
           <Text style={styles.footerHint}>
-            {!hasLocationPermission
+            {!hasPermission
               ? "Activez la localisation pour enregistrer votre position"
-              : "Appuyez sur la carte pour définir une position précise"}
+              : !locationSet
+                ? "Localisez-vous ou appuyez sur la carte"
+                : "Appuyez sur la carte pour ajuster la position"}
           </Text>
         </View>
       </KeyboardAvoidingView>
@@ -909,31 +504,10 @@ export default function LocationScreen() {
   );
 }
 
-// ================================================================================== //
-// Styles
-// ================================================================================== //
-
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
-  flex: {
-    flex: 1,
-  },
-
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 16,
-  },
-
-  searchContainer: {
-    flexDirection: "row",
-    gap: 8,
-  },
-
+  safe: { flex: 1, backgroundColor: colors.white },
+  flex: { flex: 1 },
+  content: { flex: 1, paddingHorizontal: 16, paddingTop: 16, gap: 16 },
   mapContainer: {
     flex: 1,
     borderRadius: 20,
@@ -941,10 +515,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     position: "relative",
   },
-  map: {
-    ...StyleSheet.absoluteFill,
-  },
-
+  map: { ...StyleSheet.absoluteFill },
   loaderOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(255,255,255,0.9)",
@@ -957,73 +528,31 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.inkLight,
   },
-
-  // Markers - CORRIGÉS
-  customMarker: {
-    width: 40,
-    height: 40,
-    backgroundColor: colors.white,
-    borderRadius: 20,
+  userPin: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  userMarker: {
-    backgroundColor: colors.primary,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: colors.white,
-  },
-  selectedMarker: {
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  pulseRing: {
-    position: "absolute",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primary,
-    opacity: 0.4,
-  },
-
-  // Tracking
-  trackingButton: {
-    padding: 8,
-    borderRadius: 8,
-  },
-  trackingIndicator: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.95)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 6,
   },
-  trackingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.success,
+  userPinDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.white,
   },
-  trackingText: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.xs,
-    color: colors.ink,
+  searchPin: {
+    alignItems: "center",
+    justifyContent: "center",
   },
-
   centerButton: {
     position: "absolute",
     bottom: 20,
@@ -1040,11 +569,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  centerButtonActive: {
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-
   permissionWarning: {
     position: "absolute",
     top: 16,
@@ -1060,8 +584,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.white,
   },
-
-  // Location Info
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1072,21 +594,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  locationRowError: {
-    borderColor: colors.error,
-    borderWidth: 1.5,
-  },
-  locationTextContainer: {
-    flex: 1,
-  },
+  locationRowError: { borderColor: colors.error, borderWidth: 1.5 },
+  locationTextContainer: { flex: 1 },
   locationText: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.md,
     color: colors.ink,
   },
-  locationTextError: {
-    color: colors.error,
-  },
+  locationTextError: { color: colors.error },
   locationError: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.xs,
@@ -1098,8 +613,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
   },
-
-  // Footer
   footer: {
     paddingHorizontal: 16,
     paddingBottom: 24,

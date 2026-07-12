@@ -240,7 +240,7 @@ export const useAuthStore = create<AuthState>()(
           console.log("API Register result : ", result);
           if (result && !("requiresOtp" in result)) {
             await handleAuthResult(result, set);
-            router.replace("/(auth)/onboarding-location");
+            router.replace("/(auth)/onboarding/location");
           }
         } catch (e: any) {
           let message = "Erreur lors de l'inscription.";

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   StatusBar,
-  ActivityIndicator,
   Alert,
   RefreshControl,
 } from "react-native";
@@ -18,6 +17,7 @@ import {
 } from "@/components/medications";
 import { CategoryCard } from "@/components/medications/CategoryCard";
 import { DrugCard } from "@/components/medications/DrugCard";
+import { DrugCardSkeleton } from "@/components/medications/DrugCardSkeleton";
 import { HeroBanner } from "@/components/medications/HeroBanner";
 import { EmptyState } from "@/components/medications/EmptyState";
 import { ErrorBanner } from "@/components/medications/ErrorBanner";
@@ -253,8 +253,10 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         />
 
         {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
+          <View style={styles.drugsGrid}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <DrugCardSkeleton key={i} />
+            ))}
           </View>
         ) : isEmpty ? (
           <EmptyState
@@ -297,10 +299,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
     paddingHorizontal: 16,
-  },
-  loadingContainer: {
-    padding: 40,
-    alignItems: "center",
   },
   categoriesRow: {
     gap: 12,

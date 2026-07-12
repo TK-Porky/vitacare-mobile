@@ -14,9 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Config Firebase
 // ================================================================================== //
 const firebaseConfig = {
-  apiKey:
-    process.env.EXPO_PUBLIC_FIREBASE_API_KEY ||
-    "AIzaSyDMgfqRiqBvrtl292qdA15uaEue5sU9YVg",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "[GCP_API_KEY]",
   authDomain:
     process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ||
     "vitacare-7faee.firebaseapp.com",

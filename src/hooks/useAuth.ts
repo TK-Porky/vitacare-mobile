@@ -45,10 +45,15 @@ export const useAuth = () => {
       if (!idToken) throw new Error("Pas de idToken reçu");
 
       // Crée le credential Firebase
+      console.log("ID Token:", idToken);
       const credential = GoogleAuthProvider.credential(idToken);
+      console.log("Credential:", credential);
       const userCredential = await signInWithCredential(auth, credential);
+      console.log("User Credential:", userCredential);
       const user = userCredential.user;
+      console.log("User:", user);
       const firebaseToken = await user.getIdToken();
+      console.log("Firebase Token:", firebaseToken);
 
       // Met à jour ton store
       await store.loginWithGoogle({
