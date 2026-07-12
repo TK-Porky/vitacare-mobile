@@ -1,11 +1,4 @@
-import {
-  NotificationData,
-  NotificationCategory,
-  NotificationPreferences,
-  NotificationMetadata,
-  ReminderNotificationData,
-  PaginatedResponse,
-} from "@/types";
+import { NotificationData, NotificationPreferences } from "@/types";
 
 export interface DeviceInfo {
   brand: string | null;

@@ -18,7 +18,7 @@ import {
 } from "@expo-google-fonts/dm-sans";
 import { queryClient } from "@/lib/query.client";
 import { useAuthStore } from "@/store";
-import { notificationService } from "@/services/notifications";
+import { notificationService, inAppNotificationService } from "@/services/notifications";
 import { useNotificationBootstrapper } from "@/hooks/useNotificationBootstrapper";
 
 // Prevent splash screen from auto-hiding
@@ -52,18 +52,6 @@ const getDeviceInfo = async (): Promise<DeviceInfo> => {
     deviceType: String(Device.deviceType),
     isDevice: Device.isDevice,
   };
-};
-
-/**
- * Vérifie si les notifications sont autorisées
- */
-const checkNotificationPermissions = async (): Promise<boolean> => {
-  try {
-    const { status } = await Notifications.getPermissionsAsync();
-    return status === "granted";
-  } catch {
-    return false;
-  }
 };
 
 // ─── Root Navigator ──────────────────────────────────────────────────────
@@ -128,8 +116,6 @@ export default function RootLayout() {
   // ─── Refs ──────────────────────────────────────────────────────────────
 
   const notificationListener = useRef<Notifications.Subscription>(null);
-  const responseListener = useRef<Notifications.Subscription>(null);
-  const notificationBootstrapped = useRef(false);
 
   // ─── Effets ─────────────────────────────────────────────────────────────
 
@@ -137,24 +123,7 @@ export default function RootLayout() {
   useEffect(() => {
     const setupNotifications = async () => {
       try {
-        // Vérifier les permissions
-        const hasPermission = await checkNotificationPermissions();
-        if (!hasPermission) {
-          await Notifications.requestPermissionsAsync();
-        }
-
-        // Configurer le handler pour les notifications en foreground
-        Notifications.setNotificationHandler({
-          handleNotification: async () => ({
-            shouldShowBanner: true,
-            shouldShowList: true,
-            shouldPlaySound: true,
-            shouldSetBadge: true,
-            priority: Notifications.AndroidNotificationPriority.HIGH,
-          }),
-        });
-
-        // Enregistrer le service de notifications
+        // Enregistrer le service de notifications (configure handler, canaux, token)
         await notificationService.register();
 
         // Récupérer le token FCM
@@ -166,26 +135,16 @@ export default function RootLayout() {
           await notificationService.registerDevice(fcmToken, deviceInfo);
         }
 
-        // Configurer les catégories iOS
-        await notificationService.setupNotificationCategories();
-
         // Configurer le handler de messages en arrière-plan (Firebase)
         messaging().setBackgroundMessageHandler(async (remoteMessage) => {
           console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
         });
-
-        notificationBootstrapped.current = true;
       } catch (error) {
         console.error("❌ Erreur d'initialisation des notifications:", error);
       }
     };
 
     setupNotifications();
-
-    // Cleanup
-    return () => {
-      notificationBootstrapped.current = false;
-    };
   }, []);
 
   // Listeners de notifications
@@ -197,9 +156,7 @@ export default function RootLayout() {
 
         const { title, body, data } = notification.request.content;
 
-        // Ajouter à l'inbox
-        /*
-        notificationService.addToInbox({
+        inAppNotificationService.addToInbox({
           id: notification.request.identifier,
           title: title || "",
           content: body || "",
@@ -207,25 +164,12 @@ export default function RootLayout() {
           read: false,
           createdAt: new Date().toISOString(),
         });
-        */
-      });
-
-    // Écouter les réponses aux notifications (tap/action)
-    responseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log("📱 Réponse à la notification:", response);
-
-        // Pas de délai fixe, traiter immédiatement
-        notificationService.handleNotificationAction(response);
       });
 
     // Cleanup
     return () => {
       if (notificationListener.current) {
         notificationListener.current.remove();
-      }
-      if (responseListener.current) {
-        responseListener.current.remove();
       }
     };
   }, []);

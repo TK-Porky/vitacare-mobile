@@ -1,29 +1,25 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
-import { notificationService } from "../services/notifications.service";
+import * as ExpoNotifications from "expo-notifications";
+import { notificationService, inAppNotificationService } from "@/services/notifications";
 
-/**
- * Initialise le service de notifications au démarrage de l'app :
- * permissions, canaux Android, push token, listeners foreground/response.
- *
- * À utiliser UNE SEULE FOIS dans le layout racine.
- */
 export function useNotificationBootstrapper() {
   const router = useRouter();
-  const foregroundSub = useRef<{ remove: () => void } | null>(null);
   const responseSub = useRef<{ remove: () => void } | null>(null);
 
   useEffect(() => {
-    notificationService.register();
-    notificationService.loadSavedToken();
-
-    foregroundSub.current = notificationService.addForegroundListener();
     responseSub.current = notificationService.addResponseListener(
       (response) => {
         const data = response.notification.request.content.data;
         if (!data) return;
 
-        notificationService.markAsRead(
+        // Traiter les actions de rappel (take/snooze/skip)
+        if (response.actionIdentifier !== ExpoNotifications.DEFAULT_ACTION_IDENTIFIER) {
+          notificationService.handleNotificationAction(response);
+          return;
+        }
+
+        inAppNotificationService.markAsRead(
           response.notification.request.identifier,
         );
 
@@ -44,7 +40,6 @@ export function useNotificationBootstrapper() {
     );
 
     return () => {
-      foregroundSub.current?.remove();
       responseSub.current?.remove();
     };
   }, []);
