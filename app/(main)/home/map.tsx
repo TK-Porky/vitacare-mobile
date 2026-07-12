@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -6,68 +6,70 @@ import {
   StatusBar,
   ActivityIndicator,
   NativeSyntheticEvent,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import type {
   MapRef,
   CameraRef,
   ViewStateChangeEvent,
-} from '@maplibre/maplibre-react-native';
-import LegacyMapView, { UrlTile as LegacyUrlTile } from 'react-native-maps';
-import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
+} from "@maplibre/maplibre-react-native";
+import LegacyMapView, {
+  UrlTile as LegacyUrlTile,
+  Polyline,
+} from "react-native-maps";
+import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 
 let MapComponent: any = null;
 let CameraComponent: any = null;
 let UserLocationComponent: any = null;
+let GeoJSONSourceComponent: any = null;
+let LayerComponent: any = null;
 let mapLibreLoaded = false;
 
 try {
-  const MapLibre = require('@maplibre/maplibre-react-native');
+  const MapLibre = require("@maplibre/maplibre-react-native");
   MapComponent = MapLibre.Map;
   CameraComponent = MapLibre.Camera;
   UserLocationComponent = MapLibre.UserLocation;
+  GeoJSONSourceComponent = MapLibre.GeoJSONSource;
+  LayerComponent = MapLibre.Layer;
   mapLibreLoaded = true;
-} catch (e) {
-  // MapLibre is not available (e.g. running in Expo Go)
-}
+} catch (e) {}
 
 const OSM_STYLE = {
   version: 8,
   sources: {
     osm: {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
+      attribution: "© OpenStreetMap contributors",
     },
   },
   layers: [
     {
-      id: 'osm',
-      type: 'raster',
-      source: 'osm',
+      id: "osm",
+      type: "raster",
+      source: "osm",
       minzoom: 0,
       maxzoom: 19,
     },
   ],
 };
 
-import { BackButton } from '../../../src/components';
+import { BackButton } from "../../../src/components";
 import {
   FilterBottomSheet,
   FilterBottomSheetRef,
   FilterState,
-} from '../../../src/components/modals';
-import { SearchBar } from '../../../src/components';
-import { MapMarker } from '../../../src/components';
-import { MapProviderCard } from '../../../src/components';
-import { colors } from '../../../src/themes';
-import { useMapStore } from '../../../src/store';
+} from "../../../src/components/modals";
+import { SearchBar } from "../../../src/components";
+import { MapMarker } from "../../../src/components";
+import { MapProviderCard } from "../../../src/components";
+import { colors } from "../../../src/themes";
+import { useMapStore } from "../../../src/store";
 
-// ================================================================================== //
-// Types
-// ================================================================================== //
 const INITIAL_REGION = {
   latitude: 3.853,
   longitude: 11.502,
@@ -75,20 +77,8 @@ const INITIAL_REGION = {
   longitudeDelta: 0.05,
 };
 
-// ================================================================================== //
-// Components
-// ================================================================================== //
-
-/**
- * Calculate the distance between two points using the Haversine formula
- * @param lat1 - Latitude of the first point
- * @param lon1 - Longitude of the first point
- * @param lat2 - Latitude of the second point
- * @param lon2 - Longitude of the second point
- * @returns The distance in kilometers
- */
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371; // km
+  const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
   const a =
@@ -101,48 +91,44 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * c;
 }
 
-// ================================================================================== //
-// Main
-// ================================================================================== //
+function decodeOSRMCoords(
+  coords: number[][],
+): { latitude: number; longitude: number }[] {
+  return coords.map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
+}
+
 export default function MapScreen() {
-  // ================================================================================== //
-  // Hooks
-  // ================================================================================== //
   const router = useRouter();
-  const { 
-    clinics, 
+  const {
+    clinics,
     searchResults,
-    isLoading, 
-    fetchClinics, 
-    searchClinics, 
-    selectedClinic, 
-    setSelectedClinic 
+    isLoading,
+    fetchClinics,
+    searchClinics,
+    selectedClinic,
+    setSelectedClinic,
   } = useMapStore();
-  
-  // ================================================================================== //
-  // Refs
-  // ================================================================================== //
+
   const mapRef = useRef<MapRef>(null);
   const cameraRef = useRef<CameraRef>(null);
   const legacyMapRef = useRef<LegacyMapView>(null);
   const filterSheetRef = useRef<FilterBottomSheetRef>(null);
 
-  // ================================================================================== //
-  // States
-  // ================================================================================== //
-  const [search, setSearch] = useState(''); // Search query
-  const [region, setRegion] = useState(INITIAL_REGION); // Map region
-  const [userLocation, setUserLocation] = useState<Location.LocationObjectCoords | null>(null); // User location
+  const [search, setSearch] = useState("");
+  const [region, setRegion] = useState(INITIAL_REGION);
+  const [userLocation, setUserLocation] =
+    useState<Location.LocationObjectCoords | null>(null);
   const [filters, setFilters] = useState<FilterState>({
-    perimeterKm: 15, // Search radius in kilometers
-    services: [], // Selected services
-    languages: [], // Selected languages
+    perimeterKm: 15,
+    services: [],
+    languages: [],
   });
-  const [isLoadingLocation, setIsLoadingLocation] = useState(true); // Loading state for user location
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+  const [routeCoords, setRouteCoords] = useState<
+    { latitude: number; longitude: number }[] | null
+  >(null);
+  const [isRouteLoading, setIsRouteLoading] = useState(false);
 
-  // ================================================================================== //
-  // Effects
-  // ================================================================================== //
   useEffect(() => {
     fetchClinics();
   }, []);
@@ -151,7 +137,7 @@ export default function MapScreen() {
     (async () => {
       try {
         let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
+        if (status !== "granted") {
           setIsLoadingLocation(false);
           return;
         }
@@ -165,7 +151,7 @@ export default function MapScreen() {
           longitudeDelta: 0.05,
         };
         setRegion(newRegion);
-        
+
         if (mapLibreLoaded && cameraRef.current) {
           cameraRef.current.flyTo({
             center: [currentLoc.coords.longitude, currentLoc.coords.latitude],
@@ -183,9 +169,6 @@ export default function MapScreen() {
     })();
   }, []);
 
-  // ================================================================================== //
-  // Memo
-  // ================================================================================== //
   const providers = useMemo(() => {
     const list = searchResults.length > 0 ? searchResults : clinics;
     const q = search.trim().toLowerCase();
@@ -199,14 +182,54 @@ export default function MapScreen() {
     });
   }, [search, clinics, searchResults]);
 
-  // ================================================================================== //
-  // Functions
-  // ================================================================================== //
+  const fetchRoute = useCallback(
+    async (
+      from: { latitude: number; longitude: number },
+      to: { latitude: number; longitude: number },
+    ) => {
+      setIsRouteLoading(true);
 
-  /**
-   * Handle region change to update the center coordinates for filtering
-   */
-  const handleRegionDidChange = (event: NativeSyntheticEvent<ViewStateChangeEvent>) => {
+      // Fallback: straight line between origin and destination (renders immediately)
+      const straightLine = [
+        { latitude: from.latitude, longitude: from.longitude },
+        { latitude: to.latitude, longitude: to.longitude },
+      ];
+      setRouteCoords(straightLine);
+
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+
+        const url = `https://router.project-osrm.org/route/v1/driving/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?geometries=geojson&overview=full`;
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+
+        const data = await res.json();
+        if (data.code === "Ok" && data.routes?.[0]?.geometry?.coordinates) {
+          const coords = data.routes[0].geometry.coordinates;
+          console.log(
+            `Route fetched: ${coords.length} points, ${(data.routes[0].distance / 1000).toFixed(1)}km`,
+          );
+          setRouteCoords(decodeOSRMCoords(coords));
+        } else {
+          console.warn("OSRM route failed, using straight line:", data.code);
+        }
+      } catch (err: any) {
+        if (err?.name === "AbortError") {
+          console.warn("Route fetch timed out, using straight line");
+        } else {
+          console.error("Route fetch error, using straight line:", err);
+        }
+      } finally {
+        setIsRouteLoading(false);
+      }
+    },
+    [],
+  );
+
+  const handleRegionDidChange = (
+    event: NativeSyntheticEvent<ViewStateChangeEvent>,
+  ) => {
     if (event && event.nativeEvent && event.nativeEvent.center) {
       const [longitude, latitude] = event.nativeEvent.center;
       setRegion({
@@ -217,89 +240,107 @@ export default function MapScreen() {
       });
     }
   };
-  
-  /**
-   * Open the 
-   * @param {string} id - The provider ID
-   * @returns {void}
-   */
-  const handleMarkerPress = (id: string) => {
-    const provider = providers.find(c => c.id === id);
-    if (provider) {
-      setSelectedClinic(provider);
-      if (provider.coordinates) {
-        if (mapLibreLoaded && cameraRef.current) {
-          cameraRef.current.flyTo({
-            center: [provider.coordinates.longitude, provider.coordinates.latitude],
-            zoom: 14,
-            duration: 500,
-          });
-        } else if (legacyMapRef.current) {
-          legacyMapRef.current.animateToRegion({
-            ...provider.coordinates,
-            latitudeDelta: 0.015,
-            longitudeDelta: 0.015,
-          }, 500);
+
+  const handleMarkerPress = useCallback(
+    (id: string) => {
+      const provider = providers.find((c) => c.id === id);
+      if (provider) {
+        setSelectedClinic(provider);
+        setRouteCoords(null);
+
+        if (provider.coordinates) {
+          if (mapLibreLoaded && cameraRef.current) {
+            cameraRef.current.flyTo({
+              center: [
+                provider.coordinates.longitude,
+                provider.coordinates.latitude,
+              ],
+              zoom: 14,
+              duration: 500,
+            });
+          } else if (legacyMapRef.current) {
+            legacyMapRef.current.animateToRegion(
+              {
+                ...provider.coordinates,
+                latitudeDelta: 0.015,
+                longitudeDelta: 0.015,
+              },
+              500,
+            );
+          }
+        }
+
+        const origin = userLocation
+          ? {
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude,
+            }
+          : { latitude: region.latitude, longitude: region.longitude };
+
+        if (provider.coordinates) {
+          fetchRoute(origin, provider.coordinates);
         }
       }
-    }
-  };
+    },
+    [providers, setSelectedClinic, userLocation, region, fetchRoute],
+  );
 
-  /**
-   * Opens the filter sheet
-   * @returns {void}
-   */
   const handleFilterPress = () => {
     filterSheetRef.current?.open();
   };
 
-  /**
-   * Apply Filters
-   * @param {FilterState} next
-   * @returns {Promise<void>}
-   */
   const handleApplyFilters = async (next: FilterState) => {
     setFilters(next);
     searchClinics({
       query: search,
-      filters: {
-        specialty: next.services,
-      },
+      filters: { specialty: next.services },
       coordinates: {
         latitude: region.latitude,
         longitude: region.longitude,
         radius: next.perimeterKm,
-      }
+      },
     });
   };
 
-  /**
-   * Opens the booking sheet
-   * @returns {void}
-   */
   const handleReserve = () => {
     if (!selectedClinic) return;
     router.push({
-      pathname: '/booking',
+      pathname: "/booking",
       params: {
         providerName: selectedClinic.doctorName,
         specialty: selectedClinic.specialty,
-        avatarUri: selectedClinic.avatarUri ?? '',
+        avatarUri: selectedClinic.avatarUri ?? "",
         priceXCFA: String(selectedClinic.priceXCFA ?? 0),
         location: `${selectedClinic.clinicName}, ${selectedClinic.location}`,
       },
     } as never);
   };
 
-  // ================================================================================== //
-  // Render
-  // ================================================================================== //
+  const routeGeoJSON = useMemo(() => {
+    if (!routeCoords || routeCoords.length < 2) return null;
+    return {
+      type: "Feature" as const,
+      geometry: {
+        type: "LineString" as const,
+        coordinates: routeCoords.map((c) => [c.longitude, c.latitude]),
+      },
+      properties: {},
+    };
+  }, [routeCoords]);
+
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+      <StatusBar
+        barStyle="dark-content"
+        translucent
+        backgroundColor="transparent"
+      />
 
       {/* ── Map ── */}
-      {mapLibreLoaded && MapComponent && CameraComponent && UserLocationComponent ? (
+      {mapLibreLoaded &&
+      MapComponent &&
+      CameraComponent &&
+      UserLocationComponent ? (
         <MapComponent
           ref={mapRef}
           style={StyleSheet.absoluteFill}
@@ -316,6 +357,23 @@ export default function MapScreen() {
             }}
           />
           <UserLocationComponent heading />
+
+          {routeGeoJSON && GeoJSONSourceComponent && LayerComponent && (
+            <GeoJSONSourceComponent id="route-source" data={routeGeoJSON}>
+              <LayerComponent
+                id="route-line"
+                type="line"
+                style={{
+                  lineColor: colors.blue,
+                  lineWidth: 4,
+                  lineOpacity: 0.8,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              />
+            </GeoJSONSourceComponent>
+          )}
+
           {providers.map((provider) => (
             <MapMarker
               key={provider.id}
@@ -344,6 +402,15 @@ export default function MapScreen() {
             flipY={false}
             tileSize={256}
           />
+
+          {routeCoords && routeCoords.length >= 2 && (
+            <Polyline
+              coordinates={routeCoords}
+              strokeColor="#0D9488"
+              strokeWidth={4}
+            />
+          )}
+
           {providers.map((provider) => (
             <MapMarker
               key={provider.id}
@@ -359,9 +426,13 @@ export default function MapScreen() {
 
       {/* ── Overlay layer ── */}
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-        
-        {(isLoadingLocation || isLoading) && (
-          <View style={styles.loaderContainer}>
+        {(isLoadingLocation || isLoading || isRouteLoading) && (
+          <View
+            style={[
+              styles.loaderContainer,
+              isRouteLoading && styles.routeLoaderContainer,
+            ]}
+          >
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         )}
@@ -389,14 +460,17 @@ export default function MapScreen() {
                   name: selectedClinic.doctorName,
                   avatarUri: selectedClinic.avatarUri,
                   coverUri: selectedClinic.imageUri,
-                  distanceKm: userLocation && selectedClinic.coordinates 
-                    ? Number(getDistance(
-                        userLocation.latitude, 
-                        userLocation.longitude, 
-                        selectedClinic.coordinates.latitude, 
-                        selectedClinic.coordinates.longitude
-                      ).toFixed(1))
-                    : 0,
+                  distanceKm:
+                    userLocation && selectedClinic.coordinates
+                      ? Number(
+                          getDistance(
+                            userLocation.latitude,
+                            userLocation.longitude,
+                            selectedClinic.coordinates.latitude,
+                            selectedClinic.coordinates.longitude,
+                          ).toFixed(1),
+                        )
+                      : 0,
                   priceXCFA: selectedClinic.priceXCFA || 0,
                   address: selectedClinic.location,
                 }}
@@ -405,7 +479,6 @@ export default function MapScreen() {
             </View>
           </SafeAreaView>
         )}
-
       </View>
 
       {/* ── Filter BottomSheet ── */}
@@ -414,13 +487,12 @@ export default function MapScreen() {
         initialFilters={filters}
         onApply={handleApplyFilters}
       />
-
     </View>
   );
 }
 
 const TOP_BAR_PADDING =
-  Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) + 8 : 8;
+  Platform.OS === "android" ? (StatusBar.currentHeight ?? 24) + 8 : 8;
 
 const styles = StyleSheet.create({
   root: {
@@ -428,14 +500,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   safeTop: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
   },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingTop: TOP_BAR_PADDING,
     paddingHorizontal: 16,
@@ -445,7 +517,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   safeBottom: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
@@ -456,10 +528,14 @@ const styles = StyleSheet.create({
   },
   loaderContainer: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255,255,255,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 99,
   },
+  routeLoaderContainer: {
+    top: undefined,
+    bottom: 24,
+    justifyContent: "flex-end",
+  },
 });
-

@@ -187,145 +187,137 @@ export const DrugDetailBottomSheet = forwardRef<
       <AppBottomSheet
         ref={sheetRef}
         onClose={onClose}
-        scrollable={false}
+        scrollable
         containerStyle={styles.sheetContainer}
       >
-        {/* ── Main scrollable area ── */}
-        <ScrollView
-          style={styles.scroll}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          nestedScrollEnabled
-        >
-          {/* ── Header: image + info ── */}
-          <View style={styles.header}>
-            <View style={styles.imageWrap}>
-              <Image
-                source={{ uri: drug.imageUrl || "https://via.placeholder.com/150" }}
-                style={styles.drugImage}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.infoWrap}>
-              {drug.dosageForm && (
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryText} numberOfLines={2}>
-                    {drug.dosageForm}
-                  </Text>
-                </View>
-              )}
-              <Text style={styles.drugName} numberOfLines={2}>
-                {drug.name}
-              </Text>
-              {drug.referencePrice != null && (
-                <Text style={styles.drugPrice}>{drug.referencePrice} FCFA</Text>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          {/* ── Description ── */}
-          <View style={styles.descriptionWrap}>
-            <Text style={styles.descriptionText}>
-              Ce médicament est indiqué dans le traitement symptomatique des
-              douleurs légères à modérées et des états fébriles. Toujours lire
-              attentivement la notice avant utilisation et consulter un
-              professionnel de santé en cas de doute.
-            </Text>
-          </View>
-
-          {/* ── Tags ── */}
-          <View style={styles.tagsWrap}>
-            {tags.map((tag) => (
-              <Tag key={tag} label={tag} />
-            ))}
-          </View>
-
-          {/* ── CTA ── */}
-          <View style={styles.ctaWrap}>
-            <PrimaryButton
-              label={
-                hasReminder ? "Déjà dans mes rappels" : "Ajouter à mes rappels"
-              }
-              variant={hasReminder ? "outline" : "solid"}
-              size="md"
-              fullWidth
-              icon={
-                <Ionicons
-                  name={hasReminder ? "checkmark-circle" : "alarm-outline"}
-                  size={18}
-                  color={hasReminder ? colors.error : colors.white}
-                />
-              }
-              onPress={() => !hasReminder && drug && onAddToReminder?.(drug)}
-              isDisabled={hasReminder}
+        {/* ── Header: image + info ── */}
+        <View style={styles.header}>
+          <View style={styles.imageWrap}>
+            <Image
+              source={{ uri: drug.imageUrl || "https://via.placeholder.com/150" }}
+              style={styles.drugImage}
+              resizeMode="contain"
             />
           </View>
-
-          <View style={styles.divider} />
-
-          {/* ── Tab bar ── */}
-          <View style={styles.tabBarWrap}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tabBarContent}
-            >
-              {TABS.map((tab) => (
-                <TouchableOpacity
-                  key={tab}
-                  style={[styles.tab, activeTab === tab && styles.tabActive]}
-                  onPress={() => setActiveTab(tab)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      activeTab === tab && styles.tabLabelActive,
-                    ]}
-                  >
-                    {tab}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+          <View style={styles.infoWrap}>
+            {drug.dosageForm && (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryText} numberOfLines={2}>
+                  {drug.dosageForm}
+                </Text>
+              </View>
+            )}
+            <Text style={styles.drugName} numberOfLines={2}>
+              {drug.name}
+            </Text>
+            {drug.referencePrice != null && (
+              <Text style={styles.drugPrice}>{drug.referencePrice} FCFA</Text>
+            )}
           </View>
+        </View>
 
-          {/* ── Tab content (expanded inline) ── */}
-          <View style={styles.tabContent}>
-            {TAB_CONTENT[activeTab].map((section, i) => (
-              <View
-                key={i}
-                style={[styles.section, i > 0 && styles.sectionSpacing]}
+        <View style={styles.divider} />
+
+        {/* ── Description ── */}
+        <View style={styles.descriptionWrap}>
+          <Text style={styles.descriptionText}>
+            Ce médicament est indiqué dans le traitement symptomatique des
+            douleurs légères à modérées et des états fébriles. Toujours lire
+            attentivement la notice avant utilisation et consulter un
+            professionnel de santé en cas de doute.
+          </Text>
+        </View>
+
+        {/* ── Tags ── */}
+        <View style={styles.tagsWrap}>
+          {tags.map((tag) => (
+            <Tag key={tag} label={tag} />
+          ))}
+        </View>
+
+        {/* ── CTA ── */}
+        <View style={styles.ctaWrap}>
+          <PrimaryButton
+            label={
+              hasReminder ? "Déjà dans mes rappels" : "Ajouter à mes rappels"
+            }
+            variant={hasReminder ? "outline" : "solid"}
+            size="md"
+            fullWidth
+            icon={
+              <Ionicons
+                name={hasReminder ? "checkmark-circle" : "alarm-outline"}
+                size={18}
+                color={hasReminder ? colors.error : colors.white}
+              />
+            }
+            onPress={() => !hasReminder && drug && onAddToReminder?.(drug)}
+            isDisabled={hasReminder}
+          />
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* ── Tab bar ── */}
+        <View style={styles.tabBarWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabBarContent}
+          >
+            {TABS.map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.tab, activeTab === tab && styles.tabActive]}
+                onPress={() => setActiveTab(tab)}
+                activeOpacity={0.7}
               >
-                <Text style={styles.sectionTitle}>{section.title}</Text>
-                <Text style={styles.sectionBody}>{section.body}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* ── "Vous aimerez aussi" ── */}
-          {relatedDrugs.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              <View style={styles.relatedSection}>
-                <Text style={styles.relatedTitle}>Vous aimerez aussi</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.relatedList}
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    activeTab === tab && styles.tabLabelActive,
+                  ]}
                 >
-                  {relatedDrugs.map((item) => (
-                    <RelatedCard key={item.id} item={item} />
-                  ))}
-                </ScrollView>
-              </View>
-            </>
-          )}
+                  {tab}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
 
-          <View style={styles.scrollPad} />
-        </ScrollView>
+        {/* ── Tab content (expanded inline) ── */}
+        <View style={styles.tabContent}>
+          {TAB_CONTENT[activeTab].map((section, i) => (
+            <View
+              key={i}
+              style={[styles.section, i > 0 && styles.sectionSpacing]}
+            >
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              <Text style={styles.sectionBody}>{section.body}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* ── "Vous aimerez aussi" ── */}
+        {relatedDrugs.length > 0 && (
+          <>
+            <View style={styles.divider} />
+            <View style={styles.relatedSection}>
+              <Text style={styles.relatedTitle}>Vous aimerez aussi</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.relatedList}
+              >
+                {relatedDrugs.map((item) => (
+                  <RelatedCard key={item.id} item={item} />
+                ))}
+              </ScrollView>
+            </View>
+          </>
+        )}
+
+        <View style={styles.scrollPad} />
 
         {/* ── Footer ── */}
         <View style={styles.footer}>

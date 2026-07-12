@@ -154,7 +154,7 @@ export const BookingBottomSheet = forwardRef<BookingBottomSheetRef, Props>(
         ref={sheetRef}
         snapPoints={["70%", "92%"]}
         onClose={onClose}
-        scrollable={false}
+        scrollable
         containerStyle={styles.sheet}
       >
         <View style={styles.topBar}>

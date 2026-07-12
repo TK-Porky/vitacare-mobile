@@ -8,6 +8,8 @@ import type {
   AppointmentsListQuery
 } from "../types/api-requests";
 
+const CACHE_TTL = 5 * 60 * 1000;
+
 interface AppointmentState {
   appointments: AppointmentResponse[];
   upcomingAppointments: AppointmentResponse[];
@@ -15,6 +17,7 @@ interface AppointmentState {
   selectedAppointment: AppointmentResponse | null;
   isLoading: boolean;
   error: string | null;
+  lastFetch: number | null;
 
   // Actions
   fetchAppointments: (query?: AppointmentsListQuery) => Promise<void>;
@@ -35,14 +38,18 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
   selectedAppointment: null,
   isLoading: false,
   error: null,
+  lastFetch: null,
 
   fetchAppointments: async (query) => {
-    set({ isLoading: true, error: null });
+    const state = get();
+    if (state.appointments.length > 0 && state.isLoading) return;
+    if (state.appointments.length > 0 && state.lastFetch && Date.now() - state.lastFetch < CACHE_TTL) return;
+    if (!state.appointments.length) set({ isLoading: true, error: null });
     try {
       const appointments = await appointmentService.getAppointments(query);
-      set({ appointments });
+      set({ appointments, lastFetch: Date.now() });
     } catch (e: any) {
-      set({ error: e.message });
+      if (!state.appointments.length) set({ error: e.message });
     } finally {
       set({ isLoading: false });
     }
@@ -52,7 +59,7 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const appointments = await appointmentService.getUpcomingAppointments();
-      set({ upcomingAppointments: appointments });
+      set({ upcomingAppointments: appointments, lastFetch: Date.now() });
     } catch (e: any) {
       set({ error: e.message });
     } finally {
@@ -64,7 +71,7 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const appointments = await appointmentService.getTodayAppointments();
-      set({ todayAppointments: appointments });
+      set({ todayAppointments: appointments, lastFetch: Date.now() });
     } catch (e: any) {
       set({ error: e.message });
     } finally {
@@ -90,7 +97,8 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
       const newAppointment = await appointmentService.createAppointment(data);
       set((state) => ({
         appointments: [newAppointment, ...state.appointments],
-        upcomingAppointments: [newAppointment, ...state.upcomingAppointments]
+        upcomingAppointments: [newAppointment, ...state.upcomingAppointments],
+        lastFetch: Date.now(),
       }));
     } catch (e: any) {
       set({ error: e.message });
@@ -120,7 +128,8 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
       set((state) => ({
         appointments: state.appointments.map(a => a.id === id ? updated : a),
         upcomingAppointments: state.upcomingAppointments.map(a => a.id === id ? updated : a),
-        selectedAppointment: state.selectedAppointment?.id === id ? updated : state.selectedAppointment
+        selectedAppointment: state.selectedAppointment?.id === id ? updated : state.selectedAppointment,
+        lastFetch: Date.now(),
       }));
     } catch (e: any) {
       set({ error: e.message });

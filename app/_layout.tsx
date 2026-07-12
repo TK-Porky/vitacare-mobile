@@ -5,9 +5,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router, useSegments } from "expo-router";
-import { View, ActivityIndicator, LogBox } from "react-native";
+import { View, ActivityIndicator, LogBox, InteractionManager } from "react-native";
 import * as Device from "expo-device";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import {
   useFonts,
@@ -112,6 +112,7 @@ export default function RootLayout() {
     DMSans_600SemiBold,
     DMSans_700Bold,
   });
+  const [fontsTimedOut, setFontsTimedOut] = useState(false);
 
   // ─── Refs ──────────────────────────────────────────────────────────────
 
@@ -119,37 +120,49 @@ export default function RootLayout() {
 
   // ─── Effets ─────────────────────────────────────────────────────────────
 
-  // Initialisation des notifications
+  // Font loading timeout: show UI with system fonts after 2.5s
   useEffect(() => {
-    const setupNotifications = async () => {
-      try {
-        // Enregistrer le service de notifications (configure handler, canaux, token)
-        await notificationService.register();
-
-        // Récupérer le token FCM
-        const fcmToken = await notificationService.getFCMToken();
-
-        // Enregistrer le device (si token disponible)
-        if (fcmToken) {
-          const deviceInfo = await getDeviceInfo();
-          await notificationService.registerDevice(fcmToken, deviceInfo);
-        }
-
-        // Configurer le handler de messages en arrière-plan (Firebase)
-        messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-          console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
-        });
-      } catch (error) {
-        console.error("❌ Erreur d'initialisation des notifications:", error);
-      }
-    };
-
-    setupNotifications();
+    const timer = setTimeout(() => setFontsTimedOut(true), 2500);
+    return () => clearTimeout(timer);
   }, []);
+
+  const ready = loaded || fontsTimedOut;
+
+  // Masquer le SplashScreen dès que prêt
+  useEffect(() => {
+    if (ready) {
+      SplashScreen.hideAsync();
+    }
+  }, [ready]);
+
+  // Initialisation des notifications (différée après first paint)
+  useEffect(() => {
+    if (!ready) return;
+
+    InteractionManager.runAfterInteractions(() => {
+      const setupNotifications = async () => {
+        try {
+          await notificationService.register();
+          const fcmToken = await notificationService.getFCMToken();
+          if (fcmToken) {
+            const deviceInfo = await getDeviceInfo();
+            await notificationService.registerDevice(fcmToken, deviceInfo);
+          }
+          messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+            console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
+          });
+        } catch (error) {
+          console.error("❌ Erreur d'initialisation des notifications:", error);
+        }
+      };
+      setupNotifications();
+    });
+  }, [ready]);
 
   // Listeners de notifications
   useEffect(() => {
-    // Écouter les notifications reçues en foreground
+    if (!ready) return;
+
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
         console.log("📥 Notification reçue en foreground:", notification);
@@ -166,22 +179,14 @@ export default function RootLayout() {
         });
       });
 
-    // Cleanup
     return () => {
       if (notificationListener.current) {
         notificationListener.current.remove();
       }
     };
-  }, []);
+  }, [ready]);
 
-  // Masquer le SplashScreen quand les fonts sont chargées
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) return null;
+  if (!ready) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

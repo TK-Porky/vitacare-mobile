@@ -115,31 +115,43 @@ export const useAuthStore = create<AuthState>()(
       hydrate: async () => {
         try {
           const token = await SecureStore.getItemAsync(KEYS.ACCESS_TOKEN);
-          if (token) {
-            // Check if user is already in state from persist
-            if (get().user && get().accessToken === token) {
-              const res = await apiClient.get<UserProfile>(
-                "/users/patients/profile",
-              );
-              set({ user: res.data, isHydrated: true });
-              return;
+
+          if (!token) {
+            set({ isHydrated: true });
+            return;
+          }
+
+          // Token + cached user from persist → unblock UI immediately
+          if (get().user && get().accessToken === token) {
+            set({ isHydrated: true });
+            try {
+              const res = await apiClient.get<UserProfile>("/users/patients/profile");
+              if (res.success && res.data) {
+                set({ user: res.data });
+              }
+            } catch {
+              // Silently fail – cached data is sufficient
             }
+            return;
+          }
 
-            const res = await apiClient.get<UserProfile>(
-              "/users/patients/profile",
-            );
-
+          // Token but no cached user → set token, unblock UI, fetch profile
+          set({ accessToken: token, isHydrated: true });
+          try {
+            const res = await apiClient.get<UserProfile>("/users/patients/profile");
             if (res.success && res.data) {
-              set({ accessToken: token, user: res.data });
+              set({ user: res.data });
             } else {
               await clearTokens();
               set({ user: null, accessToken: null });
             }
+          } catch {
+            await clearTokens();
+            set({ user: null, accessToken: null });
           }
         } catch {
           await clearTokens();
           set({ user: null, accessToken: null });
-        } finally {
           set({ isHydrated: true });
         }
       },
@@ -348,9 +360,7 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         accessToken: state.accessToken,
       }),
-      onRehydrateStorage: () => (state) => {
-        if (state) state.hydrate();
-      },
+      onRehydrateStorage: () => () => {},
     },
   ),
 );

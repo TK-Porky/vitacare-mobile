@@ -115,25 +115,26 @@ export const AppBottomSheet = forwardRef<AppBottomSheetRef, Props>(
       [footer, insets.bottom],
     );
 
-    // Vérifier si un élément est une FlatList ou VirtualizedList
-    const isFlatListComponent = useCallback((element: any): boolean => {
-      if (!isValidElement(element)) return false;
+    // Détection du type de contenu – mémorisée
+    const contentMeta = useMemo(() => {
+      const array = Children.toArray(children);
+      const hasFlatList = array.some((child) => {
+        if (!isValidElement(child)) return false;
+        const t = (child.type as any);
+        const n = t?.displayName || t?.name || "";
+        return n === "FlatList" || n === "VirtualizedList" || n === "BottomSheetFlatList";
+      });
+      const flatListChild = hasFlatList
+        ? (array.find((child) => {
+            if (!isValidElement(child)) return false;
+            const t = (child.type as any);
+            const n = t?.displayName || t?.name || "";
+            return n === "FlatList" || n === "VirtualizedList" || n === "BottomSheetFlatList";
+          }) as React.ReactElement<FlatListProps> | undefined)
+        : undefined;
+      return { hasFlatList, flatListChild };
+    }, [children]);
 
-      const type = element.type;
-      if (!type || typeof type === "string") return false;
-
-      // Vérifier displayName et name en toute sécurité
-      const typeObj = type as any;
-      const displayName = typeObj.displayName || typeObj.name || "";
-
-      return (
-        displayName === "FlatList" ||
-        displayName === "VirtualizedList" ||
-        displayName === "BottomSheetFlatList"
-      );
-    }, []);
-
-    // Détection du type de contenu pour éviter l'erreur VirtualizedList
     const renderContent = useCallback(() => {
       if (!scrollable) {
         return (
@@ -145,77 +146,29 @@ export const AppBottomSheet = forwardRef<AppBottomSheetRef, Props>(
         );
       }
 
-      // Vérifier si les enfants contiennent une FlatList
-      const hasFlatList = Children.toArray(children).some((child) =>
-        isFlatListComponent(child),
-      );
+      const { hasFlatList, flatListChild } = contentMeta;
 
-      if (hasFlatList) {
-        // Extraire les props de la FlatList si c'est l'enfant direct
-        const flatListChild = Children.toArray(children).find((child) =>
-          isFlatListComponent(child),
-        ) as React.ReactElement<FlatListProps>;
-
-        if (flatListChild && isValidElement(flatListChild)) {
-          // ✅ Typage explicite des props
-          const props = flatListChild.props as FlatListProps;
-          const { data, renderItem, keyExtractor } = props;
-
-          // ✅ Filtrer les props pour n'inclure que celles qui sont valides
-          const validProps: any = {};
-
-          // Ajouter les props standard si elles existent
-          if (data !== undefined) validProps.data = data;
-          if (renderItem !== undefined) validProps.renderItem = renderItem;
-          if (keyExtractor !== undefined)
-            validProps.keyExtractor = keyExtractor;
-
-          // ✅ Ajouter les props restantes manuellement (sans spread operator)
-          const excludedKeys = ["data", "renderItem", "keyExtractor"];
-          Object.keys(props).forEach((key) => {
-            if (!excludedKeys.includes(key)) {
-              validProps[key] = props[key];
-            }
-          });
-
-          return (
-            <BottomSheetFlatList
-              style={[styles.content, containerStyle]}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={[
-                styles.scrollContent,
-                footer ? styles.scrollContentWithFooter : undefined,
-              ]}
-              {...validProps}
-            />
-          );
-        }
-
-        // Fallback: utiliser BottomSheetFlatList avec les enfants comme header
-        const HeaderComponent = useCallback(
-          () => <View style={styles.headerContainer}>{children}</View>,
-          [children],
-        );
+      if (hasFlatList && flatListChild && isValidElement(flatListChild)) {
+        const props = flatListChild.props;
+        const { data, renderItem, keyExtractor, ...rest } = props;
 
         return (
           <BottomSheetFlatList
             style={[styles.content, containerStyle]}
-            data={[]}
-            renderItem={() => null}
-            ListHeaderComponent={HeaderComponent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={[
               styles.scrollContent,
               footer ? styles.scrollContentWithFooter : undefined,
             ]}
-            keyExtractor={(_, index) => `key-${index}`}
+            data={data}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            {...rest}
           />
         );
       }
 
-      // Pas de FlatList, utiliser ScrollView standard
       return (
         <BottomSheetScrollView
           style={[styles.content, containerStyle]}
@@ -230,7 +183,7 @@ export const AppBottomSheet = forwardRef<AppBottomSheetRef, Props>(
           {children}
         </BottomSheetScrollView>
       );
-    }, [children, containerStyle, footer, scrollable, isFlatListComponent]);
+    }, [children, containerStyle, footer, scrollable, contentMeta]);
 
     return (
       <BottomSheetModal

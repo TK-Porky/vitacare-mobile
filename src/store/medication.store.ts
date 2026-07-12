@@ -2,12 +2,15 @@ import { create } from "zustand";
 import { medicationService } from "../services/medication.service";
 import { StoreMedicationResponse } from "../types/api-responses";
 
+const CACHE_TTL = 5 * 60 * 1000;
+
 interface MedicationState {
   medications: StoreMedicationResponse[];
   isLoading: boolean;
   error: string | null;
   searchResults: StoreMedicationResponse[];
   isSearching: boolean;
+  lastFetch: number | null;
 
   fetchMedications: (params?: { searchQuery?: string; page?: number; size?: number }) => Promise<void>;
   fetchMedicationDetails: (id: string) => Promise<StoreMedicationResponse | null>;
@@ -17,20 +20,24 @@ interface MedicationState {
   reset: () => void;
 }
 
-export const useMedicationStore = create<MedicationState>((set) => ({
+export const useMedicationStore = create<MedicationState>((set, get) => ({
   medications: [],
   isLoading: false,
   error: null,
   searchResults: [],
   isSearching: false,
+  lastFetch: null,
 
   fetchMedications: async (params?) => {
-    set({ isLoading: true, error: null });
+    const state = get();
+    if (state.medications.length > 0 && state.isLoading) return;
+    if (state.medications.length > 0 && state.lastFetch && Date.now() - state.lastFetch < CACHE_TTL) return;
+    if (!state.medications.length) set({ isLoading: true, error: null });
     try {
       const medications = await medicationService.getStoreMedications(params);
-      set({ medications, error: null });
+      set({ medications, lastFetch: Date.now(), error: null });
     } catch (e: any) {
-      set({ error: e.message || "Failed to fetch medications" });
+      if (!state.medications.length) set({ error: e.message || "Failed to fetch medications" });
     } finally {
       set({ isLoading: false });
     }
@@ -80,6 +87,7 @@ export const useMedicationStore = create<MedicationState>((set) => ({
       error: null,
       searchResults: [],
       isSearching: false,
+      lastFetch: null,
     });
   },
 }));
