@@ -231,7 +231,12 @@
     "send": "Envoyer",
     "skip": "Passer",
     "submit": "Soumettre",
-    "success": "Succès"
+    "success": "Succès",
+    "confirmSheet": {
+      "title": "Confirmation",
+      "cancel": "Annuler",
+      "confirm": "Confirmer"
+    }
   },
   "date": {
     "months": {
@@ -433,6 +438,8 @@
       "title": "Quelle langue parlez-vous ?"
     },
     "location": {
+      "permissionDenied": "Permission de localisation refusée",
+      "searching": "Recherche de votre position...",
       "subtitle": "Nous vous trouverons les meilleurs professionnels de santé près de chez vous",
       "title": "Où êtes-vous situé ?"
     },
@@ -479,6 +486,20 @@
   },
   "profile": {
     "about": "À propos",
+    "gender": {
+      "male": "Homme",
+      "female": "Femme"
+    },
+    "bloodGroup": {
+      "a+": "A+",
+      "a-": "A-",
+      "b+": "B+",
+      "b-": "B-",
+      "ab+": "AB+",
+      "ab-": "AB-",
+      "o+": "O+",
+      "o-": "O-"
+    },
     "activityScreen": {
       "count": "{{count}} rendez-vous",
       "empty": "Aucune activité",
@@ -567,7 +588,21 @@
       "unsavedChanges": "Modifications non sauvegardées",
       "uploadError": "Impossible de télécharger l'image",
       "uploadErrorMessage": "Impossible d'envoyer la photo. Vérifiez votre connexion et réessayez.",
-      "uploading": "Téléchargement..."
+      "uploading": "Téléchargement...",
+      "gender": "Genre",
+      "genderPlaceholder": "Sélectionnez votre genre",
+      "emergencyName": "Contact d'urgence",
+      "emergencyNamePlaceholder": "Nom du contact",
+      "emergencyPhone": "Téléphone d'urgence",
+      "emergencyPhonePlaceholder": "Numéro du contact",
+      "sectionPersonal": "Informations personnelles",
+      "sectionMedical": "Informations médicales",
+      "sectionEmergency": "Contact d'urgence",
+      "discardTitle": "Modifications non sauvegardées",
+      "discardMessage": "Vous avez des modifications non enregistrées. Voulez-vous les quitter ?",
+      "discardConfirm": "Quitter sans enregistrer",
+      "keepEditing": "Continuer les modifications",
+      "loadingSkeleton": "Chargement du profil..."
     },
     "help": "Aide",
     "helpScreen": {
@@ -595,7 +630,7 @@
       "report": "Signaler un problème",
       "sendEmail": "Envoyer un e-mail",
       "title": "Aide",
-      "version": "VitaCare — Version 1.0.0"
+      "version": "VitaCare — Version 1.1.0"
     },
     "language": "Langue",
     "languageScreen": {

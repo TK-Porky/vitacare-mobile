@@ -35,9 +35,12 @@ export interface UserProfile {
   phoneNumber?: string;
   avatarUrl?: string;
   dateOfBirth?: string;
+  gender?: string;
   bloodGroup?: string;
   medicalHistory?: string;
   address?: string;
+  emergencyName?: string;
+  emergencyPhone?: string;
 }
 
 export interface BackendAuthResponse {

@@ -231,7 +231,12 @@
     "send": "Send",
     "skip": "Skip",
     "submit": "Submit",
-    "success": "Success"
+    "success": "Success",
+    "confirmSheet": {
+      "title": "Confirmation",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    }
   },
   "date": {
     "months": {
@@ -433,6 +438,8 @@
       "title": "What language do you speak?"
     },
     "location": {
+      "permissionDenied": "Location permission denied",
+      "searching": "Searching for your location...",
       "subtitle": "We'll find the best healthcare professionals near you",
       "title": "Where are you located?"
     },
@@ -479,6 +486,20 @@
   },
   "profile": {
     "about": "About",
+    "gender": {
+      "male": "Male",
+      "female": "Female"
+    },
+    "bloodGroup": {
+      "a+": "A+",
+      "a-": "A-",
+      "b+": "B+",
+      "b-": "B-",
+      "ab+": "AB+",
+      "ab-": "AB-",
+      "o+": "O+",
+      "o-": "O-"
+    },
     "activityScreen": {
       "count": "{{count}} appointments",
       "empty": "No activity",
@@ -567,7 +588,21 @@
       "unsavedChanges": "Unsaved changes",
       "uploadError": "Could not upload the image",
       "uploadErrorMessage": "Could not upload the photo. Check your connection and try again.",
-      "uploading": "Uploading..."
+      "uploading": "Uploading...",
+      "gender": "Gender",
+      "genderPlaceholder": "Select your gender",
+      "emergencyName": "Emergency contact",
+      "emergencyNamePlaceholder": "Contact name",
+      "emergencyPhone": "Emergency phone",
+      "emergencyPhonePlaceholder": "Contact phone",
+      "sectionPersonal": "Personal information",
+      "sectionMedical": "Medical information",
+      "sectionEmergency": "Emergency contact",
+      "discardTitle": "Unsaved changes",
+      "discardMessage": "You have unsaved changes. Do you want to discard them?",
+      "discardConfirm": "Discard changes",
+      "keepEditing": "Keep editing",
+      "loadingSkeleton": "Loading profile..."
     },
     "help": "Help",
     "helpScreen": {
@@ -595,7 +630,7 @@
       "report": "Report a problem",
       "sendEmail": "Send an email",
       "title": "Help",
-      "version": "VitaCare — Version 1.0.0"
+      "version": "VitaCare — Version 1.1.0"
     },
     "language": "Language",
     "languageScreen": {

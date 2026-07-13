@@ -29,9 +29,9 @@ export default function OnboardingLanguageScreen() {
     try {
       i18next.changeLanguage(selected);
       await updatePreferences({ language: selected });
-      router.push("/(auth)/onboarding-success");
+      router.push("/(auth)/onboarding/success");
     } catch {
-      router.push("/(auth)/onboarding-success");
+      router.push("/(auth)/onboarding/success");
     }
   };
 

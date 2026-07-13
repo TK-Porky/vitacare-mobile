@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -14,9 +14,10 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Linking,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Camera, X } from "lucide-react-native";
+import { Camera } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { useForm, Controller } from "react-hook-form";
@@ -30,7 +31,11 @@ import {
   EmailInput,
   PhoneInput,
   HelperText,
+  ChipSelector,
+  ConfirmSheet,
+  DatePickerSheet,
 } from "@/components";
+import type { ConfirmSheetRef, DatePickerSheetRef } from "@/components";
 import { router } from "expo-router";
 import { useProfile } from "@/hooks";
 import { useAuthStore } from "@/store";
@@ -38,9 +43,24 @@ import { getUpdateProfileSchema, UpdateProfileInput } from "@/schemas";
 
 type AvatarStatus = "idle" | "uploading" | "success" | "error";
 
+const GENDER_OPTIONS = [
+  { labelKey: "male", value: "male" },
+  { labelKey: "female", value: "female" },
+];
+
+const BLOOD_GROUP_OPTIONS = [
+  { label: "A+", value: "A+" },
+  { label: "A-", value: "A-" },
+  { label: "B+", value: "B+" },
+  { label: "B-", value: "B-" },
+  { label: "AB+", value: "AB+" },
+  { label: "AB-", value: "AB-" },
+  { label: "O+", value: "O+" },
+  { label: "O-", value: "O-" },
+];
+
 export default function EditProfileScreen() {
   const { t } = useTranslation();
-
   const user = useAuthStore((s) => s.user);
   const {
     updateProfile,
@@ -54,7 +74,11 @@ export default function EditProfileScreen() {
 
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
   const [avatarStatus, setAvatarStatus] = useState<AvatarStatus>("idle");
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+
+  const confirmSheetRef = useRef<ConfirmSheetRef>(null);
+  const datePickerSheetRef = useRef<DatePickerSheetRef>(null);
+  const [dateFieldTarget, setDateFieldTarget] = useState<string>("");
 
   const {
     control,
@@ -62,16 +86,21 @@ export default function EditProfileScreen() {
     formState: { errors, isDirty, isValid },
     reset,
     watch,
+    setValue,
   } = useForm<UpdateProfileInput>({
     resolver: zodResolver(getUpdateProfileSchema(t)),
     defaultValues: useMemo(
       () => ({
         fullName: user?.fullName || "",
         email: user?.email || "",
+        phoneNumber: user?.phoneNumber || "",
+        gender: user?.gender || "",
         dateOfBirth: user?.dateOfBirth || "",
         bloodGroup: user?.bloodGroup || "",
         medicalHistory: user?.medicalHistory || "",
         address: user?.address || "",
+        emergencyName: user?.emergencyName || "",
+        emergencyPhone: user?.emergencyPhone || "",
       }),
       [user],
     ),
@@ -81,20 +110,11 @@ export default function EditProfileScreen() {
   const formValues = watch();
 
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
-      () => setKeyboardVisible(true),
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => setKeyboardVisible(false),
-    );
-
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
+    if (user) {
+      const timer = setTimeout(() => setProfileLoaded(true), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (success) {
@@ -111,9 +131,25 @@ export default function EditProfileScreen() {
   }, [success, clearState, t]);
 
   useEffect(() => {
-    return () => {
-      clearState();
+    const onBackPress = () => {
+      if (isDirty) {
+        confirmSheetRef.current?.open();
+        return true;
+      }
+      return false;
     };
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => sub.remove();
+  }, [isDirty]);
+
+  const handleDiscardBack = useCallback(() => {
+    reset();
+    clearState();
+    router.back();
+  }, [reset, clearState]);
+
+  useEffect(() => {
+    return () => clearState();
   }, [clearState]);
 
   const handleAvatarPress = useCallback(async () => {
@@ -121,7 +157,6 @@ export default function EditProfileScreen() {
       Alert.alert(t("common.loading"), t("profile.editScreen.avatarUploadInProgress"));
       return;
     }
-
     try {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -139,7 +174,6 @@ export default function EditProfileScreen() {
         );
         return;
       }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -148,20 +182,11 @@ export default function EditProfileScreen() {
         base64: false,
         exif: false,
       });
-
-      if (result.canceled || !result.assets[0]) {
-        return;
-      }
-
+      if (result.canceled || !result.assets[0]) return;
       const asset = result.assets[0];
-
       try {
         const fileInfo = await FileSystem.getInfoAsync(asset.uri);
-        if (
-          fileInfo.exists &&
-          fileInfo.size &&
-          fileInfo.size > 5 * 1024 * 1024
-        ) {
+        if (fileInfo.exists && fileInfo.size && fileInfo.size > 5 * 1024 * 1024) {
           Alert.alert(
             t("profile.editScreen.fileTooLarge"),
             t("profile.editScreen.fileTooLargeMessage"),
@@ -169,108 +194,65 @@ export default function EditProfileScreen() {
           );
           return;
         }
-      } catch (error) {
-        console.warn("Failed to get file info:", error);
-      }
-
+      } catch (_) { /* file info not critical */ }
       const fileExtension = asset.uri.split(".").pop() || "jpg";
       const fileName = `avatar-${Date.now()}.${fileExtension}`;
       const fileType = asset.mimeType || `image/${fileExtension}`;
-
       setLocalAvatarUri(asset.uri);
       setAvatarStatus("uploading");
-
       try {
-        await uploadAvatar({
-          fileUri: asset.uri,
-          fileName,
-          fileType,
-        });
+        await uploadAvatar({ fileUri: asset.uri, fileName, fileType });
         setAvatarStatus("success");
-
-        Alert.alert(
-          t("profile.editScreen.avatarUpdated"),
-          t("profile.editScreen.photoUpdatedMessage"),
-          [{ text: t("common.ok") }],
-        );
-      } catch (uploadError) {
-        console.error("Avatar upload error:", uploadError);
+        Alert.alert(t("profile.editScreen.avatarUpdated"), t("profile.editScreen.photoUpdatedMessage"), [{ text: t("common.ok") }]);
+      } catch {
         setAvatarStatus("error");
         setLocalAvatarUri(null);
-        Alert.alert(
-          t("common.error"),
-          t("profile.editScreen.uploadErrorMessage"),
-          [{ text: t("common.ok") }],
-        );
+        Alert.alert(t("common.error"), t("profile.editScreen.uploadErrorMessage"), [{ text: t("common.ok") }]);
       }
-    } catch (error) {
-      console.error("Avatar picker error:", error);
+    } catch {
       setAvatarStatus("error");
-      Alert.alert(
-        t("common.error"),
-        t("profile.editScreen.unexpectedError"),
-        [{ text: t("common.ok") }],
-      );
+      Alert.alert(t("common.error"), t("profile.editScreen.unexpectedError"), [{ text: t("common.ok") }]);
     }
   }, [isUploadingAvatar, avatarStatus, uploadAvatar, t]);
 
   const handleRemoveAvatar = useCallback(() => {
-    Alert.alert(
-      t("profile.editScreen.deletePhoto"),
-      t("profile.editScreen.deletePhotoConfirm"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("common.delete"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLocalAvatarUri(null);
-              setAvatarStatus("idle");
-              Alert.alert(
-                t("profile.editScreen.photoDeleted"),
-                t("profile.editScreen.photoDeletedMessage"),
-              );
-            } catch (error) {
-              Alert.alert(t("common.error"), t("profile.editScreen.deletePhotoError"));
-            }
-          },
+    Alert.alert(t("profile.editScreen.deletePhoto"), t("profile.editScreen.deletePhotoConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("common.delete"),
+        style: "destructive",
+        onPress: async () => {
+          setLocalAvatarUri(null);
+          setAvatarStatus("idle");
+          Alert.alert(t("profile.editScreen.photoDeleted"), t("profile.editScreen.photoDeletedMessage"));
         },
-      ],
-    );
+      },
+    ]);
   }, [t]);
 
   const onSave = useCallback(
     async (data: UpdateProfileInput) => {
       try {
         Keyboard.dismiss();
-
         if (!isDirty) {
-          Alert.alert(
-            t("profile.editScreen.noChanges"),
-            t("profile.editScreen.noChangesMessage"),
-            [{ text: t("common.ok") }],
-          );
+          Alert.alert(t("profile.editScreen.noChanges"), t("profile.editScreen.noChangesMessage"), [{ text: t("common.ok") }]);
           return;
         }
-
         const cleanData = {
           fullName: data.fullName.trim(),
           email: data.email.trim(),
-          dateOfBirth: data.dateOfBirth,
-          bloodGroup: data.bloodGroup,
-          medicalHistory: data.medicalHistory,
-          address: data.address,
+          phoneNumber: data.phoneNumber?.trim() || undefined,
+          gender: data.gender || undefined,
+          dateOfBirth: data.dateOfBirth || undefined,
+          bloodGroup: data.bloodGroup || undefined,
+          medicalHistory: data.medicalHistory || undefined,
+          address: data.address || undefined,
+          emergencyName: data.emergencyName?.trim() || undefined,
+          emergencyPhone: data.emergencyPhone?.trim() || undefined,
         };
-
         await updateProfile(cleanData);
-      } catch (error) {
-        console.error("Save profile error:", error);
-        Alert.alert(
-          t("common.error"),
-          t("profile.editScreen.saveErrorMessage"),
-          [{ text: t("common.ok") }],
-        );
+      } catch {
+        Alert.alert(t("common.error"), t("profile.editScreen.saveErrorMessage"), [{ text: t("common.ok") }]);
       }
     },
     [isDirty, updateProfile, t],
@@ -279,29 +261,56 @@ export default function EditProfileScreen() {
   const getAvatarUri = useMemo(() => {
     if (localAvatarUri) return localAvatarUri;
     if (user?.avatarUrl) return user.avatarUrl;
-    return "https://randomuser.me/api/portraits/men/75.jpg";
+    return undefined;
   }, [localAvatarUri, user?.avatarUrl]);
 
   const getAvatarStatusText = useMemo(() => {
     switch (avatarStatus) {
-      case "uploading":
-        return t("profile.editScreen.avatarUploading");
-      case "success":
-        return t("profile.editScreen.avatarUpdated");
-      case "error":
-        return t("profile.editScreen.avatarFailed");
-      default:
-        return t("profile.editScreen.avatarHint");
+      case "uploading": return t("profile.editScreen.avatarUploading");
+      case "success": return t("profile.editScreen.avatarUpdated");
+      case "error": return t("profile.editScreen.avatarFailed");
+      default: return t("profile.editScreen.avatarHint");
     }
   }, [avatarStatus, t]);
 
   const isAvatarUploading = avatarStatus === "uploading" || isUploadingAvatar;
 
+  const handleDatePick = useCallback(
+    (field: string) => {
+      setDateFieldTarget(field);
+      datePickerSheetRef.current?.open();
+    },
+    [],
+  );
+
+  const handleDateChange = useCallback(
+    (dateString: string) => {
+      setValue(dateFieldTarget as any, dateString, { shouldDirty: true });
+    },
+    [setValue, dateFieldTarget],
+  );
+
+  if (!profileLoaded) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <StatusBar barStyle="dark-content" />
+        <TopBar title={t("profile.editScreen.title")} />
+        <View style={styles.skeletonContainer}>
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={styles.skeletonRow}>
+              <View style={styles.skeletonLabel} />
+              <View style={styles.skeletonField} />
+            </View>
+          ))}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <SafeAreaView style={styles.safe}>
         <StatusBar barStyle="dark-content" />
-
         <TopBar title={t("profile.editScreen.title")} />
 
         <KeyboardAvoidingView
@@ -324,28 +333,24 @@ export default function EditProfileScreen() {
                 accessibilityLabel={t("accessibility.changeAvatar")}
                 accessibilityHint={t("accessibility.chooseAvatarHint")}
               >
-                <Image
-                  source={{
-                    uri:
-                      getAvatarUri ||
-                      "https://randomuser.me/api/portraits/men/75.jpg",
-                  }}
-                  style={styles.avatar}
-                />
-
+                {getAvatarUri ? (
+                  <Image source={{ uri: getAvatarUri }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                    <Camera size={32} color={colors.inkLight} />
+                  </View>
+                )}
                 {isAvatarUploading && (
                   <View style={styles.uploadingOverlay}>
                     <ActivityIndicator size="large" color={colors.white} />
                   </View>
                 )}
-
-                {!isAvatarUploading && (
+                {!isAvatarUploading && getAvatarUri && (
                   <View style={styles.cameraBtn}>
                     <Camera size={18} color={colors.white} />
                   </View>
                 )}
               </TouchableOpacity>
-
               <Text
                 style={[
                   styles.avatarHint,
@@ -357,73 +362,214 @@ export default function EditProfileScreen() {
               </Text>
             </View>
 
-            <View style={styles.form}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>{t("profile.editScreen.fullName")}</Text>
-                <Controller
-                  control={control}
-                  name="fullName"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <NameInput
-                      placeholder={t("profile.editScreen.fullName")}
-                      value={value}
-                      onBlur={onBlur}
-                      onChangeText={onChange}
-                      error={!!errors.fullName?.message}
-                      autoCapitalize="words"
-                    />
-                  )}
-                />
-                {errors.fullName && (
-                  <HelperText
-                    message={errors.fullName.message || ""}
-                    type="error"
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("profile.editScreen.sectionPersonal")}</Text>
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.fullName")}</Text>
+                  <Controller
+                    control={control}
+                    name="fullName"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <NameInput
+                        placeholder={t("profile.editScreen.fullName")}
+                        value={value}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        error={!!errors.fullName?.message}
+                        autoCapitalize="words"
+                      />
+                    )}
                   />
-                )}
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>{t("profile.editScreen.labelEmail")}</Text>
-                <Controller
-                  control={control}
-                  name="email"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <EmailInput
-                      value={value}
-                      onBlur={onBlur}
-                      onChangeText={onChange}
-                      error={!!errors.email}
-                      autoCapitalize="none"
-                    />
+                  {errors.fullName && (
+                    <HelperText message={errors.fullName.message || ""} type="error" />
                   )}
-                />
-                {errors.email && (
-                  <HelperText
-                    message={errors.email.message || ""}
-                    type="error"
-                  />
-                )}
-              </View>
-
-              {profileError && (
-                <HelperText
-                  message={
-                    typeof profileError === "string"
-                      ? profileError
-                      : t("errors.generic")
-                  }
-                  type="error"
-                />
-              )}
-
-              {isDirty && (
-                <View style={styles.modificationStatus}>
-                  <Text style={styles.modificationText}>
-                    {t("profile.editScreen.unsavedChanges")}
-                  </Text>
                 </View>
-              )}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.labelEmail")}</Text>
+                  <Controller
+                    control={control}
+                    name="email"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <EmailInput
+                        value={value}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        error={!!errors.email}
+                        autoCapitalize="none"
+                      />
+                    )}
+                  />
+                  {errors.email && (
+                    <HelperText message={errors.email.message || ""} type="error" />
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.phone")}</Text>
+                  <Controller
+                    control={control}
+                    name="phoneNumber"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <PhoneInput
+                        value={value || ""}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        error={!!errors.phoneNumber}
+                      />
+                    )}
+                  />
+                  {errors.phoneNumber && (
+                    <HelperText message={errors.phoneNumber.message || ""} type="error" />
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.gender")}</Text>
+                  <Controller
+                    control={control}
+                    name="gender"
+                    render={({ field: { onChange, value } }) => (
+                      <ChipSelector
+                        options={GENDER_OPTIONS.map((o) => ({
+                          label: t(`profile.gender.${o.labelKey}`),
+                          value: o.value,
+                        }))}
+                        value={value || ""}
+                        onChange={onChange}
+                      />
+                    )}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.dob")}</Text>
+                  <TouchableOpacity
+                    style={styles.dateField}
+                    onPress={() => handleDatePick("dateOfBirth")}
+                  >
+                    <Text
+                      style={[
+                        styles.dateText,
+                        !formValues.dateOfBirth && styles.datePlaceholder,
+                      ]}
+                    >
+                      {formValues.dateOfBirth || t("profile.editScreen.dob")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("profile.editScreen.sectionMedical")}</Text>
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.bloodGroup")}</Text>
+                  <Controller
+                    control={control}
+                    name="bloodGroup"
+                    render={({ field: { onChange, value } }) => (
+                      <ChipSelector
+                        options={BLOOD_GROUP_OPTIONS}
+                        value={value || ""}
+                        onChange={onChange}
+                      />
+                    )}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.medicalHistory")}</Text>
+                  <Controller
+                    control={control}
+                    name="medicalHistory"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <NameInput
+                        placeholder={t("profile.editScreen.medicalHistory")}
+                        value={value || ""}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        error={!!errors.medicalHistory?.message}
+                        autoCapitalize="sentences"
+                        multiline
+                      />
+                    )}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.address")}</Text>
+                  <Controller
+                    control={control}
+                    name="address"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <NameInput
+                        placeholder={t("profile.editScreen.address")}
+                        value={value || ""}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        error={!!errors.address?.message}
+                        autoCapitalize="sentences"
+                      />
+                    )}
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("profile.editScreen.sectionEmergency")}</Text>
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.emergencyName")}</Text>
+                  <Controller
+                    control={control}
+                    name="emergencyName"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <NameInput
+                        placeholder={t("profile.editScreen.emergencyNamePlaceholder")}
+                        value={value || ""}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        autoCapitalize="words"
+                      />
+                    )}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.emergencyPhone")}</Text>
+                  <Controller
+                    control={control}
+                    name="emergencyPhone"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <PhoneInput
+                        value={value || ""}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                      />
+                    )}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {profileError && (
+              <HelperText
+                message={typeof profileError === "string" ? profileError : t("errors.generic")}
+                type="error"
+              />
+            )}
+
+            {isDirty && (
+              <View style={styles.modificationStatus}>
+                <Text style={styles.modificationText}>
+                  {t("profile.editScreen.unsavedChanges")}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.footer}>
               <PrimaryButton
@@ -433,16 +579,27 @@ export default function EditProfileScreen() {
                 onPress={handleSubmit(onSave)}
                 isDisabled={!isValid || !isDirty || isUpdatingProfile}
               />
-
               {!isValid && isDirty && (
-                <HelperText
-                  message={t("profile.editScreen.formErrors")}
-                  type="error"
-                />
+                <HelperText message={t("profile.editScreen.formErrors")} type="error" />
               )}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        <ConfirmSheet
+          ref={confirmSheetRef}
+          title={t("profile.editScreen.discardTitle")}
+          message={t("profile.editScreen.discardMessage")}
+          confirmLabel={t("profile.editScreen.discardConfirm")}
+          cancelLabel={t("profile.editScreen.keepEditing")}
+          onConfirm={handleDiscardBack}
+        />
+
+        <DatePickerSheet
+          ref={datePickerSheetRef}
+          value={(formValues as any)[dateFieldTarget] || ""}
+          onChange={handleDateChange}
+        />
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
@@ -461,6 +618,26 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 40,
   },
+  skeletonContainer: {
+    padding: 20,
+    gap: 24,
+    marginTop: 20,
+  },
+  skeletonRow: {
+    gap: 8,
+  },
+  skeletonLabel: {
+    width: "40%",
+    height: 14,
+    borderRadius: 6,
+    backgroundColor: "#EAE8EA",
+  },
+  skeletonField: {
+    width: "100%",
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#EAE8EA",
+  },
   avatarContainer: {
     alignItems: "center",
     marginBottom: 32,
@@ -477,6 +654,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
     backgroundColor: colors.gray50,
+  },
+  avatarPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surface,
   },
   uploadingOverlay: {
     position: "absolute",
@@ -513,24 +695,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
   },
-  avatarHintError: {
-    color: colors.error,
+  avatarHintError: { color: colors.error },
+  avatarHintSuccess: { color: colors.success },
+  section: {
+    marginBottom: 28,
   },
-  avatarHintSuccess: {
-    color: colors.success,
-  },
-  removeAvatarBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 8,
-    padding: 8,
-  },
-  removeAvatarText: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.xs,
-    color: colors.inkLight,
-    textDecorationLine: "underline",
+  sectionTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    marginBottom: 16,
+    paddingLeft: 4,
   },
   form: {
     gap: 20,
@@ -544,36 +719,39 @@ const styles = StyleSheet.create({
     color: colors.ink,
     marginLeft: 4,
   },
-  resetButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  dateField: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    paddingHorizontal: 14,
+    justifyContent: "center",
   },
-  resetText: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    color: colors.primary,
+  dateText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  datePlaceholder: {
+    color: colors.inkLight,
   },
   modificationStatus: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 8,
-    backgroundColor: colors.warningLight || "#FFF3E0",
+    backgroundColor: "#FFF3E0",
     borderRadius: 8,
+    marginTop: 8,
   },
   modificationText: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.sm,
-    color: colors.warning || "#F57C00",
+    color: "#F57C00",
   },
   footer: {
     marginTop: 40,
     gap: 12,
   },
-  validationHint: {
-    marginTop: 4,
-    textAlign: "center",
-  },
 });
-
-export type EditProfileScreenProps = {};

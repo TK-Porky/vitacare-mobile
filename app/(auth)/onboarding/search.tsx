@@ -18,10 +18,10 @@ import { useProfile } from "@/hooks";
 // Types
 // ================================================================================== //
 const OPTIONS = [
-  "Un médecin en urgence",
-  "Un suivi de traitements réguliers",
-  "Des informations sur un médicaments",
-  "Rien en particulier",
+  "onboarding.searchOptions.emergency",
+  "onboarding.searchOptions.treatmentFollowUp",
+  "onboarding.searchOptions.medicationInfo",
+  "onboarding.searchOptions.nothingSpecific",
 ];
 
 // ================================================================================== //
@@ -41,7 +41,7 @@ export default function OnboardingSearchScreen() {
    */
   const handleContinue = async () => {
     if (!selected) {
-      router.push("/(auth)/onboarding-language");
+      router.push("/(auth)/onboarding/language");
       return;
     }
 
@@ -51,10 +51,10 @@ export default function OnboardingSearchScreen() {
         // We use a generic way to store this or map to a specific field if backend supports it
       } as any);
 
-      router.push("/(auth)/onboarding-language");
+      router.push("/(auth)/onboarding/language");
     } catch (e) {
       // Fallback to next screen even if save fails for better UX, or show error
-      router.push("/(auth)/onboarding-language");
+      router.push("/(auth)/onboarding/language");
     }
   };
 
@@ -66,7 +66,7 @@ export default function OnboardingSearchScreen() {
       <StepHeader
         current={2}
         total={3}
-        onSkip={() => router.push("/(auth)/onboarding-language")}
+        onSkip={() => router.push("/(auth)/onboarding/language")}
       />
 
       <ScrollView
@@ -79,7 +79,7 @@ export default function OnboardingSearchScreen() {
           {OPTIONS.map((option) => (
             <SelectOption
               key={option}
-              label={option}
+              label={t(option)}
               selected={selected === option}
               onPress={() => setSelected(option)}
             />

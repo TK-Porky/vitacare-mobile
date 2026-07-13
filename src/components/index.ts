@@ -38,3 +38,6 @@ export * from "./payment";
 
 // Notifications
 export * from "./notifications";
+
+// Modals
+export * from "./modals";

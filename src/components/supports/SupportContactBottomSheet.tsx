@@ -40,11 +40,11 @@ type Props = {
 // ================================================================================== //
 
 const SUPPORT_INFO = {
-  email: "support@vitacare.com",
-  phone: "+237 6XX XX XX XX",
-  whatsapp: "+237 6XX XX XX XX",
+  email: "devignpro@gmail.com",
+  phone: "+237 681 518 489",
+  whatsapp: "+237 681 518 489",
   hours: "Lun - Ven, 8h - 18h",
-  website: "www.vitacare.com",
+  website: "vitacare-two.vercel.app",
 };
 
 interface ContactOption {

@@ -10,11 +10,14 @@ export const getUpdateProfileSchema = (t: TFunction) =>
       .string()
       .min(1, t("validation.emailRequired"))
       .email(t("validation.emailInvalid")),
+    phoneNumber: z.string().optional(),
     gender: z.string().optional(),
     dateOfBirth: z.string().optional(),
     bloodGroup: z.string().optional(),
     medicalHistory: z.string().optional(),
     address: z.string().optional(),
+    emergencyName: z.string().optional(),
+    emergencyPhone: z.string().optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
   });

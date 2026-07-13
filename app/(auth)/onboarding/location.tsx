@@ -37,7 +37,7 @@ export default function OnboardingLocationScreen() {
   // ================================================================================== //
   // States
   // ================================================================================== //
-  const [location, setLocation] = useState("Recherche de votre position..."); // Location status
+  const [location, setLocation] = useState(t("onboarding.location.searching")); // Location status
   const [region, setRegion] = useState(INITIAL_REGION); // Map region
   const [markerCoords, setMarkerCoords] = useState({
     latitude: INITIAL_REGION.latitude,
@@ -53,7 +53,7 @@ export default function OnboardingLocationScreen() {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        setLocation("Permission de localisation refusée");
+        setLocation(t("onboarding.location.permissionDenied"));
         return;
       }
 
@@ -95,7 +95,7 @@ export default function OnboardingLocationScreen() {
         address: location,
       } as any);
 
-      router.push("/(auth)/onboarding-search");
+      router.push("/(auth)/onboarding/search");
     } catch (e) {
       Alert.alert(t("errors.generic"), t("errors.somethingWrong"));
     }
@@ -117,7 +117,7 @@ export default function OnboardingLocationScreen() {
       <StepHeader
         current={1}
         total={2}
-        onSkip={() => router.push("/(auth)/onboarding-search")}
+        onSkip={() => router.push("/(auth)/onboarding/search")}
       />
 
       <View style={styles.content}>
