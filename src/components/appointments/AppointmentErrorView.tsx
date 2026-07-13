@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { AppHeader } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 
@@ -12,13 +13,14 @@ export const AppointmentErrorView = ({
   error,
   onRetry,
 }: AppointmentErrorViewProps) => {
+  const { t } = useTranslation();
   return (
     <SafeAreaView style={styles.safe}>
-      <AppHeader title="Rendez-vous" />
+      <AppHeader title={t('appointments.title')} />
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>{error}</Text>
         <Text style={styles.retryText} onPress={onRetry}>
-          Réessayer
+          {t('common.retry')}
         </Text>
       </View>
     </SafeAreaView>

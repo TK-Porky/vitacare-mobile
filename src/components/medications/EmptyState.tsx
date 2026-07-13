@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
 
@@ -8,20 +9,21 @@ type EmptyStateProps = {
 };
 
 export const EmptyState = ({ isSearching, onClearSearch }: EmptyStateProps) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyContainer}>
       <Ionicons name="medkit-outline" size={48} color={colors.inkLight} />
       <Text style={styles.emptyText}>
         {isSearching
-          ? "Aucun médicament trouvé"
-          : "Aucun médicament disponible"}
+          ? t("medications.searchNoResults")
+          : t("medications.empty")}
       </Text>
       {isSearching && (
         <TouchableOpacity
           style={styles.clearSearchButton}
           onPress={onClearSearch}
         >
-          <Text style={styles.clearSearchButtonText}>Effacer la recherche</Text>
+          <Text style={styles.clearSearchButtonText}>{t("common.search")}</Text>
         </TouchableOpacity>
       )}
     </View>

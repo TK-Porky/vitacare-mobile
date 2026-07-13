@@ -7,15 +7,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, fontFamily, fontSize } from '../../../src/themes';
 import { TopBar } from '../../../src/components';
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
 
 const SECTIONS: { title: string; body: string }[] = [
   {
     title: '1. Objet',
-    body: "Les présentes conditions régissent l'utilisation de l'application mobile VitaCare, développée et opérée par VitaCare SAS, immatriculée au Registre du Commerce et du Crédit Mobilier de Yaoundé. En téléchargeant ou en utilisant l'application, vous acceptez sans réserve les présentes conditions.",
+    body: "Les présentes conditions régissent l'utilisation de l'application mobile VitaCare, développée et opérée par VitaCare SAS, immatriculée au Registre du Commerce et du Crédit Mobilier de Yaoundé. En téléchargant ou en utilisant l'application, vous acceptez sans réserve les présentes conditions.",
   },
   {
     title: '2. Services proposés',
@@ -55,32 +54,29 @@ const SECTIONS: { title: string; body: string }[] = [
   },
 ];
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
-
 export default function TermsScreen() {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <StatusBar barStyle="dark-content" />
-      <TopBar title="Termes et Conditions" />
+      <TopBar title={t('profile.termsScreen.title')} />
 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header info */}
         <View style={styles.header}>
           <View style={styles.headerIcon}>
             <Ionicons name="document-text-outline" size={28} color={colors.primary} />
           </View>
-          <Text style={styles.headerTitle}>Termes et Conditions d'utilisation</Text>
-          <Text style={styles.headerMeta}>Dernière mise à jour : Juin 2026</Text>
+          <Text style={styles.headerTitle}>{t('profile.termsScreen.headerTitle')}</Text>
+          <Text style={styles.headerMeta}>{t('profile.termsScreen.lastUpdate')}</Text>
           <Text style={styles.headerIntro}>
-            Veuillez lire attentivement ces termes avant d'utiliser VitaCare.
-            En utilisant l'application, vous acceptez les conditions ci-dessous.
+            {t('profile.termsScreen.intro')}
           </Text>
         </View>
 
-        {/* Sections */}
         {SECTIONS.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -88,20 +84,16 @@ export default function TermsScreen() {
           </View>
         ))}
 
-        {/* Footer notice */}
         <View style={styles.notice}>
           <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
           <Text style={styles.noticeText}>
-            VitaCare s'engage à protéger vos données et à vous offrir un service de
-            santé numérique fiable et sécurisé.
+            {t('profile.termsScreen.notice')}
           </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.white },
@@ -112,7 +104,6 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  // Header
   header: {
     alignItems: 'center',
     gap: 10,
@@ -147,7 +138,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
 
-  // Sections
   section: {
     backgroundColor: colors.surface,
     borderRadius: 14,
@@ -168,7 +158,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Notice
   notice: {
     flexDirection: 'row',
     alignItems: 'flex-start',

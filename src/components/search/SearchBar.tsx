@@ -7,6 +7,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { PrimaryButton } from '../buttons';
 import { colors, fontFamily, fontSize } from '../../themes';
 
@@ -21,10 +22,12 @@ type Props = {
 export const SearchBar = ({
   value,
   onChangeText,
-  placeholder = 'Rechercher votre position...',
+  placeholder,
   onFilterPress,
   style,
 }: Props) => {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t('map.searchPlaceholder');
   return (
     <View style={[styles.container, style]}>
       <Ionicons
@@ -37,7 +40,7 @@ export const SearchBar = ({
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         placeholderTextColor={colors.inkMuted}
         returnKeyType="search"
       />

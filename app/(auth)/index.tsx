@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import LottieView from "lottie-react-native";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { OnboardingCarousel } from "@/components/auth/OnboardingCarousel";
@@ -24,6 +25,7 @@ const { width } = Dimensions.get("window");
 const ONBOARDING_KEY = "@onboarding_completed";
 
 export default function LandingScreen() {
+  const { t } = useTranslation();
   const { user, isLoading } = useAuthStore();
   const [showCarousel, setShowCarousel] = React.useState(false);
 
@@ -72,23 +74,20 @@ export default function LandingScreen() {
     const slides = [
       {
         id: "1",
-        title: "Bienvenue sur VitaCare",
-        description:
-          "Gérez votre santé en toute simplicité avec notre application.\nPrenez soin de vous et vos proches.",
+        title: t("onboarding.carousel.slide1Title"),
+        description: t("onboarding.carousel.slide1Desc"),
         animation: ANIMATIONS.doctor,
       },
       {
         id: "2",
-        title: "Suivez vos traitements",
-        description:
-          "Ne manquez plus jamais une prise avec nos rappels intelligents.\nVotre santé, en mains.",
+        title: t("onboarding.carousel.slide2Title"),
+        description: t("onboarding.carousel.slide2Desc"),
         animation: ANIMATIONS.health,
       },
       {
         id: "3",
-        title: "Commencez dès maintenant",
-        description:
-          "Créez votre compte et prenez le contrôle de votre santé.\nNous sommes là pour vous accompagner.",
+        title: t("onboarding.carousel.slide3Title"),
+        description: t("onboarding.carousel.slide3Desc"),
         animation: ANIMATIONS.care,
       },
     ];
@@ -130,17 +129,16 @@ export default function LandingScreen() {
         {/* Copy */}
         <View style={styles.copy}>
           <Text style={styles.copyTitle}>
-            {"Votre ecosystème de santé, simplifié."}
+            {t("auth.landing.title")}
           </Text>
           <Text style={styles.copyBody}>
-            Prenez rendez-vous, suivez vos traitements et restez en contact avec
-            vos médecins en un seul endroit.
+            {t("auth.landing.body")}
           </Text>
         </View>
 
         {/* CTA principal */}
         <AuthButton
-          label="Se connecter via l'email"
+          label={t("auth.landing.loginEmail")}
           onPress={() => handleNavigate("/(auth)/login-email")}
           variant="primary"
           fullWidth
@@ -148,10 +146,9 @@ export default function LandingScreen() {
           size="lg"
         />
 
-        {/* Séparateur */}
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>ou</Text>
+          <Text style={styles.dividerText}>{t("auth.landing.or")}</Text>
           <View style={styles.dividerLine} />
         </View>
 
@@ -161,7 +158,7 @@ export default function LandingScreen() {
             style={styles.secondaryBtn}
             onPress={() => handleNavigate("/(auth)/register")}
             activeOpacity={0.7}
-            accessibilityLabel="Créer un compte"
+            accessibilityLabel={t("auth.landing.accessibilityCreateAccount")}
             accessibilityRole="button"
           >
             <Ionicons
@@ -169,27 +166,25 @@ export default function LandingScreen() {
               size={17}
               color={colors.primary}
             />
-            <Text style={styles.secondaryText}>Créer un compte</Text>
+            <Text style={styles.secondaryText}>{t("auth.landing.createAccount")}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Légal */}
         <Text style={styles.legal}>
-          En continuant, vous acceptez nos{" "}
-          <Text
-            style={styles.legalLink}
-            onPress={() => handleNavigate("/terms")}
-          >
-            Conditions d'utilisation
-          </Text>{" "}
-          et notre{" "}
-          <Text
-            style={styles.legalLink}
-            onPress={() => handleNavigate("/privacy")}
-          >
-            Politique de confidentialité
-          </Text>
-          .
+          {(() => {
+            const legalText = t("auth.landing.legalNotice", { terms: "||TERMS||", privacy: "||PRIVACY||" });
+            const [before, afterTerms] = legalText.split("||TERMS||");
+            const [middle, afterPrivacy] = afterTerms.split("||PRIVACY||");
+            return (
+              <>
+                <Text>{before}</Text>
+                <Text style={styles.legalLink} onPress={() => handleNavigate("/terms")}>{t("auth.landing.terms")}</Text>
+                <Text>{middle}</Text>
+                <Text style={styles.legalLink} onPress={() => handleNavigate("/privacy")}>{t("auth.landing.privacy")}</Text>
+                <Text>{afterPrivacy}</Text>
+              </>
+            );
+          })()}
         </Text>
       </View>
     </View>

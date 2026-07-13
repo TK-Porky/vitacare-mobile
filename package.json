@@ -1,6 +1,6 @@
 {
   "name": "vitacare-mobile",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -39,6 +39,7 @@
     "expo-image-picker": "~56.0.19",
     "expo-linear-gradient": "~56.0.4",
     "expo-linking": "~56.0.15",
+    "expo-localization": "^57.0.0",
     "expo-location": "~56.0.19",
     "expo-notifications": "~56.0.19",
     "expo-print": "~56.0.4",
@@ -51,6 +52,7 @@
     "expo-updates": "~56.0.21",
     "expo-web-browser": "~56.0.5",
     "firebase": "^11.10.0",
+    "i18next": "^26.3.6",
     "lodash": "^4.18.1",
     "lottie-react-native": "~7.3.4",
     "lucide-react-native": "^1.7.0",
@@ -58,6 +60,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.2",
+    "react-i18next": "^17.0.9",
     "react-native": "0.85.3",
     "react-native-gesture-handler": "~2.31.1",
     "react-native-iconify": "^2.0.3",

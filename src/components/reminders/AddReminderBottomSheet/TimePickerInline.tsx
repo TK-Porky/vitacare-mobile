@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
@@ -30,6 +31,7 @@ const TimePickerInlineComponent = ({
   onHourSelect,
   onMinuteSelect,
 }: TimePickerInlineProps) => {
+  const { t } = useTranslation();
   const initialState = useMemo(() => {
     if (!value || !value.includes(":")) return { hour: "12", minute: "30" };
     const [h, m] = value.split(":");
@@ -83,18 +85,18 @@ const TimePickerInlineComponent = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Sélectionnez l'heure</Text>
+      <Text style={styles.title}>{t("reminders.addForm.time")}</Text>
 
       <View style={styles.row}>
         {/* ── Colonne Heure ── */}
         <View style={styles.column}>
-          <Text style={styles.columnLabel}>Heure</Text>
+          <Text style={styles.columnLabel}>{t("reminders.addForm.time")}</Text>
 
           <TouchableOpacity
             style={styles.navButton}
             onPress={() => navigateHour("up")}
             activeOpacity={0.7}
-            accessibilityLabel="Heure précédente"
+            accessibilityLabel={t("accessibility.startSearch")}
           >
             <Ionicons name="chevron-up" size={22} color={colors.black} />
           </TouchableOpacity>
@@ -126,7 +128,7 @@ const TimePickerInlineComponent = ({
             style={styles.navButton}
             onPress={() => navigateHour("down")}
             activeOpacity={0.7}
-            accessibilityLabel="Heure suivante"
+            accessibilityLabel={t("accessibility.startSearch")}
           >
             <Ionicons name="chevron-down" size={22} color={colors.black} />
           </TouchableOpacity>
@@ -137,13 +139,13 @@ const TimePickerInlineComponent = ({
 
         {/* ── Colonne Minute ── */}
         <View style={styles.column}>
-          <Text style={styles.columnLabel}>Minute</Text>
+          <Text style={styles.columnLabel}>{t("reminders.addForm.time")}</Text>
 
           <TouchableOpacity
             style={styles.navButton}
             onPress={() => navigateMinute("up")}
             activeOpacity={0.7}
-            accessibilityLabel="Minute précédente"
+            accessibilityLabel={t("accessibility.startSearch")}
           >
             <Ionicons name="chevron-up" size={22} color={colors.black} />
           </TouchableOpacity>
@@ -175,7 +177,7 @@ const TimePickerInlineComponent = ({
             style={styles.navButton}
             onPress={() => navigateMinute("down")}
             activeOpacity={0.7}
-            accessibilityLabel="Minute suivante"
+            accessibilityLabel={t("accessibility.startSearch")}
           >
             <Ionicons name="chevron-down" size={22} color={colors.black} />
           </TouchableOpacity>
@@ -184,7 +186,7 @@ const TimePickerInlineComponent = ({
 
       {/* ── Résumé ── */}
       <View style={styles.footer}>
-        <Text style={styles.footerLabel}>Heure sélectionnée</Text>
+        <Text style={styles.footerLabel}>{t("reminders.addForm.time")}</Text>
         <Text style={styles.footerValue}>{`${hour}:${minute}`}</Text>
       </View>
     </View>

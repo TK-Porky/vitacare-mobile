@@ -1,5 +1,6 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { PrimaryButton } from "../buttons";
 
@@ -20,6 +21,8 @@ export function ProfileHeader({
   address,
   onLocationPress,
 }: ProfileHeaderProps) {
+  const { t } = useTranslation();
+
   const getInitialsAvatar = (name: string) => {
     const initials = name
       .split(" ")
@@ -31,18 +34,18 @@ export function ProfileHeader({
   };
 
   const avatarUri = avatarUrl || getInitialsAvatar(fullName || "U");
-  const displayContact = phoneNumber || email || "Utilisateur";
+  const displayContact = phoneNumber || email || t("profile.userFallback");
 
   return (
     <View style={styles.profileCard}>
       <View style={styles.avatarWrapper}>
         <Image source={{ uri: avatarUri }} style={styles.avatar} />
       </View>
-      <Text style={styles.userName}>{fullName || "Utilisateur"}</Text>
+      <Text style={styles.userName}>{fullName || t("profile.userFallback")}</Text>
       <Text style={styles.userContact}>{displayContact}</Text>
 
       <PrimaryButton
-        label={address ? address : "Touche ici pour ajouter ton adresse"}
+        label={address ? address : t("profile.addAddress")}
         onPress={onLocationPress}
         variant={address ? "outline" : "solid"}
         size="sm"

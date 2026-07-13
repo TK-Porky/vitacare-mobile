@@ -5,6 +5,7 @@ import React, {
   useState,
 } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { AppBottomSheet, AppBottomSheetRef } from '../generics';
 import { FilterSectionHeader } from './filter/FilterSectionHeader';
 import { FilterChip } from './filter/FilterChip';
@@ -24,16 +25,16 @@ const DEFAULT_FILTERS: FilterState = {
   languages: [],
 };
 
-const SERVICES = [
+const SERVICE_IDS = [
   'Dentition',
   'Analyse Médicale',
   'Dermatologie',
   'Piendontologie',
   'Pédiatrie',
   'Génicologie',
-];
+] as const;
 
-const LANGUAGES = ['Français', 'Anglais', 'Pongo', 'Bami', 'Eton', 'Arabe'];
+const LANGUAGE_IDS = ['Français', 'Anglais', 'Pongo', 'Bami', 'Eton', 'Arabe'] as const;
 
 export type FilterBottomSheetRef = {
   open: () => void;
@@ -46,8 +47,33 @@ type Props = {
   onClose?: () => void;
 };
 
+const getServiceKey = (id: string) => {
+  const map: Record<string, string> = {
+    'Dentition': 'servicesDentition',
+    'Analyse Médicale': 'servicesAnalyseMedicale',
+    'Dermatologie': 'servicesDermatologie',
+    'Piendontologie': 'servicesPiendontologie',
+    'Pédiatrie': 'servicesPediatrie',
+    'Génicologie': 'servicesGenicologie',
+  };
+  return map[id] || id;
+};
+
+const getLanguageKey = (id: string) => {
+  const map: Record<string, string> = {
+    'Français': 'languagesFrench',
+    'Anglais': 'languagesEnglish',
+    'Pongo': 'languagesPongo',
+    'Bami': 'languagesBami',
+    'Eton': 'languagesEton',
+    'Arabe': 'languagesArabic',
+  };
+  return map[id] || id;
+};
+
 export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
   ({ initialFilters = DEFAULT_FILTERS, onApply, onClose }, ref) => {
+    const { t } = useTranslation();
     const sheetRef = useRef<AppBottomSheetRef>(null);
 
     const [filters, setFilters] = useState<FilterState>(initialFilters);
@@ -91,14 +117,14 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
         footer={
           <View style={styles.footer}>
             <PrimaryButton
-              label="Retour"
+              label={t('search.back')}
               variant="outline"
               size="md"
               onPress={handleBack}
               style={styles.footerBtn}
             />
             <PrimaryButton
-              label="Afficher les résultats"
+              label={t('search.showResults')}
               variant="solid"
               size="md"
               onPress={handleApply}
@@ -110,12 +136,12 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
         scrollable
         containerStyle={styles.sheet}
       >
-        <Text style={styles.sheetTitle}>Filtres</Text>
+        <Text style={styles.sheetTitle}>{t('search.filterTitle')}</Text>
 
         <View style={styles.section}>
           <FilterSectionHeader
-            title="Périmètre"
-            subtitle={`Affichés les résultats dans un périmètre de ${filters.perimeterKm}Km`}
+            title={t('search.perimeter')}
+            subtitle={t('search.perimeterSubtitle', { km: filters.perimeterKm })}
           />
           <FilterRangeSlider
             value={filters.perimeterKm}
@@ -131,17 +157,17 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
 
         <View style={styles.section}>
           <FilterSectionHeader
-            title="Services"
-            subtitle="Sélectionner les types de services recherchés"
+            title={t('search.services')}
+            subtitle={t('search.servicesSubtitle')}
             isOpen={servicesOpen}
             onToggle={() => setServicesOpen((v) => !v)}
           />
           {servicesOpen && (
             <View style={styles.chipsWrap}>
-              {SERVICES.map((s) => (
+              {SERVICE_IDS.map((s) => (
                 <FilterChip
                   key={s}
-                  label={s}
+                  label={t(`search.${getServiceKey(s)}`)}
                   isSelected={filters.services.includes(s)}
                   onPress={() => toggleItem('services', s)}
                 />
@@ -154,17 +180,17 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
 
         <View style={styles.section}>
           <FilterSectionHeader
-            title="Langages"
-            subtitle="Langue parlée par les professionnels de santé"
+            title={t('search.languages')}
+            subtitle={t('search.languagesSubtitle')}
             isOpen={languagesOpen}
             onToggle={() => setLanguagesOpen((v) => !v)}
           />
           {languagesOpen && (
             <View style={styles.chipsWrap}>
-              {LANGUAGES.map((l) => (
+              {LANGUAGE_IDS.map((l) => (
                 <FilterChip
                   key={l}
-                  label={l}
+                  label={t(`search.${getLanguageKey(l)}`)}
                   isSelected={filters.languages.includes(l)}
                   onPress={() => toggleItem('languages', l)}
                 />
@@ -177,15 +203,15 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
 
         <View style={styles.section}>
           <FilterSectionHeader
-            title="Prix"
-            subtitle="L'intervalle des prix de la consultation"
+            title={t('search.priceFilter')}
+            subtitle={t('search.priceFilterSubtitle')}
             isOpen={priceOpen}
             onToggle={() => setPriceOpen((v) => !v)}
           />
           {priceOpen && (
             <View style={styles.priceNote}>
               <Text style={styles.priceNoteText}>
-                Filtre de prix bientôt disponible
+                {t('search.priceComingSoon')}
               </Text>
             </View>
           )}

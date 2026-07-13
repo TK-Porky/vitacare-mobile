@@ -6,6 +6,7 @@ import {
   RefreshControl,
   StyleSheet,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Calendar } from "lucide-react-native";
 import {
   MonthHeader,
@@ -32,6 +33,7 @@ export const AppointmentListView = ({
   onRefresh,
   onCardPress,
 }: AppointmentListViewProps) => {
+  const { t } = useTranslation();
   const displayed = useMemo(() =>
     appointments.filter((a) =>
       activeTab === "upcoming"
@@ -81,8 +83,8 @@ export const AppointmentListView = ({
           </View>
           <Text style={styles.emptyText}>
             {activeTab === "upcoming"
-              ? "Aucun rendez-vous à venir"
-              : "Aucun rendez-vous passé"}
+              ? t('appointments.noUpcoming')
+              : t('appointments.noPast')}
           </Text>
         </View>
       )}

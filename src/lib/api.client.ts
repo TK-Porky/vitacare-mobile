@@ -4,6 +4,7 @@
  * This class handles all API requests with automatic token management and retry logic.
  * Optimized for Expo SDK 56+ with modern fetch API and FormData for file uploads.
  */
+import i18next from "@/i18n";
 import { fetch } from "expo/fetch";
 import { File as ExpoFile } from "expo-file-system";
 import * as SecureStore from "expo-secure-store";
@@ -319,7 +320,7 @@ class ApiClient {
         if (error.name === "AbortError") {
           return {
             success: false,
-            error: "La requête a expiré ou a été annulée",
+            error: i18next.t('errors.requestTimeout'),
             statusCode: 408,
           };
         }
@@ -332,7 +333,7 @@ class ApiClient {
 
       return {
         success: false,
-        error: "Une erreur inattendue est survenue",
+        error: i18next.t('errors.unexpected'),
         statusCode: 500,
       };
     }
@@ -380,7 +381,7 @@ class ApiClient {
       this.onLogout?.();
       return {
         success: false,
-        error: "Session expirée. Veuillez vous reconnecter.",
+        error: i18next.t('errors.sessionExpired'),
         statusCode: 401,
       };
     }
@@ -647,7 +648,7 @@ class ApiClient {
             this.onLogout?.();
             return {
               success: false,
-              error: "Session expirée. Veuillez vous reconnecter.",
+              error: i18next.t('errors.sessionExpiredReconnect'),
               statusCode: 401,
             };
           }
@@ -724,7 +725,7 @@ class ApiClient {
         if (error.name === "AbortError") {
           return {
             success: false,
-            error: "L'upload a expiré ou a été annulé",
+            error: i18next.t('errors.uploadTimeout'),
             statusCode: 408,
           };
         }
@@ -737,7 +738,7 @@ class ApiClient {
 
       return {
         success: false,
-        error: "Échec de l'upload",
+        error: i18next.t('errors.uploadFailed'),
         statusCode: 0,
       };
     }
@@ -844,7 +845,7 @@ class ApiClient {
         if (error.name === "AbortError") {
           return {
             success: false,
-            error: "L'upload multiple a expiré ou a été annulé",
+            error: i18next.t('errors.uploadMultipleTimeout'),
             statusCode: 408,
           };
         }
@@ -857,7 +858,7 @@ class ApiClient {
 
       return {
         success: false,
-        error: "Échec de l'upload multiple",
+        error: i18next.t('errors.uploadMultipleFailed'),
         statusCode: 0,
       };
     }

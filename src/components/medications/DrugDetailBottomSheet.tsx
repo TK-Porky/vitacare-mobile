@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { AppBottomSheet, AppBottomSheetRef } from "../generics";
 import { PrimaryButton } from "../buttons";
@@ -138,28 +139,31 @@ const Tag = ({ label }: { label: string | undefined | null }) => {
   );
 };
 
-const RelatedCard = ({ item }: { item: Drug }) => (
-  <TouchableOpacity style={styles.relatedCard} activeOpacity={0.8}>
-    <View style={styles.relatedImageWrap}>
-      <Image
-        source={{ uri: item.imageUrl || "https://via.placeholder.com/150" }}
-        style={styles.relatedImage}
-        resizeMode="contain"
-      />
-    </View>
-    <View style={styles.relatedInfo}>
-      <Text style={styles.relatedCategory} numberOfLines={1}>
-        {item.dosageForm || "Médicament"}
-      </Text>
-      <Text style={styles.relatedName} numberOfLines={2}>
-        {item.name}
-      </Text>
-      {item.referencePrice != null && (
-        <Text style={styles.relatedPrice}>{item.referencePrice} FCFA</Text>
-      )}
-    </View>
-  </TouchableOpacity>
-);
+const RelatedCard = ({ item }: { item: Drug }) => {
+  const { t } = useTranslation();
+  return (
+    <TouchableOpacity style={styles.relatedCard} activeOpacity={0.8}>
+      <View style={styles.relatedImageWrap}>
+        <Image
+          source={{ uri: item.imageUrl || "https://via.placeholder.com/150" }}
+          style={styles.relatedImage}
+          resizeMode="contain"
+        />
+      </View>
+      <View style={styles.relatedInfo}>
+        <Text style={styles.relatedCategory} numberOfLines={1}>
+          {item.dosageForm || t("medications.available")}
+        </Text>
+        <Text style={styles.relatedName} numberOfLines={2}>
+          {item.name}
+        </Text>
+        {item.referencePrice != null && (
+          <Text style={styles.relatedPrice}>{item.referencePrice} FCFA</Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -171,6 +175,7 @@ export const DrugDetailBottomSheet = forwardRef<
     { drug, onAddToReminder, onClose, relatedDrugs = [], hasReminder = false },
     ref,
   ) => {
+    const { t } = useTranslation();
     const sheetRef = useRef<AppBottomSheetRef>(null);
     const [activeTab, setActiveTab] = useState<DrugTab>("Adulte");
 
@@ -181,7 +186,7 @@ export const DrugDetailBottomSheet = forwardRef<
 
     if (!drug) return null;
 
-    const tags = [drug.dosageForm ?? "Médicament", ...(drug.requiresPrescription ? ["Sur ordonnance"] : ["Sans ordonnance"])];
+    const tags = [drug.dosageForm ?? t("medications.available"), ...(drug.requiresPrescription ? ["Sur ordonnance"] : ["Sans ordonnance"])];
 
     return (
       <AppBottomSheet
@@ -221,10 +226,7 @@ export const DrugDetailBottomSheet = forwardRef<
         {/* ── Description ── */}
         <View style={styles.descriptionWrap}>
           <Text style={styles.descriptionText}>
-            Ce médicament est indiqué dans le traitement symptomatique des
-            douleurs légères à modérées et des états fébriles. Toujours lire
-            attentivement la notice avant utilisation et consulter un
-            professionnel de santé en cas de doute.
+    Ce médicament est indiqué dans le traitement symptomatique des douleurs légères à modérées et des états fébriles.
           </Text>
         </View>
 
@@ -239,7 +241,7 @@ export const DrugDetailBottomSheet = forwardRef<
         <View style={styles.ctaWrap}>
           <PrimaryButton
             label={
-              hasReminder ? "Déjà dans mes rappels" : "Ajouter à mes rappels"
+              hasReminder ? "Déjà dans mes rappels" : t("medications.addToReminder")
             }
             variant={hasReminder ? "outline" : "solid"}
             size="md"
@@ -303,7 +305,7 @@ export const DrugDetailBottomSheet = forwardRef<
           <>
             <View style={styles.divider} />
             <View style={styles.relatedSection}>
-              <Text style={styles.relatedTitle}>Vous aimerez aussi</Text>
+              <Text style={styles.relatedTitle}>{t("medications.title")}</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -322,7 +324,7 @@ export const DrugDetailBottomSheet = forwardRef<
         {/* ── Footer ── */}
         <View style={styles.footer}>
           <GrayButton
-            label="Fermer"
+            label={t("common.close")}
             onPress={() => sheetRef.current?.close()}
             style={styles.closeBtn}
           />

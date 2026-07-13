@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ProgressBar } from "@/components/booking/ProgressBar";
@@ -91,6 +92,7 @@ const DEFAULT_BOOKING: BookingData = {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function BookingScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{
     providerId?: string;
@@ -200,8 +202,8 @@ export default function BookingScreen() {
           avatarUri: provider.avatarUri,
           date: dateLabel,
           time: timeLabel,
-          paymentMode: isPaymentOnline ? "en ligne" : "sur place",
-          status: "en attente de validation",
+          paymentMode: isPaymentOnline ? t('booking.payNow') : t('booking.payLater'),
+          status: t('appointments.status.PENDING'),
           location: provider.location,
         },
       } as never);
@@ -226,7 +228,7 @@ export default function BookingScreen() {
         providerId: provider.id ?? 0,
         date: `${y}-${m}-${d}`,
         time: booking.time,
-        reason: booking.reason || "Consultation générale",
+        reason: booking.reason || t('booking.reason'),
         paymentMethod:
           booking.paymentMethod === "now" ? booking.paymentProvider : "later",
         // On envoie le mode de paiement choisi, mais on ne paie pas maintenant
@@ -247,8 +249,8 @@ export default function BookingScreen() {
       navigateToSuccess(appointment.id, isOnline);
     } catch (err: any) {
       Alert.alert(
-        "Erreur",
-        err?.message || "Impossible de créer le rendez-vous.",
+        t('common.error'),
+        err?.message || t('booking.error'),
       );
     } finally {
       setIsSubmitting(false);
@@ -277,7 +279,7 @@ export default function BookingScreen() {
           <Ionicons name="chevron-back" size={22} color={colors.ink} />
         </TouchableOpacity>
         {!isLastStep && (
-          <Text style={styles.headerTitle}>Nouvelle réservation</Text>
+          <Text style={styles.headerTitle}>{t('booking.title')}</Text>
         )}
         {isLastStep ? (
           <TouchableOpacity
@@ -361,16 +363,16 @@ export default function BookingScreen() {
             hitSlop={8}
           >
             <Ionicons name="chevron-back" size={20} color={colors.ink} />
-            <Text style={styles.footerBackText}>Retour</Text>
+            <Text style={styles.footerBackText}>{t('common.back')}</Text>
           </TouchableOpacity>
         )}
         <PrimaryButton
           label={
             isLastStep
               ? isSubmitting
-                ? "Création en cours..."
-                : "Confirmer la réservation"
-              : "Continuer"
+                ? t('common.loading')
+                : t('booking.confirm')
+              : t('common.continue')
           }
           variant="solid"
           size="md"

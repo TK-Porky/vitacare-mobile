@@ -16,6 +16,7 @@ import * as Haptics from "expo-haptics";
 import { PasswordInput, HelperText, EmailInput } from "@/components";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { AuthButton } from "@/components/auth/AuthButton";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store";
@@ -24,6 +25,7 @@ import { useAuthStore } from "@/store";
 // Main
 // ================================================================================== //
 export default function LoginEmailScreen() {
+  const { t } = useTranslation();
   // ================================================================================== //
   // States
   // ================================================================================== //
@@ -54,15 +56,15 @@ export default function LoginEmailScreen() {
 
   const validate = useCallback(() => {
     if (!email.trim() || !email.includes("@")) {
-      setLocalError("Adresse email invalide.");
+      setLocalError(t("auth.loginEmail.invalidEmail"));
       return false;
     }
     if (password.length < 8) {
-      setLocalError("Le mot de passe doit contenir au moins 8 caractères.");
+      setLocalError(t("auth.loginEmail.invalidPassword"));
       return false;
     }
     return true;
-  }, [email, password]);
+  }, [email, password, t]);
 
   const handleSubmit = useCallback(async () => {
     if (!validate()) return;
@@ -133,8 +135,8 @@ export default function LoginEmailScreen() {
       >
         {/* ── Header ── */}
         <AuthHeader
-          title="Connexion par Email"
-          subtitle="Entrez votre email et mot de passe pour vous connecter"
+          title={t("auth.loginEmail.title")}
+          subtitle={t("auth.loginEmail.subtitle")}
           showBack
           onBack={handleBack}
         />
@@ -143,7 +145,7 @@ export default function LoginEmailScreen() {
         <View style={styles.form}>
           <View style={styles.fieldWrapper}>
             <Text style={styles.label}>
-              Email <Text style={styles.required}>*</Text>
+              {t("auth.loginEmail.emailLabel")} <Text style={styles.required}>*</Text>
             </Text>
             <EmailInput
               value={email}
@@ -152,14 +154,14 @@ export default function LoginEmailScreen() {
                 if (localError) setLocalError("");
                 if (storeError) clearStoreError();
               }}
-              placeholder="exemple@email.com"
+              placeholder={t("auth.loginEmail.emailPlaceholder")}
               autoFocus
             />
           </View>
 
           <View style={styles.fieldWrapper}>
             <Text style={styles.label}>
-              Mot de passe <Text style={styles.required}>*</Text>
+              {t("auth.loginEmail.passwordLabel")} <Text style={styles.required}>*</Text>
             </Text>
             <PasswordInput
               value={password}
@@ -168,7 +170,7 @@ export default function LoginEmailScreen() {
                 if (localError) setLocalError("");
                 if (storeError) clearStoreError();
               }}
-              placeholder="Mot de passe"
+              placeholder={t("auth.loginEmail.passwordPlaceholder")}
             />
           </View>
 
@@ -176,10 +178,10 @@ export default function LoginEmailScreen() {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={handleForgotPassword}
-              accessibilityLabel="Mot de passe oublié"
+              accessibilityLabel={t("auth.loginEmail.accessibilityForgotPassword")}
               accessibilityRole="button"
             >
-              <Text style={styles.forgotText}>Mot de passe oublié</Text>
+              <Text style={styles.forgotText}>{t("auth.loginEmail.forgotPassword")}</Text>
             </TouchableOpacity>
           </View>
 
@@ -194,7 +196,7 @@ export default function LoginEmailScreen() {
         {/* ── Actions ── */}
         <View style={styles.actions}>
           <AuthButton
-            label="Se connecter"
+            label={t("auth.loginEmail.loginButton")}
             onPress={handleSubmit}
             variant="primary"
             fullWidth
@@ -208,11 +210,10 @@ export default function LoginEmailScreen() {
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou</Text>
+            <Text style={styles.dividerText}>{t("auth.loginEmail.or")}</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Google Sign-In avec Firebase */}
           <TouchableOpacity
             style={[
               styles.googleButton,
@@ -221,7 +222,7 @@ export default function LoginEmailScreen() {
             onPress={handleGoogleLogin}
             activeOpacity={0.7}
             disabled={isLoading}
-            accessibilityLabel="Se connecter avec Google"
+            accessibilityLabel={t("auth.loginEmail.accessibilityGoogleLogin")}
             accessibilityRole="button"
           >
             {isGoogleLoading ? (
@@ -229,7 +230,7 @@ export default function LoginEmailScreen() {
             ) : (
               <>
                 <Ionicons name="logo-google" size={20} color="#f44242ff" />
-                <Text style={styles.googleText}>Continuer avec Google</Text>
+                <Text style={styles.googleText}>{t("auth.loginEmail.googleButton")}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -238,23 +239,27 @@ export default function LoginEmailScreen() {
         {/* ── Footer ── */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Vous n'avez pas de compte ?{" "}
+            {t("auth.loginEmail.noAccount")}{" "}
             <Text style={styles.legalLink} onPress={handleSignUp}>
-              S'inscrire
+              {t("auth.loginEmail.signUp")}
             </Text>
           </Text>
 
-          {/* Légal */}
           <Text style={styles.legal}>
-            En continuant, vous acceptez nos{" "}
-            <Text style={styles.legalLink} onPress={handleTerms}>
-              Conditions d'utilisation
-            </Text>{" "}
-            et notre{" "}
-            <Text style={styles.legalLink} onPress={handlePrivacy}>
-              Politique de confidentialité
-            </Text>
-            .
+            {(() => {
+              const legalText = t("auth.loginEmail.legalNotice", { terms: "||TERMS||", privacy: "||PRIVACY||" });
+              const [before, afterTerms] = legalText.split("||TERMS||");
+              const [middle, afterPrivacy] = afterTerms.split("||PRIVACY||");
+              return (
+                <>
+                  <Text>{before}</Text>
+                  <Text style={styles.legalLink} onPress={handleTerms}>{t("auth.loginEmail.terms")}</Text>
+                  <Text>{middle}</Text>
+                  <Text style={styles.legalLink} onPress={handlePrivacy}>{t("auth.loginEmail.privacy")}</Text>
+                  <Text>{afterPrivacy}</Text>
+                </>
+              );
+            })()}
           </Text>
         </View>
       </ScrollView>

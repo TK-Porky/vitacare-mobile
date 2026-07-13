@@ -14,6 +14,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { AppBottomSheet, AppBottomSheetRef } from "@/components/generics";
@@ -78,6 +79,7 @@ export const EditReminderBottomSheet = forwardRef<
   EditReminderBottomSheetRef,
   Props
 >(({ onClose }, ref) => {
+  const { t } = useTranslation();
   const sheetRef = useRef<AppBottomSheetRef>(null);
   const [reminderId, setReminderId] = useState<string | null>(null);
   const [data, setData] = useState<ReminderData>({
@@ -126,11 +128,11 @@ export const EditReminderBottomSheet = forwardRef<
         data: requestData,
       });
       sheetRef.current?.close();
-      Alert.alert("Succès", "Rappel mis à jour !");
+      Alert.alert(t("common.success"), t("reminders.edit"));
       if (Platform.OS === "ios")
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      Alert.alert("Erreur", "Impossible de mettre à jour le rappel");
+      Alert.alert(t("common.error"), t("reminders.addError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -148,7 +150,7 @@ export const EditReminderBottomSheet = forwardRef<
       containerStyle={styles.sheet}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Modifier le rappel</Text>
+        <Text style={styles.title}>{t("reminders.edit")}</Text>
         <TouchableOpacity
           onPress={() => sheetRef.current?.close()}
           style={styles.closeBtn}
@@ -160,17 +162,17 @@ export const EditReminderBottomSheet = forwardRef<
       <View style={styles.formContainer}>
         <View style={styles.field}>
           <FieldInput
-            label="Nom du médicament"
+            label={t("reminders.addForm.drugName")}
             value={data.drugName}
             onChangeText={(t) => patch({ drugName: t })}
-            placeholder="Ex: Amoxicilline"
+            placeholder={t("reminders.addForm.drugNamePlaceholder")}
             required
           />
         </View>
 
         <View style={[styles.field, { zIndex: 300 }]}>
           <InlineDropdown
-            label="Forme"
+            label={t("reminders.addForm.form")}
             value={data.form}
             options={FORMS}
             onSelect={(v) => patch({ form: v })}
@@ -179,7 +181,7 @@ export const EditReminderBottomSheet = forwardRef<
 
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>
-            Dosage <Text style={styles.required}>*</Text>
+            {t("reminders.addForm.dosage")} <Text style={styles.required}>*</Text>
           </Text>
           <View style={styles.dosageRow}>
             <FieldInput
@@ -200,7 +202,7 @@ export const EditReminderBottomSheet = forwardRef<
 
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>
-            Fréquence <Text style={styles.required}>*</Text>
+            {t("reminders.addForm.frequency")} <Text style={styles.required}>*</Text>
           </Text>
           <View style={styles.freqRow}>
             <InlineDropdown
@@ -221,7 +223,7 @@ export const EditReminderBottomSheet = forwardRef<
 
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>
-            Heure <Text style={styles.required}>*</Text>
+            {t("reminders.addForm.time")} <Text style={styles.required}>*</Text>
           </Text>
           <TouchableOpacity
             style={styles.timeBtn}
@@ -240,17 +242,17 @@ export const EditReminderBottomSheet = forwardRef<
 
         <View style={styles.field}>
           <FieldInput
-            label="Notes (optionnel)"
+            label={t("reminders.addForm.notes")}
             value={data.notes || ""}
             onChangeText={(t) => patch({ notes: t })}
-            placeholder="Ajoutez des notes supplémentaires..."
+            placeholder={t("reminders.addForm.notes")}
             multiline
             numberOfLines={3}
           />
         </View>
 
         <PrimaryButton
-          label={isSubmitting ? "Mise à jour..." : "Enregistrer"}
+          label={isSubmitting ? t("common.save") + "..." : t("common.save")}
           variant="solid"
           size="md"
           onPress={handleSave}

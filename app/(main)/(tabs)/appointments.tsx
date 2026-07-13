@@ -3,6 +3,7 @@ import React, { useRef, useState, useCallback } from "react";
 import { StyleSheet, StatusBar, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { colors } from "@/themes";
 import { Appointment } from "@/types";
 import {
@@ -22,6 +23,7 @@ import {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function AppointmentScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const appointmentRef = useRef<AppointmentDetailBottomSheetRef>(null);
 
@@ -80,15 +82,15 @@ export default function AppointmentScreen() {
     if (!selectedAppointmentId) return;
     try {
       await markAppointmentAsPaid(selectedAppointmentId);
-      Alert.alert("Succès", "Paiement effectué avec succès !");
+      Alert.alert(t('common.success'), t('booking.success'));
       refresh();
       appointmentRef.current?.close();
       setSelectedItem(undefined);
       setSelectedAppointmentId(undefined);
     } catch (error) {
       Alert.alert(
-        "Erreur",
-        "Impossible de marquer le paiement comme effectué.",
+        t('common.error'),
+        t('errors.somethingWrong'),
       );
     }
   }, [selectedAppointmentId, markAppointmentAsPaid, refresh]);
@@ -102,7 +104,7 @@ export default function AppointmentScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.primary} />
 
-      <AppHeader title="Rendez-vous" />
+      <AppHeader title={t('appointments.title')} />
 
       <TabsSection activeTab={activeTab} onTabChange={setActiveTab} />
 

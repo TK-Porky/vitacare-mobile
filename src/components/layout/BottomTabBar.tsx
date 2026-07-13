@@ -3,6 +3,7 @@ import { Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, usePathname } from "expo-router";
+import i18next from "@/i18n";
 import { colors, fontFamily, fontSize } from "../../themes";
 import { useNotificationStore } from "@/store";
 
@@ -21,21 +22,21 @@ const TABS: TabItem[] = [
     path: "/(main)/(tabs)/home",
     icon: "home-outline",
     iconActive: "home",
-    label: "Accueil",
+    label: i18next.t('tabs.home'),
   },
   {
     name: "explore",
     path: "/(main)/(tabs)/explore",
     icon: "search-outline",
     iconActive: "search",
-    label: "Explorer",
+    label: i18next.t('tabs.explore'),
   },
   {
     name: "appointments",
     path: "/(main)/(tabs)/appointments",
     icon: "calendar-outline",
     iconActive: "calendar",
-    label: "RDV",
+    label: i18next.t('tabs.appointments'),
     badge: true,
   },
   {
@@ -43,14 +44,14 @@ const TABS: TabItem[] = [
     path: "/(main)/(tabs)/medications",
     icon: "medical-outline",
     iconActive: "medical",
-    label: "Drugs",
+    label: i18next.t('tabs.medications'),
   },
   {
     name: "profile",
     path: "/(main)/(tabs)/profile",
     icon: "person-outline",
     iconActive: "person",
-    label: "Profil",
+    label: i18next.t('tabs.profile'),
   },
 ];
 

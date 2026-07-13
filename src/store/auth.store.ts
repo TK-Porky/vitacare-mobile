@@ -8,6 +8,7 @@ import {
   type AuthResult,
   type UserProfile,
 } from "@/services/auth.service";
+import i18next from "@/i18n";
 import { apiClient } from "@/lib/api.client";
 import type { LoginEmailInput, RegisterInput } from "@/schemas/auth.schema";
 import { router } from "expo-router";
@@ -168,7 +169,7 @@ export const useAuthStore = create<AuthState>()(
             params: { phone, fullName: fullName || "" },
           });
         } catch (e: any) {
-          set({ error: e?.message ?? "Erreur lors de l'envoi du SMS." });
+          set({ error: e?.message ?? i18next.t("errors.generic") });
         } finally {
           set({ isLoading: false });
         }
@@ -184,7 +185,7 @@ export const useAuthStore = create<AuthState>()(
           await handleAuthResult(result, set);
           router.replace("/(main)");
         } catch (e: any) {
-          set({ error: e?.message ?? "Code invalide ou expiré." });
+          set({ error: e?.message ?? i18next.t("auth.otp.invalidCode") });
         } finally {
           set({ isLoading: false });
         }
@@ -201,18 +202,17 @@ export const useAuthStore = create<AuthState>()(
           await handleAuthResult(result, set);
           router.replace("/(main)");
         } catch (e: any) {
-          // Firebase error messages
-          let message = "Email ou mot de passe incorrect.";
+          let message = i18next.t("errors.generic");
           if (e.code === "auth/user-not-found") {
-            message = "Aucun compte associé à cet email.";
+            message = i18next.t("errors.notFound");
           } else if (e.code === "auth/wrong-password") {
-            message = "Mot de passe incorrect.";
+            message = i18next.t("errors.generic");
           } else if (e.code === "auth/invalid-email") {
-            message = "Adresse email invalide.";
+            message = i18next.t("validation.emailInvalid");
           } else if (e.code === "auth/user-disabled") {
-            message = "Ce compte a été désactivé.";
+            message = i18next.t("errors.unauthorized");
           } else if (e.code === "auth/too-many-requests") {
-            message = "Trop de tentatives. Veuillez réessayer plus tard.";
+            message = i18next.t("errors.tryAgain");
           }
           set({ error: e?.message || message });
         } finally {
@@ -230,7 +230,7 @@ export const useAuthStore = create<AuthState>()(
           await handleAuthResult(response, set);
           router.replace("/(main)");
         } catch (e: any) {
-          set({ error: e?.message ?? "Erreur lors de la connexion Google." });
+          set({ error: e?.message ?? i18next.t("errors.generic") });
         } finally {
           set({ isLoading: false });
         }
@@ -255,19 +255,19 @@ export const useAuthStore = create<AuthState>()(
             router.replace("/(auth)/onboarding/location");
           }
         } catch (e: any) {
-          let message = "Erreur lors de l'inscription.";
+          let message = i18next.t("errors.generic");
           if (e.code === "auth/email-already-in-use") {
-            message = "Cet email est déjà utilisé.";
+            message = i18next.t("errors.generic");
           } else if (e.code === "auth/invalid-email") {
-            message = "Adresse email invalide.";
+            message = i18next.t("validation.emailInvalid");
           } else if (e.code === "auth/argument-error") {
-            message = "Le mot de passe doit contenir au moins 6 caracteres.";
+            message = i18next.t("validation.passwordMin");
           } else if (e.code === "auth/weak-password") {
-            message = "Le mot de passe est trop faible.";
+            message = i18next.t("validation.passwordMin");
           } else if (e.code === "auth/user-disabled") {
-            message = "Ce compte a été désactivé.";
+            message = i18next.t("errors.unauthorized");
           } else if (e.code === "auth/too-many-requests") {
-            message = "Trop de tentatives. Veuillez réessayer plus tard.";
+            message = i18next.t("errors.tryAgain");
           }
           set({ error: e?.message || message });
         } finally {
@@ -284,11 +284,11 @@ export const useAuthStore = create<AuthState>()(
           // ✅ Firebase password reset
           await authService.forgotPassword(email);
         } catch (e: any) {
-          let message = "Impossible d'envoyer l'email.";
+          let message = i18next.t("errors.generic");
           if (e.code === "auth/user-not-found") {
-            message = "Aucun compte associé à cet email.";
+            message = i18next.t("errors.notFound");
           } else if (e.code === "auth/invalid-email") {
-            message = "Adresse email invalide.";
+            message = i18next.t("validation.emailInvalid");
           }
           set({ error: e?.message || message });
         } finally {
@@ -304,7 +304,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           await authService.verifyPasswordResetOtp(email, otp);
         } catch (e: any) {
-          set({ error: e?.message ?? "Code invalide ou expiré." });
+          set({ error: e?.message ?? i18next.t("auth.otp.invalidCode") });
           throw e;
         } finally {
           set({ isLoading: false });
@@ -322,7 +322,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             error:
               e?.message ??
-              "Erreur lors de la réinitialisation du mot de passe.",
+              i18next.t("errors.generic"),
           });
           throw e;
         } finally {

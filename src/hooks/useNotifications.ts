@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as ExpoNotifications from "expo-notifications";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { notificationService } from "@/services/notifications.service";
 import type { NotificationData } from "@/types";
 import { Alert } from "react-native";
@@ -31,6 +32,7 @@ const PAGE_SIZE = 20;
  * Mount this hook once in the root layout.
  */
 export function useNotifications(): UseNotificationsReturn {
+  const { t } = useTranslation();
   const router = useRouter();
 
   // ── États ──────────────────────────────────────────────────────────────
@@ -267,16 +269,16 @@ export function useNotifications(): UseNotificationsReturn {
     // Confirmation utilisateur
     return new Promise<void>((resolve, reject) => {
       Alert.alert(
-        "Marquer tout comme lu",
-        "Voulez-vous marquer toutes les notifications comme lues ?",
+        t('notifications.markAllRead'),
+        t('notifications.markAllReadConfirm'),
         [
           {
-            text: "Annuler",
+            text: t('common.cancel'),
             style: "cancel",
-            onPress: () => reject(new Error("Annulé par l'utilisateur")),
+            onPress: () => reject(new Error(t('notifications.markAllReadCancel'))),
           },
           {
-            text: "Confirmer",
+            text: t('common.confirm'),
             onPress: async () => {
               try {
                 await notificationService.markAllAsRead();

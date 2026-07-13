@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { MapPin } from "lucide-react-native";
 import MapView, { UrlTile, Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
+import { useTranslation } from "react-i18next";
 import { StepHeader, SearchInput, PrimaryButton } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useProfile } from "@/hooks";
@@ -31,6 +32,7 @@ const INITIAL_REGION = {
 // Main
 // ================================================================================== //
 export default function OnboardingLocationScreen() {
+  const { t } = useTranslation();
   const { updateProfile, isUpdatingProfile } = useProfile();
   // ================================================================================== //
   // States
@@ -95,7 +97,7 @@ export default function OnboardingLocationScreen() {
 
       router.push("/(auth)/onboarding-search");
     } catch (e) {
-      Alert.alert("Erreur", "Impossible de sauvegarder votre position.");
+      Alert.alert(t("errors.generic"), t("errors.somethingWrong"));
     }
   };
 
@@ -120,17 +122,16 @@ export default function OnboardingLocationScreen() {
 
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Indiquer votre position</Text>
+          <Text style={styles.title}>{t("onboarding.location.title")}</Text>
           <Text style={styles.subtitle}>
-            Les recherches s'effectueront dans un périmètre de 15km, ajustable
-            plus tard
+            {t("onboarding.location.subtitle")}
           </Text>
         </View>
 
         <SearchInput
           value={searchQuery}
           onChangeText={handleChangeSearchQuery}
-          placeholder="Rechercher votre position..."
+          placeholder={t("common.search") + "..."}
         />
 
         {/* Map Container */}
@@ -172,7 +173,7 @@ export default function OnboardingLocationScreen() {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label="Continuer"
+          label={t("common.continue")}
           fullWidth
           isLoading={isUpdatingProfile}
           onPress={handleContinue}

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import LottieView from "lottie-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 
 const { width, height } = Dimensions.get("window");
@@ -30,6 +31,7 @@ export const OnboardingCarousel = ({
   slides,
   onComplete,
 }: OnboardingCarouselProps) => {
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const animationRef = useRef<LottieView>(null);
@@ -87,7 +89,7 @@ export const OnboardingCarousel = ({
 
       {/* Bouton Skip */}
       <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-        <Text style={styles.skipText}>Passer</Text>
+        <Text style={styles.skipText}>{t('common.skip')}</Text>
       </TouchableOpacity>
 
       {/* Carousel */}
@@ -115,7 +117,7 @@ export const OnboardingCarousel = ({
         activeOpacity={0.8}
       >
         <Text style={styles.nextButtonText}>
-          {currentIndex === slides.length - 1 ? "Commencer" : "Suivant"}
+          {currentIndex === slides.length - 1 ? t('onboarding.carousel.slide3Title') : t('common.next')}
         </Text>
       </TouchableOpacity>
     </SafeAreaView>

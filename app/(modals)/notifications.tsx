@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import Toast from "react-native-toast-message";
 import { colors } from "@/themes";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -23,6 +24,7 @@ import { ListFooter } from "@/components/notifications/ListFooter";
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
 export default function NotificationsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const {
     inbox,
@@ -46,14 +48,14 @@ export default function NotificationsScreen() {
         await deleteNotification(id);
         Toast.show({
           type: "success",
-          text1: "Notification supprimée",
+          text1: t('notifications.empty'),
           position: "bottom",
         });
       } catch (error) {
         Toast.show({
           type: "error",
-          text1: "Erreur",
-          text2: "Impossible de supprimer la notification",
+          text1: t('common.error'),
+          text2: t('notifications.empty'),
           position: "bottom",
         });
       }
@@ -74,11 +76,11 @@ export default function NotificationsScreen() {
 
   const handleMarkAllAsRead = useCallback(() => {
     Alert.alert(
-      "Marquer tout comme lu",
-      "Voulez-vous marquer toutes les notifications comme lues ?",
+      t('notifications.markAllRead'),
+      t('notifications.markAllReadConfirm'),
       [
-        { text: "Annuler", style: "cancel" },
-        { text: "Confirmer", onPress: markAllAsRead },
+        { text: t('common.cancel'), style: "cancel" },
+        { text: t('common.confirm'), onPress: markAllAsRead },
       ],
     );
   }, [markAllAsRead]);

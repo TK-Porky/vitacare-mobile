@@ -1,23 +1,22 @@
 import { Stack } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { colors } from "@/themes";
 
-// ─── Options communes ────────────────────────────────────────────────────────
-
-const HEADER_OPTIONS = {
-  headerShown: false,
-  headerBackTitle: "Retour",
-  headerStyle: {
-    backgroundColor: colors.white,
-  },
-  headerTitleStyle: {
-    color: colors.ink,
-  },
-  headerShadowVisible: false,
-};
-
-// ─── Layout ──────────────────────────────────────────────────────────────────
-
 export default function ProfileLayout() {
+  const { t } = useTranslation();
+
+  const HEADER_OPTIONS = {
+    headerShown: false,
+    headerBackTitle: t("common.back"),
+    headerStyle: {
+      backgroundColor: colors.white,
+    },
+    headerTitleStyle: {
+      color: colors.ink,
+    },
+    headerShadowVisible: false,
+  };
+
   return (
     <Stack
       screenOptions={{
@@ -31,7 +30,7 @@ export default function ProfileLayout() {
         name="edit-profile"
         options={{
           ...HEADER_OPTIONS,
-          headerTitle: "Modifier le profil",
+          headerTitle: t("profile.editScreen.title"),
         }}
       />
 
@@ -39,7 +38,7 @@ export default function ProfileLayout() {
         name="activity"
         options={{
           ...HEADER_OPTIONS,
-          headerTitle: "Mon activité",
+          headerTitle: t("profile.activityScreen.title"),
         }}
       />
 
@@ -47,7 +46,7 @@ export default function ProfileLayout() {
         name="location"
         options={{
           ...HEADER_OPTIONS,
-          headerTitle: "Ma localisation",
+          headerTitle: t("profile.locationScreen.title"),
         }}
       />
 
@@ -55,7 +54,7 @@ export default function ProfileLayout() {
         name="downloads"
         options={{
           ...HEADER_OPTIONS,
-          headerTitle: "Mes téléchargements",
+          headerTitle: t("profile.downloadsScreen.title"),
         }}
       />
 
@@ -63,7 +62,7 @@ export default function ProfileLayout() {
         name="change-password"
         options={{
           ...HEADER_OPTIONS,
-          headerTitle: "Modifier le mot de passe",
+          headerTitle: t("profile.changePasswordScreen.title"),
         }}
       />
 
@@ -71,7 +70,7 @@ export default function ProfileLayout() {
         name="notifications-settings"
         options={{
           ...HEADER_OPTIONS,
-          headerTitle: "Notifications",
+          headerTitle: t("profile.notificationsScreen.title"),
         }}
       />
 
@@ -79,7 +78,7 @@ export default function ProfileLayout() {
         name="language-settings"
         options={{
           ...HEADER_OPTIONS,
-          headerTitle: "Langue",
+          headerTitle: t("profile.languageScreen.title"),
         }}
       />
 
@@ -87,7 +86,7 @@ export default function ProfileLayout() {
         name="help"
         options={{
           ...HEADER_OPTIONS,
-          headerTitle: "Aide",
+          headerTitle: t("profile.helpScreen.title"),
         }}
       />
 
@@ -95,7 +94,7 @@ export default function ProfileLayout() {
         name="terms"
         options={{
           ...HEADER_OPTIONS,
-          headerTitle: "Conditions d'utilisation",
+          headerTitle: t("profile.termsScreen.title"),
         }}
       />
     </Stack>

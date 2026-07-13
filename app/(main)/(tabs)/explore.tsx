@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { AppHeader, ClinicCard, ClinicCardSkeleton } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 import {
@@ -28,6 +29,7 @@ import { apiClient } from "@/lib/api.client";
 import { API_ENDPOINTS } from "@/types/api-endpoints";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useNotificationStore } from "@/store/notification.store";
+import i18next from "@/i18n";
 
 // ================================================================================== //
 // Helper Functions
@@ -43,16 +45,16 @@ const mapProviderData = (
   // ✅ Vérifier que clinic existe
   if (!clinic) {
     return {
-      clinicName: "Nom non spécifié",
+      clinicName: i18next.t('provider.clinicNameDefault'),
       avatarUri: "",
-      specialty: "Spécialiste",
-      experience: "+5 Ans",
+      specialty: i18next.t('provider.specialtyDefault'),
+      experience: i18next.t('provider.experienceDefault', { years: 5 }),
       language: "FR-EN",
-      doctorName: "Dr. Inconnu",
-      description: "Aucune description disponible",
-      hoursRange: "Horaires non spécifiés",
-      hoursdays: "Jours non spécifiés",
-      location: "Adresse non spécifiée",
+      doctorName: i18next.t('provider.doctorNameDefault'),
+      description: i18next.t('provider.descriptionDefault'),
+      hoursRange: i18next.t('provider.hoursDefault'),
+      hoursdays: i18next.t('provider.daysDefault'),
+      location: i18next.t('provider.locationDefault'),
       coverUri: undefined,
       phone: undefined,
       email: undefined,
@@ -62,27 +64,27 @@ const mapProviderData = (
   if (detail) {
     return {
       clinicName:
-        detail.doctor.cabinet ?? clinic.clinicName ?? "Nom non spécifié",
+        detail.doctor.cabinet ?? clinic.clinicName ?? i18next.t('provider.clinicNameDefault'),
       avatarUri: detail.doctor.avatarUrl ?? clinic.avatarUri ?? "",
       specialty:
-        detail.doctor.specialization ?? clinic.specialty ?? "Spécialiste",
+        detail.doctor.specialization ?? clinic.specialty ?? i18next.t('provider.specialtyDefault'),
       experience: detail.doctor.experienceYears
-        ? `+${detail.doctor.experienceYears} Ans`
-        : "+5 Ans",
+        ? i18next.t('provider.experienceDefault', { years: detail.doctor.experienceYears })
+        : i18next.t('provider.experienceDefault', { years: 5 }),
       language: "FR-EN",
-      doctorName: detail.doctor.fullName ?? clinic.doctorName ?? "Dr. Inconnu",
+      doctorName: detail.doctor.fullName ?? clinic.doctorName ?? i18next.t('provider.doctorNameDefault'),
       description:
         detail.doctor.bio ??
         clinic.description ??
-        "Spécialiste de santé qualifié.",
+        i18next.t('provider.descriptionDefaultQualified'),
       hoursRange:
-        detail.doctor.hours ?? clinic.hours ?? "Horaires non spécifiés",
-      hoursdays: detail.doctor.days ?? clinic.days ?? "Jours non spécifiés",
+        detail.doctor.hours ?? clinic.hours ?? i18next.t('provider.hoursDefault'),
+      hoursdays: detail.doctor.days ?? clinic.days ?? i18next.t('provider.daysDefault'),
       location:
         detail.doctor.address ??
         detail.doctor.city ??
         clinic.location ??
-        "Adresse non spécifiée",
+        i18next.t('provider.locationDefault'),
       coverUri: detail.doctor.serviceLocationImageUrl ?? clinic.imageUri,
       phone: detail.doctor.phone ?? clinic.phone,
       email: detail.doctor.email ?? clinic.email,
@@ -90,16 +92,16 @@ const mapProviderData = (
   }
 
   return {
-    clinicName: clinic.clinicName ?? "Nom non spécifié",
+    clinicName: clinic.clinicName ?? i18next.t('provider.clinicNameDefault'),
     avatarUri: clinic.avatarUri || "",
-    specialty: clinic.specialty ?? "Spécialiste",
-    experience: "+5 Ans",
+    specialty: clinic.specialty ?? i18next.t('provider.specialtyDefault'),
+    experience: i18next.t('provider.experienceDefault', { years: 5 }),
     language: "FR-EN",
-    doctorName: clinic.doctorName ?? "Dr. Inconnu",
-    description: clinic.description || "Spécialiste de santé qualifié.",
-    hoursRange: clinic.hours ?? "Horaires non spécifiés",
-    hoursdays: clinic.days ?? "Jours non spécifiés",
-    location: clinic.location ?? "Adresse non spécifiée",
+    doctorName: clinic.doctorName ?? i18next.t('provider.doctorNameDefault'),
+    description: clinic.description || i18next.t('provider.descriptionDefaultQualified'),
+    hoursRange: clinic.hours ?? i18next.t('provider.hoursDefault'),
+    hoursdays: clinic.days ?? i18next.t('provider.daysDefault'),
+    location: clinic.location ?? i18next.t('provider.locationDefault'),
     coverUri: clinic.imageUri,
     phone: clinic.phone,
     email: clinic.email,
@@ -114,6 +116,7 @@ export default function ExploreScreen() {
   // ================================================================================== //
   // Hooks
   // ================================================================================== //
+  const { t } = useTranslation();
   const router = useRouter();
   const {
     clinics,
@@ -179,7 +182,7 @@ export default function ExploreScreen() {
       .then((res) => {
         if (cancelled) return;
         if (!res.success) {
-          setDetailError(res.message || "Erreur de chargement du profil");
+          setDetailError(res.message || t('common.error'));
           setDoctorDetail(null);
           return;
         }
@@ -195,7 +198,7 @@ export default function ExploreScreen() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setDetailError(err.message || "Erreur de chargement du profil");
+          setDetailError(err.message || t('common.error'));
           setDoctorDetail(null);
         }
       })
@@ -228,7 +231,7 @@ export default function ExploreScreen() {
     (clinic?: ClinicProviderResponse) => {
       const target = clinic ?? selectedClinic;
       if (!target) {
-        Alert.alert("Erreur", "Aucun professionnel sélectionné");
+        Alert.alert(t('common.error'), t('explore.noProfessionalSelected'));
         return;
       }
 
@@ -269,7 +272,7 @@ export default function ExploreScreen() {
     if (currentProvider) {
       shareSheetRef.current?.open();
     } else {
-      Alert.alert("Info", "Aucun contact à partager");
+      Alert.alert(t('common.info'), t('explore.noContactToShare'));
     }
   }, [currentProvider]);
 
@@ -295,7 +298,7 @@ export default function ExploreScreen() {
     return (
       <View style={styles.loaderFooter}>
         <ActivityIndicator color={colors.primary} />
-        <Text style={styles.loaderText}>Chargement...</Text>
+        <Text style={styles.loaderText}>{t('common.loading')}</Text>
       </View>
     );
   }, [isLoadingMore]);
@@ -306,12 +309,12 @@ export default function ExploreScreen() {
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>
           {search
-            ? "Aucun professionnel trouvé"
-            : "Aucun professionnel disponible"}
+            ? t('explore.noProfessionalFound')
+            : t('explore.noProfessionalAvailable')}
         </Text>
         {search && (
           <Text style={styles.emptySubtext}>
-            Essayez de modifier votre recherche
+            {t('explore.tryModifySearch')}
           </Text>
         )}
       </View>

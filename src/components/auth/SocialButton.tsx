@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
 
@@ -13,11 +14,13 @@ export function SocialLogin({
   onApplePress,
   onFacebookPress,
 }: SocialLoginProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.dividerContainer}>
         <View style={styles.divider} />
-        <Text style={styles.dividerText}>ou continuer avec</Text>
+        <Text style={styles.dividerText}>{t("common.or")}</Text>
         <View style={styles.divider} />
       </View>
 

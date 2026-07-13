@@ -8,6 +8,7 @@ import {
   Vibration,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -17,6 +18,7 @@ import { GrayButton } from "@/components/buttons/GrayButton";
 import { useReminders } from "@/hooks";
 
 export default function ReminderValidationModal() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const {
     reminderId,
@@ -68,17 +70,17 @@ export default function ReminderValidationModal() {
 
       // Afficher un message de succès
       Alert.alert(
-        "✅ Prise confirmée",
-        `${medicationName} a été marqué comme pris.`,
+        t("reminders.taken"),
+        `${medicationName} ${t("reminders.markAsTaken")}.`,
         [
           {
-            text: "OK",
+            text: t("common.ok"),
             onPress: () => router.back(),
           },
         ],
       );
     } catch (error) {
-      Alert.alert("Erreur", "Impossible de marquer le rappel comme pris.");
+      Alert.alert(t("common.error"), t("reminders.markTakenError"));
     } finally {
       setIsLoading(false);
     }
@@ -96,14 +98,14 @@ export default function ReminderValidationModal() {
       // ⏰ Reporter le rappel
       await snoozeReminder({ id: reminderId as string, minutes: 15 });
 
-      Alert.alert("⏰ Rappel reporté", `Vous serez notifié dans 15 minutes.`, [
+      Alert.alert(t("reminders.snoozed"), t("reminders.snoozeTitle"), [
         {
-          text: "OK",
+          text: t("common.ok"),
           onPress: () => router.back(),
         },
       ]);
     } catch (error) {
-      Alert.alert("Erreur", "Impossible de reporter le rappel.");
+      Alert.alert(t("common.error"), t("reminders.addError"));
     } finally {
       setIsLoading(false);
     }
@@ -122,17 +124,17 @@ export default function ReminderValidationModal() {
       await deleteReminder(reminderId as string);
 
       Alert.alert(
-        "❌ Rappel ignoré",
-        `Le rappel pour ${medicationName} a été ignoré.`,
+        t("reminders.skip"),
+        `${t("reminders.skip")}: ${medicationName}`,
         [
           {
-            text: "OK",
+            text: t("common.ok"),
             onPress: () => router.back(),
           },
         ],
       );
     } catch (error) {
-      Alert.alert("Erreur", "Impossible d'ignorer le rappel.");
+      Alert.alert(t("common.error"), t("reminders.addError"));
     } finally {
       setIsLoading(false);
     }
@@ -156,27 +158,27 @@ export default function ReminderValidationModal() {
         </View>
 
         {/* ── Informations ── */}
-        <Text style={styles.title}>Rappel de médicament</Text>
+        <Text style={styles.title}>{t("reminders.title")}</Text>
 
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
             <Ionicons name="medkit" size={20} color={colors.primary} />
-            <Text style={styles.infoLabel}>Médicament:</Text>
+            <Text style={styles.infoLabel}>{t("medications.available")}:</Text>
             <Text style={styles.infoValue}>{medicationName}</Text>
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="scale-outline" size={20} color={colors.primary} />
-            <Text style={styles.infoLabel}>Dosage:</Text>
+            <Text style={styles.infoLabel}>{t("reminders.addForm.dosage")}:</Text>
             <Text style={styles.infoValue}>{dosage}</Text>
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="time-outline" size={20} color={colors.primary} />
-            <Text style={styles.infoLabel}>Heure prévue:</Text>
+            <Text style={styles.infoLabel}>{t("reminders.addForm.time")}:</Text>
             <Text style={styles.infoValue}>{scheduledTime}</Text>
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="cube-outline" size={20} color={colors.primary} />
-            <Text style={styles.infoLabel}>Forme:</Text>
+            <Text style={styles.infoLabel}>{t("reminders.addForm.form")}:</Text>
             <Text style={styles.infoValue}>{form}</Text>
           </View>
         </View>
@@ -184,7 +186,7 @@ export default function ReminderValidationModal() {
         {/* ── Timer de snooze ── */}
         {selectedAction === "snooze" && timeLeft !== null && timeLeft > 0 && (
           <View style={styles.timerContainer}>
-            <Text style={styles.timerText}>Report dans:</Text>
+            <Text style={styles.timerText}>{t("reminders.snooze")}:</Text>
             <Text style={styles.timerValue}>{formatTime(timeLeft)}</Text>
           </View>
         )}
@@ -192,7 +194,7 @@ export default function ReminderValidationModal() {
         {/* ── Actions ── */}
         <View style={styles.actions}>
           <PrimaryButton
-            label="Pris"
+            label={t("reminders.taken")}
             onPress={handleTake}
             isLoading={isLoading && selectedAction === "take"}
             isDisabled={isLoading}
@@ -202,13 +204,13 @@ export default function ReminderValidationModal() {
 
           <View style={styles.secondaryActions}>
             <GrayButton
-              label="Reporter 15min"
+              label={t("reminders.snooze") + " 15min"}
               onPress={handleSnooze}
               disabled={isLoading}
               style={styles.secondaryButton}
             />
             <GrayButton
-              label="Ignorer"
+              label={t("reminders.skip")}
               onPress={handleSkip}
               disabled={isLoading}
             />
@@ -221,7 +223,7 @@ export default function ReminderValidationModal() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Text style={styles.closeText}>Fermer</Text>
+          <Text style={styles.closeText}>{t("common.close")}</Text>
         </TouchableOpacity>
       </View>
     </View>

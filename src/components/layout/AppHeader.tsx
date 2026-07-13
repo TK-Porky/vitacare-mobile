@@ -11,6 +11,7 @@ import { Search, Filter } from "lucide-react-native";
 import { SearchInput } from "../inputs/SearchInput";
 import { PrimaryButton } from "../buttons/PrimaryButton";
 import { colors, fontFamily, fontSize } from "../../themes";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   title?: string;
@@ -49,6 +50,7 @@ export function AppHeader({
   rightActions,
   notificationBell,
 }: Props) {
+  const { t } = useTranslation();
   const statusBarHeight = StatusBar.currentHeight ?? 50;
   const hideLogo = !!title || showLogo == false;
 
@@ -75,9 +77,9 @@ export function AppHeader({
                 onPress={onSearch}
                 activeOpacity={0.7}
                 style={styles.iconButton}
-                accessibilityLabel="Rechercher"
+                accessibilityLabel={t('accessibility.search')}
                 accessibilityRole="button"
-                accessibilityHint="Ouvrir la recherche"
+                accessibilityHint={t('accessibility.openSearch')}
               >
                 <Search size={20} color={colors.ink} />
               </TouchableOpacity>
@@ -87,9 +89,9 @@ export function AppHeader({
                 onPress={onFilter}
                 activeOpacity={0.7}
                 style={styles.iconButton}
-                accessibilityLabel="Filtrer"
+                accessibilityLabel={t('accessibility.filter')}
                 accessibilityRole="button"
-                accessibilityHint="Filtrer les éléments affichés"
+                accessibilityHint={t('accessibility.filterItems')}
               >
                 <Filter size={20} color={colors.ink} />
               </TouchableOpacity>
@@ -99,9 +101,9 @@ export function AppHeader({
                 onPress={onNotification}
                 activeOpacity={0.7}
                 style={styles.iconButton}
-                accessibilityLabel="Notifications"
+                accessibilityLabel={t('accessibility.notifications')}
                 accessibilityRole="button"
-                accessibilityHint="Voir vos notifications"
+                accessibilityHint={t('accessibility.seeNotifications')}
               >
                 <View style={styles.notificationContainer}>
                   <Ionicons
@@ -121,7 +123,7 @@ export function AppHeader({
             )}
             {onMap && (
               <PrimaryButton
-                label="Carte"
+                label={t('accessibility.map')}
                 onPress={onMap}
                 icon={<Ionicons name="map" size={16} color={colors.white} />}
                 style={styles.mapButton}
@@ -130,7 +132,7 @@ export function AppHeader({
             )}
             {onReminders && !onMap && (
               <PrimaryButton
-                label="Rappels"
+                label={t('accessibility.reminders')}
                 onPress={onReminders}
                 icon={
                   <Ionicons
@@ -157,15 +159,15 @@ export function AppHeader({
                 value={searchValue}
                 onChangeText={onSearchChange || (() => {})}
                 onFocus={onSearchFocus}
-                accessibilityLabel="Rechercher"
-                accessibilityHint="Saisissez votre recherche"
+                accessibilityLabel={t('accessibility.search')}
+                accessibilityHint={t('accessibility.enterSearch')}
               />
               {isSearching && onSearchClose && (
                 <TouchableOpacity
                   style={styles.searchCloseButton}
                   onPress={onSearchClose}
                   activeOpacity={0.7}
-                  accessibilityLabel="Fermer la recherche"
+                  accessibilityLabel={t('accessibility.closeSearch')}
                   accessibilityRole="button"
                 >
                   <Ionicons name="close" size={20} color={colors.ink} />

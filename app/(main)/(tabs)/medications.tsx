@@ -8,6 +8,7 @@ import {
   Alert,
   RefreshControl,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "@/themes";
 import { SectionHeader, AppHeader } from "@/components";
@@ -39,6 +40,7 @@ const HERO_IMAGE_URL =
 // ================================================================================== //
 
 export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDrug, setSelectedDrug] =
@@ -109,8 +111,8 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
     async (drug: StoreMedicationResponse) => {
       if (!user) {
         Alert.alert(
-          "Erreur",
-          "Vous devez être connecté pour ajouter un rappel",
+          t('common.error'),
+          t('medications.loginRequired'),
         );
         return;
       }
@@ -127,11 +129,11 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         });
 
         Alert.alert(
-          "Succès",
-          `Le rappel pour ${drug.name} a été ajouté avec succès !`,
+          t('common.success'),
+          t('medications.addToReminderSuccess', { name: drug.name }),
           [
             {
-              text: "OK",
+              text: t('common.ok'),
               onPress: () => {
                 drugSheetRef.current?.close();
                 if (onReminders) onReminders();
@@ -141,10 +143,10 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         );
       } catch (error) {
         Alert.alert(
-          "Erreur",
+          t('common.error'),
           error instanceof Error
             ? error.message
-            : "Impossible d'ajouter le rappel",
+            : t('medications.addToReminderError'),
         );
       }
     },
@@ -220,11 +222,11 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         }
       >
         <HeroBanner
-          title="Espace Médicaments"
+          title={t('medications.title')}
           subtitle={
             isSearching
-              ? `Résultats pour "${searchQuery}"`
-              : "Découvrez nos médicaments classés par catégorie."
+              ? t('medications.searchResults', { query: searchQuery })
+              : t('medications.subtitle')
           }
           imageUrl={HERO_IMAGE_URL}
         />
@@ -232,7 +234,7 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         {/* Categories */}
         {!isSearching && (
           <>
-            <SectionHeader title="Catégories" onSeeAll={() => {}} />
+            <SectionHeader title={t('medications.categories')} onSeeAll={() => {}} />
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -251,7 +253,7 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
 
         {/* Medications Grid */}
         <SectionHeader
-          title={isSearching ? "Résultats" : "Médicaments disponibles"}
+          title={isSearching ? t('medications.results') : t('medications.available')}
           onSeeAll={() => {}}
         />
 

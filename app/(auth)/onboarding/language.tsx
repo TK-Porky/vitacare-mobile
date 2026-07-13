@@ -9,46 +9,32 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
+import i18next from "@/i18n";
 import { StepHeader, SelectOption, PrimaryButton } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useProfile } from "@/hooks";
 
-// ================================================================================== //
-// Types
-// ================================================================================== //
-const LANGUAGES = ["Français", "Anglais"];
+const LANGUAGES = [
+  { label: "Français", id: "fr" },
+  { label: "Anglais", id: "en" },
+];
 
-// ================================================================================== //
-// Main
-// ================================================================================== //
 export default function OnboardingLanguageScreen() {
+  const { t } = useTranslation();
   const { updatePreferences, isUpdatingPreferences } = useProfile();
-  // ================================================================================== //
-  // States
-  // ================================================================================== //
-  const [selected, setSelected] = useState<string>("Français"); // Selected language
+  const [selected, setSelected] = useState<string>("fr");
 
-  /**
-   * Finalize the onboarding
-   * @returns
-   */
   const handleFinish = async () => {
     try {
-      // Save language preference to profile
-      await updatePreferences({
-        language: selected === "Français" ? "fr" : "en",
-      });
-
+      i18next.changeLanguage(selected);
+      await updatePreferences({ language: selected });
       router.push("/(auth)/onboarding-success");
-    } catch (e) {
-      // UX: Navigate anyway if it fails, or show warning
+    } catch {
       router.push("/(auth)/onboarding-success");
     }
   };
 
-  // ================================================================================== //
-  // Render
-  // ================================================================================== //
   return (
     <View style={styles.root}>
       <StepHeader current={3} total={3} showSkip={false} />
@@ -57,15 +43,15 @@ export default function OnboardingLanguageScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Quelle langue parlez-vous ?</Text>
+        <Text style={styles.title}>{t("onboarding.language.title")}</Text>
 
         <View style={styles.options}>
           {LANGUAGES.map((lang) => (
             <SelectOption
-              key={lang}
-              label={lang}
-              selected={selected === lang}
-              onPress={() => setSelected(lang)}
+              key={lang.id}
+              label={lang.label}
+              selected={selected === lang.id}
+              onPress={() => setSelected(lang.id)}
             />
           ))}
         </View>
@@ -78,11 +64,11 @@ export default function OnboardingLanguageScreen() {
           activeOpacity={0.7}
         >
           <ChevronLeft size={16} color={colors.ink} />
-          <Text style={styles.backText}>Retour</Text>
+          <Text style={styles.backText}>{t("onboarding.language.back")}</Text>
         </TouchableOpacity>
 
         <PrimaryButton
-          label="Terminer"
+          label={t("onboarding.language.finish")}
           isLoading={isUpdatingPreferences}
           onPress={handleFinish}
           style={styles.finishButton}

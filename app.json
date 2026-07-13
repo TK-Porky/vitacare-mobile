@@ -2,7 +2,7 @@
   "expo": {
     "name": "VitaCare",
     "slug": "vitacare",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "scheme": "vitacare",
     "platforms": [
       "ios",

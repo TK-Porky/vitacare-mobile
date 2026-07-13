@@ -10,26 +10,42 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, fontFamily, fontSize } from '../../../src/themes';
 import { TopBar } from '../../../src/components';
 import { appointmentService } from '../../../src/services';
 import { Appointment } from '../../../src/types';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type Tab = 'upcoming' | 'past';
 
-const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  confirmed: { label: 'Confirmé',   color: '#1A7F3C', bg: '#E8FFF0' },
-  pending:   { label: 'En attente', color: '#B45309', bg: '#FFF8ED' },
-  paid:      { label: 'Payé',       color: '#1A7F3C', bg: '#E8FFF0' },
-  cancelled: { label: 'Annulé',     color: '#B91C1C', bg: '#FFF0F0' },
+const STATUS_MAP: Record<string, string> = {
+  confirmed: 'CONFIRMED',
+  pending: 'PENDING',
+  paid: 'PAID',
+  cancelled: 'CANCELLED',
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+const STATUS_BG: Record<string, string> = {
+  confirmed: '#E8FFF0',
+  pending: '#FFF8ED',
+  paid: '#E8FFF0',
+  cancelled: '#FFF0F0',
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  confirmed: '#1A7F3C',
+  pending: '#B45309',
+  paid: '#1A7F3C',
+  cancelled: '#B91C1C',
+};
 
 function ActivityCard({ item }: { item: Appointment }) {
-  const statusStyle = STATUS_STYLE[item.status] ?? STATUS_STYLE.pending;
+  const { t } = useTranslation();
+
+  const statusKey = STATUS_MAP[item.status] ?? 'PENDING';
+  const statusLabel = t(`appointments.status.${statusKey}`);
+  const color = STATUS_COLOR[item.status] ?? '#B45309';
+  const bg = STATUS_BG[item.status] ?? '#FFF8ED';
 
   return (
     <View style={styles.card}>
@@ -50,9 +66,9 @@ function ActivityCard({ item }: { item: Appointment }) {
           <Text style={styles.metaText}>{item.clinic}</Text>
         </View>
       </View>
-      <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-        <Text style={[styles.statusText, { color: statusStyle.color }]}>
-          {statusStyle.label}
+      <View style={[styles.statusBadge, { backgroundColor: bg }]}>
+        <Text style={[styles.statusText, { color }]}>
+          {statusLabel}
         </Text>
       </View>
     </View>
@@ -60,18 +76,19 @@ function ActivityCard({ item }: { item: Appointment }) {
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.empty}>
       <Ionicons name="calendar-outline" size={48} color={colors.border} />
-      <Text style={styles.emptyTitle}>Aucune activité</Text>
-      <Text style={styles.emptySubtitle}>Vos rendez-vous apparaîtront ici.</Text>
+      <Text style={styles.emptyTitle}>{t('profile.activityScreen.empty')}</Text>
+      <Text style={styles.emptySubtitle}>{t('profile.activityScreen.emptySubtitle')}</Text>
     </View>
   );
 }
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
-
 export default function ActivityScreen() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('upcoming');
   const [data, setData] = useState<Appointment[]>([]);
 
@@ -97,19 +114,18 @@ export default function ActivityScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <StatusBar barStyle="dark-content" />
-      <TopBar title="Mon activité" />
+      <TopBar title={t('profile.activityScreen.title')} />
 
-      {/* Tab switcher */}
       <View style={styles.tabs}>
-        {(['upcoming', 'past'] as Tab[]).map((t) => (
+        {(['upcoming', 'past'] as Tab[]).map((tabKey) => (
           <TouchableOpacity
-            key={t}
-            style={[styles.tab, tab === t && styles.tabActive]}
-            onPress={() => setTab(t)}
+            key={tabKey}
+            style={[styles.tab, tab === tabKey && styles.tabActive]}
+            onPress={() => setTab(tabKey)}
             activeOpacity={0.75}
           >
-            <Text style={[styles.tabLabel, tab === t && styles.tabLabelActive]}>
-              {t === 'upcoming' ? 'À venir' : 'Passés'}
+            <Text style={[styles.tabLabel, tab === tabKey && styles.tabLabelActive]}>
+              {tabKey === 'upcoming' ? t('profile.activityScreen.upcoming') : t('profile.activityScreen.past')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -120,7 +136,7 @@ export default function ActivityScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.countLabel}>
-          {data.length} rendez-vous
+          {t('profile.activityScreen.count', { count: data.length })}
         </Text>
 
         {data.length === 0 ? (
@@ -133,12 +149,9 @@ export default function ActivityScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.white },
 
-  // Tabs
   tabs: {
     flexDirection: 'row',
     marginHorizontal: 20,
@@ -172,7 +185,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
 
-  // List
   list: {
     padding: 20,
     gap: 12,
@@ -187,7 +199,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Card
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -246,7 +257,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
   },
 
-  // Empty state
   empty: {
     alignItems: 'center',
     paddingTop: 60,

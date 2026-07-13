@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Dimensions } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, fontFamily, fontSize } from '../../themes';
 
 type Props = {
@@ -16,6 +17,7 @@ export function StepHeader({
   onSkip,
   showSkip = true,
 }: Props) {
+  const { t } = useTranslation();
   const fillWidth = (current / total) * TRACK_WIDTH;
   const statusBarHeight = StatusBar.currentHeight ?? 44;
 
@@ -27,7 +29,7 @@ export function StepHeader({
           <Text style={styles.step}>{current}/{total}</Text>
           {showSkip && onSkip && (
             <TouchableOpacity onPress={onSkip} activeOpacity={0.7}>
-              <Text style={styles.skip}>Passer</Text>
+              <Text style={styles.skip}>{t('common.skip')}</Text>
             </TouchableOpacity>
           )}
         </View>

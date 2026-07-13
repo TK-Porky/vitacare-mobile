@@ -1,19 +1,22 @@
 import { Stack } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { colors } from "@/themes";
 
-const HEADER_OPTIONS = {
-  headerShown: true,
-  headerBackTitle: "Retour",
-  headerStyle: {
-    backgroundColor: colors.white,
-  },
-  headerTitleStyle: {
-    color: colors.ink,
-  },
-  headerShadowVisible: false,
-};
-
 export default function RemindersLayout() {
+  const { t } = useTranslation();
+
+  const HEADER_OPTIONS = {
+    headerShown: true,
+    headerBackTitle: t("common.back"),
+    headerStyle: {
+      backgroundColor: colors.white,
+    },
+    headerTitleStyle: {
+      color: colors.ink,
+    },
+    headerShadowVisible: false,
+  };
+
   return (
     <Stack
       screenOptions={{
@@ -21,19 +24,16 @@ export default function RemindersLayout() {
         contentStyle: { backgroundColor: colors.surface },
       }}
     >
-      {/* ── Liste des rappels ── */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
 
-      {/* ── Détail d'un rappel ── */}
       <Stack.Screen
         name="[id]"
         options={{
           ...HEADER_OPTIONS,
-          headerTitle: "Détail du rappel",
+          headerTitle: t("reminders.title"),
         }}
       />
 
-      {/* ── Validation d'un rappel ── */}
       <Stack.Screen
         name="validate"
         options={{

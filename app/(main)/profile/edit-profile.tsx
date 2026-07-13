@@ -21,6 +21,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import {
   TopBar,
@@ -33,15 +34,12 @@ import {
 import { router } from "expo-router";
 import { useProfile } from "@/hooks";
 import { useAuthStore } from "@/store";
-import { updateProfileSchema, UpdateProfileInput } from "@/schemas";
+import { getUpdateProfileSchema, UpdateProfileInput } from "@/schemas";
 
-// Types
 type AvatarStatus = "idle" | "uploading" | "success" | "error";
 
 export default function EditProfileScreen() {
-  // ================================================================================== //
-  // Store & Hooks
-  // ================================================================================== //
+  const { t } = useTranslation();
 
   const user = useAuthStore((s) => s.user);
   const {
@@ -54,17 +52,9 @@ export default function EditProfileScreen() {
     success,
   } = useProfile();
 
-  // ================================================================================== //
-  // Local State
-  // ================================================================================== //
-
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
   const [avatarStatus, setAvatarStatus] = useState<AvatarStatus>("idle");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-  // ================================================================================== //
-  // Form Setup
-  // ================================================================================== //
 
   const {
     control,
@@ -73,7 +63,7 @@ export default function EditProfileScreen() {
     reset,
     watch,
   } = useForm<UpdateProfileInput>({
-    resolver: zodResolver(updateProfileSchema),
+    resolver: zodResolver(getUpdateProfileSchema(t)),
     defaultValues: useMemo(
       () => ({
         fullName: user?.fullName || "",
@@ -85,17 +75,11 @@ export default function EditProfileScreen() {
       }),
       [user],
     ),
-    mode: "onChange", // Validation en temps réel
+    mode: "onChange",
   });
 
-  // Watch form values for debugging
   const formValues = watch();
 
-  // ================================================================================== //
-  // Effects
-  // ================================================================================== //
-
-  // Keyboard listeners
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       "keyboardDidShow",
@@ -112,12 +96,11 @@ export default function EditProfileScreen() {
     };
   }, []);
 
-  // Handle success
   useEffect(() => {
     if (success) {
-      Alert.alert("Succès", "Votre profil a été mis à jour.", [
+      Alert.alert(t("common.success"), t("profile.editScreen.success"), [
         {
-          text: "OK",
+          text: t("common.ok"),
           onPress: () => {
             clearState();
             router.back();
@@ -125,38 +108,31 @@ export default function EditProfileScreen() {
         },
       ]);
     }
-  }, [success, clearState]);
+  }, [success, clearState, t]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       clearState();
     };
   }, [clearState]);
 
-  // ================================================================================== //
-  // Handlers
-  // ================================================================================== //
-
   const handleAvatarPress = useCallback(async () => {
-    // Vérifier si un upload est déjà en cours
     if (avatarStatus === "uploading" || isUploadingAvatar) {
-      Alert.alert("En cours", "L'upload de l'avatar est déjà en cours.");
+      Alert.alert(t("common.loading"), t("profile.editScreen.avatarUploadInProgress"));
       return;
     }
 
     try {
-      // Demander la permission
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
-          "Permission requise",
-          "Autorisez l'accès à votre galerie dans les réglages pour changer votre photo.",
+          t("profile.editScreen.permissionRequired"),
+          t("profile.editScreen.galleryPermissionMessage"),
           [
-            { text: "Annuler", style: "cancel" },
+            { text: t("common.cancel"), style: "cancel" },
             {
-              text: "Ouvrir les réglages",
+              text: t("profile.editScreen.openSettings"),
               onPress: () => Linking.openSettings(),
             },
           ],
@@ -164,14 +140,13 @@ export default function EditProfileScreen() {
         return;
       }
 
-      // Ouvrir la galerie avec des options optimisées
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8, // Réduit à 0.8 pour optimiser la taille
-        base64: false, // Évite de charger en mémoire
-        exif: false, // Pas besoin des métadonnées
+        quality: 0.8,
+        base64: false,
+        exif: false,
       });
 
       if (result.canceled || !result.assets[0]) {
@@ -180,7 +155,6 @@ export default function EditProfileScreen() {
 
       const asset = result.assets[0];
 
-      // Validation de la taille du fichier (max 5MB)
       try {
         const fileInfo = await FileSystem.getInfoAsync(asset.uri);
         if (
@@ -189,9 +163,9 @@ export default function EditProfileScreen() {
           fileInfo.size > 5 * 1024 * 1024
         ) {
           Alert.alert(
-            "Fichier trop volumineux",
-            "La taille de l'image ne doit pas dépasser 5 Mo.",
-            [{ text: "OK" }],
+            t("profile.editScreen.fileTooLarge"),
+            t("profile.editScreen.fileTooLargeMessage"),
+            [{ text: t("common.ok") }],
           );
           return;
         }
@@ -199,16 +173,13 @@ export default function EditProfileScreen() {
         console.warn("Failed to get file info:", error);
       }
 
-      // Générer un nom de fichier unique
       const fileExtension = asset.uri.split(".").pop() || "jpg";
       const fileName = `avatar-${Date.now()}.${fileExtension}`;
       const fileType = asset.mimeType || `image/${fileExtension}`;
 
-      // Afficher l'aperçu local immédiatement
       setLocalAvatarUri(asset.uri);
       setAvatarStatus("uploading");
 
-      // Upload de l'avatar
       try {
         await uploadAvatar({
           fileUri: asset.uri,
@@ -217,78 +188,72 @@ export default function EditProfileScreen() {
         });
         setAvatarStatus("success");
 
-        // Petit feedback visuel
         Alert.alert(
-          "Photo mise à jour",
-          "Votre photo de profil a été changée avec succès.",
-          [{ text: "OK" }],
+          t("profile.editScreen.avatarUpdated"),
+          t("profile.editScreen.photoUpdatedMessage"),
+          [{ text: t("common.ok") }],
         );
       } catch (uploadError) {
         console.error("Avatar upload error:", uploadError);
         setAvatarStatus("error");
         setLocalAvatarUri(null);
         Alert.alert(
-          "Erreur",
-          "Impossible d'envoyer la photo. Vérifiez votre connexion et réessayez.",
-          [{ text: "OK" }],
+          t("common.error"),
+          t("profile.editScreen.uploadErrorMessage"),
+          [{ text: t("common.ok") }],
         );
       }
     } catch (error) {
       console.error("Avatar picker error:", error);
       setAvatarStatus("error");
       Alert.alert(
-        "Erreur",
-        "Une erreur inattendue est survenue. Veuillez réessayer.",
-        [{ text: "OK" }],
+        t("common.error"),
+        t("profile.editScreen.unexpectedError"),
+        [{ text: t("common.ok") }],
       );
     }
-  }, [isUploadingAvatar, avatarStatus, uploadAvatar]);
+  }, [isUploadingAvatar, avatarStatus, uploadAvatar, t]);
 
   const handleRemoveAvatar = useCallback(() => {
     Alert.alert(
-      "Supprimer la photo",
-      "Voulez-vous vraiment supprimer votre photo de profil ?",
+      t("profile.editScreen.deletePhoto"),
+      t("profile.editScreen.deletePhotoConfirm"),
       [
-        { text: "Annuler", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Supprimer",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
-              // Appeler l'API pour supprimer l'avatar
-              // await deleteAvatar();
               setLocalAvatarUri(null);
               setAvatarStatus("idle");
               Alert.alert(
-                "Photo supprimée",
-                "Votre photo de profil a été supprimée.",
+                t("profile.editScreen.photoDeleted"),
+                t("profile.editScreen.photoDeletedMessage"),
               );
             } catch (error) {
-              Alert.alert("Erreur", "Impossible de supprimer la photo.");
+              Alert.alert(t("common.error"), t("profile.editScreen.deletePhotoError"));
             }
           },
         },
       ],
     );
-  }, []);
+  }, [t]);
 
   const onSave = useCallback(
     async (data: UpdateProfileInput) => {
       try {
-        // Désactiver le clavier avant la soumission
         Keyboard.dismiss();
 
-        // Vérifier si des champs ont été modifiés
         if (!isDirty) {
           Alert.alert(
-            "Aucune modification",
-            "Vous n'avez apporté aucune modification à votre profil.",
-            [{ text: "OK" }],
+            t("profile.editScreen.noChanges"),
+            t("profile.editScreen.noChangesMessage"),
+            [{ text: t("common.ok") }],
           );
           return;
         }
 
-        // Nettoyer les données avant l'envoi
         const cleanData = {
           fullName: data.fullName.trim(),
           email: data.email.trim(),
@@ -302,18 +267,14 @@ export default function EditProfileScreen() {
       } catch (error) {
         console.error("Save profile error:", error);
         Alert.alert(
-          "Erreur",
-          "Impossible de sauvegarder les modifications. Veuillez réessayer.",
-          [{ text: "OK" }],
+          t("common.error"),
+          t("profile.editScreen.saveErrorMessage"),
+          [{ text: t("common.ok") }],
         );
       }
     },
-    [isDirty, updateProfile],
+    [isDirty, updateProfile, t],
   );
-
-  // ================================================================================== //
-  // UI Helpers
-  // ================================================================================== //
 
   const getAvatarUri = useMemo(() => {
     if (localAvatarUri) return localAvatarUri;
@@ -324,28 +285,24 @@ export default function EditProfileScreen() {
   const getAvatarStatusText = useMemo(() => {
     switch (avatarStatus) {
       case "uploading":
-        return "Envoi en cours…";
+        return t("profile.editScreen.avatarUploading");
       case "success":
-        return "Photo mise à jour";
+        return t("profile.editScreen.avatarUpdated");
       case "error":
-        return "Échec de l'upload";
+        return t("profile.editScreen.avatarFailed");
       default:
-        return "Appuyez pour changer la photo";
+        return t("profile.editScreen.avatarHint");
     }
-  }, [avatarStatus]);
+  }, [avatarStatus, t]);
 
   const isAvatarUploading = avatarStatus === "uploading" || isUploadingAvatar;
-
-  // ================================================================================== //
-  // Main
-  // ================================================================================== //
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <SafeAreaView style={styles.safe}>
         <StatusBar barStyle="dark-content" />
 
-        <TopBar title="Modifier le profil" />
+        <TopBar title={t("profile.editScreen.title")} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -357,7 +314,6 @@ export default function EditProfileScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* ── Avatar Section ── */}
             <View style={styles.avatarContainer}>
               <TouchableOpacity
                 style={styles.avatarWrapper}
@@ -365,8 +321,8 @@ export default function EditProfileScreen() {
                 onLongPress={handleRemoveAvatar}
                 activeOpacity={0.8}
                 disabled={isAvatarUploading}
-                accessibilityLabel="Changer la photo de profil"
-                accessibilityHint="Appuyez pour choisir une photo dans votre galerie"
+                accessibilityLabel={t("accessibility.changeAvatar")}
+                accessibilityHint={t("accessibility.chooseAvatarHint")}
               >
                 <Image
                   source={{
@@ -377,14 +333,12 @@ export default function EditProfileScreen() {
                   style={styles.avatar}
                 />
 
-                {/* Badge de statut */}
                 {isAvatarUploading && (
                   <View style={styles.uploadingOverlay}>
                     <ActivityIndicator size="large" color={colors.white} />
                   </View>
                 )}
 
-                {/* Bouton appareil photo */}
                 {!isAvatarUploading && (
                   <View style={styles.cameraBtn}>
                     <Camera size={18} color={colors.white} />
@@ -403,17 +357,15 @@ export default function EditProfileScreen() {
               </Text>
             </View>
 
-            {/* ── Form Section ── */}
             <View style={styles.form}>
-              {/* Full Name */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Nom complet</Text>
+                <Text style={styles.label}>{t("profile.editScreen.fullName")}</Text>
                 <Controller
                   control={control}
                   name="fullName"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <NameInput
-                      placeholder="Votre nom complet"
+                      placeholder={t("profile.editScreen.fullName")}
                       value={value}
                       onBlur={onBlur}
                       onChangeText={onChange}
@@ -430,9 +382,8 @@ export default function EditProfileScreen() {
                 )}
               </View>
 
-              {/* Email */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Adresse Email</Text>
+                <Text style={styles.label}>{t("profile.editScreen.labelEmail")}</Text>
                 <Controller
                   control={control}
                   name="email"
@@ -454,32 +405,29 @@ export default function EditProfileScreen() {
                 )}
               </View>
 
-              {/* Display general error */}
               {profileError && (
                 <HelperText
                   message={
                     typeof profileError === "string"
                       ? profileError
-                      : "Une erreur est survenue"
+                      : t("errors.generic")
                   }
                   type="error"
                 />
               )}
 
-              {/* Modification status */}
               {isDirty && (
                 <View style={styles.modificationStatus}>
                   <Text style={styles.modificationText}>
-                    Modifications non sauvegardées
+                    {t("profile.editScreen.unsavedChanges")}
                   </Text>
                 </View>
               )}
             </View>
 
-            {/* ── Action Section ── */}
             <View style={styles.footer}>
               <PrimaryButton
-                label="Enregistrer les modifications"
+                label={t("profile.editScreen.save")}
                 fullWidth
                 isLoading={isUpdatingProfile}
                 onPress={handleSubmit(onSave)}
@@ -488,7 +436,7 @@ export default function EditProfileScreen() {
 
               {!isValid && isDirty && (
                 <HelperText
-                  message="Certains champs contiennent des erreurs"
+                  message={t("profile.editScreen.formErrors")}
                   type="error"
                 />
               )}
@@ -499,10 +447,6 @@ export default function EditProfileScreen() {
     </TouchableWithoutFeedback>
   );
 }
-
-// ================================================================================== //
-// Styles
-// ================================================================================== //
 
 const styles = StyleSheet.create({
   safe: {
@@ -632,7 +576,4 @@ const styles = StyleSheet.create({
   },
 });
 
-// Export du type pour le débogage
-export type EditProfileScreenProps = {
-  // Aucune prop requise
-};
+export type EditProfileScreenProps = {};

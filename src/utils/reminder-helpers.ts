@@ -1,36 +1,34 @@
+import i18next from "@/i18n";
 import { ReminderData } from "@/components/modals";
 import { CreateReminderRequest } from "@/types/api-requests";
 
-/**
- * Validate reminder data
- */
 export const validateReminderData = (data: ReminderData): string | null => {
   if (!data.drugName?.trim()) {
-    return "Le nom du médicament est requis";
+    return i18next.t("reminders.addForm.validation.nameRequired");
   }
   if (!data.form?.trim()) {
-    return "La forme du médicament est requise";
+    return i18next.t("reminders.addForm.validation.formRequired");
   }
   const dosageValue = parseFloat(data.dosageValue);
   if (!data.dosageValue || isNaN(dosageValue) || dosageValue <= 0) {
-    return "Le dosage doit être un nombre supérieur à 0";
+    return i18next.t("reminders.addForm.validation.dosageInvalid");
   }
   if (!data.dosageUnit?.trim()) {
-    return "L'unité de dosage est requise";
+    return i18next.t("reminders.addForm.validation.unitRequired");
   }
   const frequencyCount = parseFloat(data.frequencyCount);
   if (!data.frequencyCount || isNaN(frequencyCount) || frequencyCount <= 0) {
-    return "La fréquence doit être un nombre supérieur à 0";
+    return i18next.t("reminders.addForm.validation.frequencyInvalid");
   }
   if (!data.frequencyUnit?.trim()) {
-    return "L'unité de fréquence est requise";
+    return i18next.t("reminders.addForm.validation.frequencyUnitRequired");
   }
   if (!data.time?.trim()) {
-    return "L'heure est requise";
+    return i18next.t("reminders.addForm.validation.timeRequired");
   }
   const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
   if (!timeRegex.test(data.time)) {
-    return "L'heure doit être au format HH:MM (ex: 14:30)";
+    return i18next.t("reminders.addForm.validation.timeInvalid");
   }
   return null;
 };

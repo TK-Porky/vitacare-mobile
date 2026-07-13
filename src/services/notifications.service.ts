@@ -1,3 +1,4 @@
+import i18next from "@/i18n";
 import * as ExpoNotifications from "expo-notifications";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -150,7 +151,7 @@ class NotificationService {
       await ExpoNotifications.setNotificationChannelAsync(
         "vitacare-reminders",
         {
-          name: "Rappels",
+          name: i18next.t('notifications.channelReminders'),
           importance: ExpoNotifications.AndroidImportance.HIGH,
           vibrationPattern: [0, 250, 250, 250],
           lightColor: "#0D9488",
@@ -173,7 +174,7 @@ class NotificationService {
         authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
       if (!enabled) {
-        if (__DEV__) console.log("Permission de notification refusée");
+        if (__DEV__) console.log(i18next.t('notifications.permissionDenied'));
         return null;
       }
 
@@ -285,7 +286,7 @@ class NotificationService {
       pathname: "/(modals)/reminder-validation",
       params: {
         reminderId: data.reminderId,
-        medicationName: data.medicationName || "Médicament",
+        medicationName: data.medicationName || i18next.t('medication'),
         dosage: data.dosage || "",
         scheduledTime: data.scheduledTime || new Date().toISOString(),
         fromNotification: "true",
@@ -315,8 +316,8 @@ class NotificationService {
 
       const identifier = await ExpoNotifications.scheduleNotificationAsync({
         content: {
-          title: "💊 Rappel de médicament",
-          body: `N'oubliez pas de prendre ${medicationName}${dosage ? ` (${dosage})` : ""}`,
+          title: i18next.t('notifications.reminderTitle'),
+          body: i18next.t('notifications.reminderBody', { medicationName, dosageText: dosage ? ` (${dosage})` : '' }),
           data: {
             reminderId,
             medicationName,
@@ -352,7 +353,7 @@ class NotificationService {
         await ExpoNotifications.setNotificationCategoryAsync("reminder", [
           {
             identifier: "take",
-            buttonTitle: "✅ Pris",
+            buttonTitle: i18next.t('notifications.takeButton'),
             options: {
               isDestructive: false,
               isAuthenticationRequired: false,
@@ -360,7 +361,7 @@ class NotificationService {
           },
           {
             identifier: "snooze",
-            buttonTitle: "⏰ Snooze 15min",
+            buttonTitle: i18next.t('notifications.snoozeButton'),
             options: {
               isDestructive: false,
               isAuthenticationRequired: false,
@@ -368,7 +369,7 @@ class NotificationService {
           },
           {
             identifier: "skip",
-            buttonTitle: "❌ Ignorer",
+            buttonTitle: i18next.t('notifications.skipButton'),
             options: {
               isDestructive: true,
               isAuthenticationRequired: false,
@@ -394,7 +395,7 @@ class NotificationService {
     // ✅ Construction sécurisée de ReminderNotificationData
     const reminderData: ReminderNotificationData = {
       reminderId: (data.reminderId as string) || "",
-      medicationName: (data.medicationName as string) || "Médicament",
+      medicationName: (data.medicationName as string) || i18next.t('medication'),
       dosage: (data.dosage as string) || "",
       scheduledTime: (data.scheduledTime as string) || new Date().toISOString(),
       action: (actionIdentifier as "take" | "snooze" | "skip") || undefined,
@@ -444,13 +445,13 @@ class NotificationService {
       }
 
       Alert.alert(
-        "✅ Prise confirmée",
-        `${data.medicationName} a été marqué comme pris.`,
-        [{ text: "OK" }],
+        i18next.t('notifications.takenTitle'),
+        i18next.t('notifications.takenBody', { medicationName: data.medicationName }),
+        [{ text: i18next.t('common.ok') }],
       );
     } catch (error) {
       console.error("❌ Erreur:", error);
-      Alert.alert("Erreur", "Impossible de marquer le rappel comme pris.");
+      Alert.alert(i18next.t('common.error'), i18next.t('notifications.markTakenError'));
     } finally {
       // TOUJOURS annuler la notification, même en cas d'erreur
       await this.cancel(data.reminderId);
@@ -482,13 +483,13 @@ class NotificationService {
       });
 
       Alert.alert(
-        "⏰ Rappel reporté",
-        `Vous serez notifié dans ${data.minutes} minutes.`,
-        [{ text: "OK" }],
+        i18next.t('notifications.snoozedTitle'),
+        i18next.t('notifications.snoozedBody', { minutes: data.minutes }),
+        [{ text: i18next.t('common.ok') }],
       );
     } catch (error) {
       console.error("❌ Erreur de snooze:", error);
-      Alert.alert("Erreur", "Impossible de reporter le rappel.");
+      Alert.alert(i18next.t('common.error'), i18next.t('notifications.snoozeError'));
     } finally {
       // ✅ TOUJOURS annuler l'ancienne notification
       await this.cancel(data.reminderId);
@@ -511,13 +512,13 @@ class NotificationService {
       }
 
       Alert.alert(
-        "❌ Rappel ignoré",
-        `Le rappel pour ${data.medicationName} a été ignoré.`,
-        [{ text: "OK" }],
+        i18next.t('notifications.skippedTitle'),
+        i18next.t('notifications.skippedBody', { medicationName: data.medicationName }),
+        [{ text: i18next.t('common.ok') }],
       );
     } catch (error) {
       console.error("❌ Erreur:", error);
-      Alert.alert("Erreur", "Impossible d'ignorer le rappel.");
+      Alert.alert(i18next.t('common.error'), i18next.t('notifications.skipError'));
     } finally {
       // TOUJOURS annuler la notification
       await this.cancel(data.reminderId);
@@ -1079,8 +1080,8 @@ class NotificationService {
     if (triggerDate <= new Date()) return null;
 
     return this.schedule({
-      title: "Rappel de rendez-vous",
-      body: `Votre rendez-vous avec ${doctorName} est dans ${lead} min.`,
+      title: i18next.t('notifications.appointmentReminderTitle'),
+      body: i18next.t('notifications.appointmentReminderBody', { doctorName, lead }),
       scheduledFor: triggerDate,
       type: "appointment_reminder",
       metadata: { appointmentId, doctorName },
@@ -1098,8 +1099,8 @@ class NotificationService {
     reminderTime: Date;
   }): Promise<string | null> {
     return this.schedule({
-      title: "Rappel de traitement",
-      body: `N'oubliez pas de prendre votre traitement : ${treatmentName}.`,
+      title: i18next.t('notifications.treatmentReminderTitle'),
+      body: i18next.t('notifications.treatmentReminderBody', { treatmentName }),
       scheduledFor: reminderTime,
       type: "treatment_reminder",
       metadata: { treatmentId, treatmentName },

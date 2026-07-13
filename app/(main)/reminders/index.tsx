@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Plus, ShoppingBag } from "lucide-react-native";
@@ -41,6 +42,7 @@ type Props = { onStore?: () => void };
 // ================================================================================== //
 
 export default function RemindersScreen({ onStore }: Props) {
+  const { t } = useTranslation();
   const router = useRouter();
   const addSheetRef = useRef<AddReminderBottomSheetRef>(null);
 
@@ -78,17 +80,14 @@ export default function RemindersScreen({ onStore }: Props) {
 
   const handleUpgrade = useCallback(() => {
     Alert.alert(
-      "VitaCare Premium",
-      "Profitez de rappels illimités avec VitaCare Premium !\n\n" +
-        "✨ Rappels illimités\n" +
-        "✨ Suivi avancé\n" +
-        "✨ Rapports détaillés",
+      t("reminders.premiumTitle"),
+      t("reminders.premiumMessage"),
       [
-        { text: "Plus tard", style: "cancel" },
-        { text: "Voir les offres", onPress: () => router.push("/premium") },
+        { text: t("common.later"), style: "cancel" },
+        { text: t("reminders.premiumSee"), onPress: () => router.push("/premium") },
       ],
     );
-  }, [router]);
+  }, [router, t]);
 
   const handleStorePress = useCallback(() => {
     if (onStore) onStore();
@@ -100,19 +99,19 @@ export default function RemindersScreen({ onStore }: Props) {
       try {
         const validationError = validateReminderData(data);
         if (validationError) {
-          Alert.alert("Erreur", validationError);
+          Alert.alert(t("common.error"), validationError);
           return;
         }
 
         if (!isHydrated) {
-          Alert.alert("Erreur", "Veuillez patienter, chargement du profil...");
+          Alert.alert(t("common.error"), t("reminders.waitProfile"));
           return;
         }
 
         if (!user) {
           Alert.alert(
-            "Erreur",
-            "Vous devez être connecté pour ajouter un rappel",
+            t("common.error"),
+            t("reminders.loginRequired"),
           );
           return;
         }
@@ -128,23 +127,23 @@ export default function RemindersScreen({ onStore }: Props) {
         await createReminder(requestData);
 
         Alert.alert(
-          "Succès",
-          `Rappel pour ${data.drugName} ajouté avec succès !`,
-          [{ text: "OK" }],
+          t("common.success"),
+          t("reminders.addSuccess", { name: data.drugName }),
+          [{ text: t("common.ok") }],
         );
 
         addSheetRef.current?.close();
       } catch (error) {
         console.error("Error creating reminder:", error);
         Alert.alert(
-          "Erreur",
+          t("common.error"),
           error instanceof Error
             ? error.message
-            : "Impossible d'ajouter le rappel",
+            : t("reminders.addError"),
         );
       }
     },
-    [createReminder, user, isHydrated],
+    [createReminder, user, isHydrated, t],
   );
 
   const handleMarkAsTaken = useCallback(
@@ -152,40 +151,40 @@ export default function RemindersScreen({ onStore }: Props) {
       try {
         await markAsTaken({ id });
       } catch (error) {
-        Alert.alert("Erreur", "Impossible de marquer comme pris");
+        Alert.alert(t("common.error"), t("reminders.markTakenError"));
       }
     },
-    [markAsTaken],
+    [markAsTaken, t],
   );
 
   const handleSnooze = useCallback(
     (id: string) => {
-      Alert.alert("Reporter le rappel", "Choisissez la durée de report", [
-        { text: "15 min", onPress: () => snoozeReminder({ id, minutes: 15 }) },
-        { text: "30 min", onPress: () => snoozeReminder({ id, minutes: 30 }) },
-        { text: "1 heure", onPress: () => snoozeReminder({ id, minutes: 60 }) },
-        { text: "Annuler", style: "cancel" },
+      Alert.alert(t("reminders.snoozeTitle"), t("reminders.snoozeTitle"), [
+        { text: t("reminders.snooze15min"), onPress: () => snoozeReminder({ id, minutes: 15 }) },
+        { text: t("reminders.snooze30min"), onPress: () => snoozeReminder({ id, minutes: 30 }) },
+        { text: t("reminders.snooze1hour"), onPress: () => snoozeReminder({ id, minutes: 60 }) },
+        { text: t("common.cancel"), style: "cancel" },
       ]);
     },
-    [snoozeReminder],
+    [snoozeReminder, t],
   );
 
   const handleDelete = useCallback(
     (id: string) => {
       Alert.alert(
-        "Supprimer le rappel",
-        "Êtes-vous sûr de vouloir supprimer ce rappel ?",
+        t("reminders.delete"),
+        t("reminders.confirmDelete"),
         [
-          { text: "Annuler", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Supprimer",
+            text: t("common.delete"),
             style: "destructive",
             onPress: () => deleteReminder(id),
           },
         ],
       );
     },
-    [deleteReminder],
+    [deleteReminder, t],
   );
 
   const handleViewReminder = useCallback(
@@ -206,12 +205,12 @@ export default function RemindersScreen({ onStore }: Props) {
       <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
 
       <AppHeader
-        title="Mes Rappels"
+        title={t("reminders.title")}
         onNotification={handleNotificationPress}
         notificationCount={unreadNotificationCount}
         rightActions={
           <PrimaryButton
-            label="Magasin"
+            label={t("reminders.store")}
             onPress={handleStorePress}
             icon={<ShoppingBag size={16} color={colors.white} />}
             size="sm"
@@ -225,18 +224,18 @@ export default function RemindersScreen({ onStore }: Props) {
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>
             {!isHydrated
-              ? "Chargement du profil..."
-              : "Chargement des rappels..."}
+              ? t("reminders.loadingProfile")
+              : t("reminders.loading")}
           </Text>
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>Une erreur est survenue</Text>
+          <Text style={styles.errorText}>{t("reminders.error")}</Text>
           <Text style={styles.errorSubtext}>
-            {typeof error === "string" ? error : error?.message || "Une erreur est survenue"}
+            {typeof error === "string" ? error : error?.message || t("reminders.error")}
           </Text>
           <PrimaryButton
-            label="Réessayer"
+            label={t("common.retry")}
             onPress={() => refetch()}
             style={{ marginTop: 16 }}
           />
@@ -263,19 +262,19 @@ export default function RemindersScreen({ onStore }: Props) {
             <View style={styles.summaryContainer}>
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryNumber}>{summary.pending}</Text>
-                <Text style={styles.summaryLabel}>En attente</Text>
+                <Text style={styles.summaryLabel}>{t("reminders.summary.pending")}</Text>
               </View>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryNumber, { color: colors.success }]}>
                   {summary.taken}
                 </Text>
-                <Text style={styles.summaryLabel}>Pris</Text>
+                <Text style={styles.summaryLabel}>{t("reminders.summary.taken")}</Text>
               </View>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryNumber, { color: colors.error }]}>
                   {summary.missed}
                 </Text>
-                <Text style={styles.summaryLabel}>Manqué</Text>
+                <Text style={styles.summaryLabel}>{t("reminders.summary.missed")}</Text>
               </View>
             </View>
           )}
@@ -308,7 +307,7 @@ export default function RemindersScreen({ onStore }: Props) {
           onPress={() => addSheetRef.current?.open()}
           disabled={isCreating}
           activeOpacity={0.85}
-          accessibilityLabel="Ajouter un rappel"
+          accessibilityLabel={t("accessibility.addReminder")}
           accessibilityRole="button"
         >
           {isCreating ? (

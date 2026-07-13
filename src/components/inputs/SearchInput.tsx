@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Search, X, Mic } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { BaseInput, BaseInputProps } from "../generics/BaseInput";
 import { colors, fontFamily, fontSize } from "../../themes";
 
@@ -78,7 +79,7 @@ export const SearchInput = forwardRef<SearchInputRef, SearchInputProps>(
       maxLength,
       value,
       onChangeText,
-      placeholder = "Rechercher...",
+      placeholder,
       returnKeyType = "search",
       ...props
     },
@@ -87,7 +88,8 @@ export const SearchInput = forwardRef<SearchInputRef, SearchInputProps>(
     // ================================================================================== //
     // State & Refs
     // ================================================================================== //
-
+    const { t } = useTranslation();
+    const resolvedPlaceholder = placeholder ?? t('common.search');
     const inputRef = useRef<TextInput>(null);
     const [isFocused, setIsFocused] = React.useState(false);
     const [localValue, setLocalValue] = React.useState(value || "");
@@ -263,7 +265,7 @@ export const SearchInput = forwardRef<SearchInputRef, SearchInputProps>(
             onPress={handleClear}
             style={styles.rightButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityLabel="Effacer la recherche"
+            accessibilityLabel={t('accessibility.clearSearch')}
           >
             <X size={16} color={colors.inkLight} />
           </TouchableOpacity>,
@@ -278,7 +280,7 @@ export const SearchInput = forwardRef<SearchInputRef, SearchInputProps>(
             onPress={onMicPress}
             style={styles.rightButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityLabel="Recherche vocale"
+            accessibilityLabel={t('accessibility.voiceSearch')}
           >
             <Mic size={16} color={colors.inkLight} />
           </TouchableOpacity>,
@@ -293,7 +295,7 @@ export const SearchInput = forwardRef<SearchInputRef, SearchInputProps>(
             onPress={handleSearchPress}
             style={[styles.rightButton, styles.searchButton]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityLabel="Lancer la recherche"
+            accessibilityLabel={t('accessibility.startSearch')}
           >
             <Search size={16} color={colors.primary} />
           </TouchableOpacity>,
@@ -325,7 +327,7 @@ export const SearchInput = forwardRef<SearchInputRef, SearchInputProps>(
       ref: inputRef,
       value: currentValue,
       onChangeText: handleChangeText,
-      placeholder,
+      placeholder: resolvedPlaceholder,
       returnKeyType,
       keyboardType: "default" as const,
       autoCapitalize: "none" as const,

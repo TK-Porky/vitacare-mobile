@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { StepHeader, SelectOption, PrimaryButton } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useProfile } from "@/hooks";
@@ -27,6 +28,7 @@ const OPTIONS = [
 // Main
 // ================================================================================== //
 export default function OnboardingSearchScreen() {
+  const { t } = useTranslation();
   const { updatePreferences, isUpdatingPreferences } = useProfile();
   // ================================================================================== //
   // States
@@ -71,7 +73,7 @@ export default function OnboardingSearchScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Que recherchez-vous ?</Text>
+        <Text style={styles.title}>{t("onboarding.search.title")}</Text>
 
         <View style={styles.options}>
           {OPTIONS.map((option) => (
@@ -92,11 +94,11 @@ export default function OnboardingSearchScreen() {
           activeOpacity={0.7}
         >
           <ChevronLeft size={16} color={colors.ink} />
-          <Text style={styles.backText}>Retour</Text>
+          <Text style={styles.backText}>{t("common.back")}</Text>
         </TouchableOpacity>
 
         <PrimaryButton
-          label="Continuer"
+          label={t("common.continue")}
           isLoading={isUpdatingPreferences}
           onPress={handleContinue}
           style={styles.continueButton}

@@ -10,6 +10,7 @@ import {
   Vibration,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -25,6 +26,7 @@ import { ReminderResponse } from "@/types/api-responses";
 // ================================================================================== //
 
 export default function ReminderValidateScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const { reminderId, medicationName, dosage, scheduledTime } = params;
 
@@ -100,12 +102,12 @@ export default function ReminderValidateScreen() {
       await markAsTaken({ id: reminderId as string });
 
       Alert.alert(
-        "✅ Prise confirmée",
-        `${reminder?.medicationName || medicationName || "Médicament"} a été marqué comme pris.`,
-        [{ text: "OK", onPress: () => router.back() }],
+        t("reminders.taken"),
+        `${reminder?.medicationName || medicationName || t("medications.available")} ${t("reminders.markAsTaken")}.`,
+        [{ text: t("common.ok"), onPress: () => router.back() }],
       );
     } catch (error) {
-      Alert.alert("Erreur", "Impossible de marquer le rappel comme pris.");
+      Alert.alert(t("common.error"), t("reminders.markTakenError"));
     } finally {
       setIsUpdating(false);
     }
@@ -122,11 +124,11 @@ export default function ReminderValidateScreen() {
 
       await snoozeReminder({ id: reminderId as string, minutes: 15 });
 
-      Alert.alert("⏰ Rappel reporté", `Vous serez notifié dans 15 minutes.`, [
-        { text: "OK", onPress: () => router.back() },
+      Alert.alert(t("reminders.snoozed"), t("reminders.snoozeTitle"), [
+        { text: t("common.ok"), onPress: () => router.back() },
       ]);
     } catch (error) {
-      Alert.alert("Erreur", "Impossible de reporter le rappel.");
+      Alert.alert(t("common.error"), t("reminders.addError"));
     } finally {
       setIsUpdating(false);
     }
@@ -144,12 +146,12 @@ export default function ReminderValidateScreen() {
       await skipReminder(reminderId as string);
 
       Alert.alert(
-        "❌ Rappel ignoré",
-        `Le rappel pour ${reminder?.medicationName || medicationName || "Médicament"} a été ignoré.`,
-        [{ text: "OK", onPress: () => router.back() }],
+        t("reminders.skip"),
+        `${t("reminders.skip")}: ${reminder?.medicationName || medicationName || t("medications.available")}`,
+        [{ text: t("common.ok"), onPress: () => router.back() }],
       );
     } catch (error) {
-      Alert.alert("Erreur", "Impossible d'ignorer le rappel.");
+      Alert.alert(t("common.error"), t("reminders.addError"));
     } finally {
       setIsUpdating(false);
     }
@@ -167,7 +169,7 @@ export default function ReminderValidateScreen() {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <Text style={styles.loadingText}>{t("common.loading")}</Text>
       </SafeAreaView>
     );
   }
@@ -176,7 +178,7 @@ export default function ReminderValidateScreen() {
     reminder?.medicationName ||
     reminder?.name ||
     (medicationName as string) ||
-    "Médicament";
+    t("medications.available");
 
   const displayDosage =
     reminder?.dosage || reminder?.medicationDosage || (dosage as string) || "";
@@ -191,8 +193,8 @@ export default function ReminderValidateScreen() {
         })
       : "");
 
-  const displayForm = reminder?.form || "Non spécifiée";
-  const displayFrequency = reminder?.frequency || "Non spécifiée";
+  const displayForm = reminder?.form || t("reminders.addForm.form");
+  const displayFrequency = reminder?.frequency || t("reminders.addForm.frequency");
 
   return (
     <SafeAreaView style={styles.container}>
@@ -204,7 +206,7 @@ export default function ReminderValidateScreen() {
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color={colors.inkLight} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Validation du rappel</Text>
+          <Text style={styles.headerTitle}>{t("reminders.title")}</Text>
           <View style={styles.closeButton} />
         </View>
 
@@ -217,36 +219,36 @@ export default function ReminderValidateScreen() {
         </View>
 
         {/* ── Medication Info ── */}
-        <Text style={styles.title}>Rappel de médicament</Text>
+        <Text style={styles.title}>{t("reminders.title")}</Text>
 
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
             <Ionicons name="medkit-outline" size={20} color={colors.primary} />
-            <Text style={styles.infoLabel}>Médicament:</Text>
+              <Text style={styles.infoLabel}>{t("medications.available")}:</Text>
             <Text style={styles.infoValue}>{displayName}</Text>
           </View>
           {displayDosage && (
             <View style={styles.infoRow}>
               <Ionicons name="scale-outline" size={20} color={colors.primary} />
-              <Text style={styles.infoLabel}>Dosage:</Text>
+              <Text style={styles.infoLabel}>{t("reminders.addForm.dosage")}:</Text>
               <Text style={styles.infoValue}>{displayDosage}</Text>
             </View>
           )}
           {displayTime && (
             <View style={styles.infoRow}>
               <Ionicons name="time-outline" size={20} color={colors.primary} />
-              <Text style={styles.infoLabel}>Heure prévue:</Text>
+              <Text style={styles.infoLabel}>{t("reminders.addForm.time")}:</Text>
               <Text style={styles.infoValue}>{displayTime}</Text>
             </View>
           )}
           <View style={styles.infoRow}>
             <Ionicons name="cube-outline" size={20} color={colors.primary} />
-            <Text style={styles.infoLabel}>Forme:</Text>
+              <Text style={styles.infoLabel}>{t("reminders.addForm.form")}:</Text>
             <Text style={styles.infoValue}>{displayForm}</Text>
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="repeat-outline" size={20} color={colors.primary} />
-            <Text style={styles.infoLabel}>Fréquence:</Text>
+              <Text style={styles.infoLabel}>{t("reminders.addForm.frequency")}:</Text>
             <Text style={styles.infoValue}>{displayFrequency}</Text>
           </View>
         </View>
@@ -254,7 +256,7 @@ export default function ReminderValidateScreen() {
         {/* ── Timer de snooze ── */}
         {selectedAction === "snooze" && timeLeft !== null && timeLeft > 0 && (
           <View style={styles.timerContainer}>
-            <Text style={styles.timerText}>Report dans:</Text>
+            <Text style={styles.timerText}>{t("reminders.snooze")}:</Text>
             <Text style={styles.timerValue}>
               {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:
               {String(timeLeft % 60).padStart(2, "0")}
@@ -265,7 +267,7 @@ export default function ReminderValidateScreen() {
         {/* ── Actions ── */}
         <View style={styles.actionsContainer}>
           <PrimaryButton
-            label="✅ Pris"
+            label={t("reminders.taken")}
             onPress={handleTake}
             isLoading={isUpdating && selectedAction === "take"}
             isDisabled={isUpdating}
@@ -275,13 +277,13 @@ export default function ReminderValidateScreen() {
 
           <View style={styles.secondaryActions}>
             <GrayButton
-              label="⏰ Reporter 15min"
+              label={t("reminders.snooze") + " 15min"}
               onPress={handleSnooze}
               disabled={isUpdating}
               style={styles.secondaryButton}
             />
             <GrayButton
-              label="❌ Ignorer"
+              label={t("reminders.skip")}
               onPress={handleSkip}
               disabled={isUpdating}
             />
@@ -290,7 +292,7 @@ export default function ReminderValidateScreen() {
 
         {/* ── Footer ── */}
         <TouchableOpacity style={styles.footerButton} onPress={handleClose}>
-          <Text style={styles.footerText}>Fermer</Text>
+          <Text style={styles.footerText}>{t("common.close")}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

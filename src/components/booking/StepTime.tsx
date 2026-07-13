@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontFamily, fontSize } from '../../themes';
 import { StepLabel } from './StepLabel';
@@ -21,6 +22,7 @@ type Props = {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export const StepTime = ({ slots, selected, onSelect }: Props) => {
+  const { t } = useTranslation();
   const sorted = useMemo(() => {
     if (!slots || slots.length === 0) return [];
     return [...slots].sort();
@@ -29,10 +31,10 @@ export const StepTime = ({ slots, selected, onSelect }: Props) => {
   if (slots === undefined) {
     return (
       <View style={styles.container}>
-        <StepLabel number={2} label="Choisissez l'heure" />
+        <StepLabel number={2} label={t('booking.selectTime')} />
         <View style={styles.empty}>
           <Ionicons name="time-outline" size={40} color={colors.inkFaint} />
-          <Text style={styles.emptyText}>Veuillez d'abord sélectionner une date</Text>
+          <Text style={styles.emptyText}>{t('booking.selectDate')}</Text>
         </View>
       </View>
     );
@@ -41,17 +43,17 @@ export const StepTime = ({ slots, selected, onSelect }: Props) => {
   if (sorted.length === 0) {
     return (
       <View style={styles.container}>
-        <StepLabel number={2} label="Choisissez l'heure" />
+        <StepLabel number={2} label={t('booking.selectTime')} />
         <View style={styles.empty}>
           <Ionicons name="time-outline" size={40} color={colors.inkFaint} />
-          <Text style={styles.emptyText}>Aucun créneau disponible pour cette date</Text>
+          <Text style={styles.emptyText}>{t('common.noResults')}</Text>
         </View>
       </View>
     );
   }
   return (
     <View style={styles.container}>
-      <StepLabel number={2} label="Choisissez l'heure" />
+      <StepLabel number={2} label={t('booking.selectTime')} />
       {selected && (
         <View style={styles.displayCard}>
           <Ionicons name="time-outline" size={22} color={colors.primary} />

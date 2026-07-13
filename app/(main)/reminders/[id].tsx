@@ -11,6 +11,7 @@ import {
   Share,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -28,32 +29,27 @@ type ReminderStatus = "PENDING" | "TAKEN" | "MISSED" | "SNOOZED";
 const STATUS_CONFIG: Record<
   ReminderStatus,
   {
-    label: string;
     color: string;
     bg: string;
     icon: keyof typeof Ionicons.glyphMap;
   }
 > = {
   PENDING: {
-    label: "En attente",
     color: "#854F0B",
     bg: "#FAEEDA",
     icon: "time-outline",
   },
   TAKEN: {
-    label: "Pris",
     color: "#085041",
     bg: "#E1F5EE",
     icon: "checkmark-circle-outline",
   },
   MISSED: {
-    label: "Manqué",
     color: "#791F1F",
     bg: "#FCEBEB",
     icon: "close-circle-outline",
   },
   SNOOZED: {
-    label: "Reporté",
     color: "#0C447C",
     bg: "#E6F1FB",
     icon: "alarm-outline",
@@ -61,6 +57,7 @@ const STATUS_CONFIG: Record<
 };
 
 export default function ReminderDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [reminder, setReminder] = useState<ReminderResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +78,7 @@ export default function ReminderDetailScreen() {
       const data = await getReminder(id);
       setReminder(data);
     } catch {
-      Alert.alert("Erreur", "Impossible de charger le rappel");
+      Alert.alert(t("common.error"), t("reminders.error"));
     } finally {
       setIsLoading(false);
     }
@@ -96,18 +93,18 @@ export default function ReminderDetailScreen() {
       if (Platform.OS === "ios")
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      Alert.alert("Erreur", "Impossible de marquer comme pris");
+      Alert.alert(t("common.error"), t("reminders.markTakenError"));
     } finally {
       setIsUpdating(false);
     }
   };
 
   const handleSnooze = () => {
-    Alert.alert("Reporter le rappel", "Choisissez la durée", [
-      { text: "15 min", onPress: () => performSnooze(15) },
-      { text: "30 min", onPress: () => performSnooze(30) },
-      { text: "1 heure", onPress: () => performSnooze(60) },
-      { text: "Annuler", style: "cancel" },
+    Alert.alert(t("reminders.snoozeTitle"), t("reminders.snoozeTitle"), [
+      { text: t("reminders.snooze15min"), onPress: () => performSnooze(15) },
+      { text: t("reminders.snooze30min"), onPress: () => performSnooze(30) },
+      { text: t("reminders.snooze1hour"), onPress: () => performSnooze(60) },
+      { text: t("common.cancel"), style: "cancel" },
     ]);
   };
 
@@ -120,43 +117,43 @@ export default function ReminderDetailScreen() {
       if (Platform.OS === "ios")
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {
-      Alert.alert("Erreur", "Impossible de reporter le rappel");
+      Alert.alert(t("common.error"), t("reminders.addError"));
     } finally {
       setIsUpdating(false);
     }
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      "Supprimer le rappel",
-      `Supprimer le rappel pour ${reminder?.medicationName} ?`,
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteReminder(String(reminder!.id));
-              if (Platform.OS === "ios")
-                Haptics.notificationAsync(
-                  Haptics.NotificationFeedbackType.Error,
-                );
-              router.back();
-            } catch {
-              Alert.alert("Erreur", "Impossible de supprimer le rappel");
-            }
+      Alert.alert(
+        t("reminders.delete"),
+        t("reminders.confirmDelete"),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("common.delete"),
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await deleteReminder(String(reminder!.id));
+                if (Platform.OS === "ios")
+                  Haptics.notificationAsync(
+                    Haptics.NotificationFeedbackType.Error,
+                  );
+                router.back();
+              } catch {
+                Alert.alert(t("common.error"), t("reminders.addError"));
+              }
+            },
           },
-        },
-      ],
-    );
+        ],
+      );
   };
 
   const handleShare = async () => {
     if (!reminder) return;
     await Share.share({
-      message: `💊 ${reminder.medicationName} — ${reminder.dosage || "dosage non spécifié"}\nHeure : ${reminder.scheduledHour}\nFréquence : ${reminder.frequency}`,
-      title: `Rappel — ${reminder.medicationName}`,
+      message: `💊 ${reminder.medicationName} — ${reminder.dosage || "dosage non spécifié"}\n${t("reminders.addForm.time")} : ${reminder.scheduledHour}\n${t("reminders.addForm.frequency")} : ${reminder.frequency}`,
+      title: `${t("reminders.title")} — ${reminder.medicationName}`,
     });
   };
 
@@ -168,7 +165,7 @@ export default function ReminderDetailScreen() {
     return (
       <SafeAreaView style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <Text style={styles.loadingText}>{t("common.loading")}</Text>
       </SafeAreaView>
     );
   }
@@ -177,12 +174,12 @@ export default function ReminderDetailScreen() {
     return (
       <SafeAreaView style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
-        <Text style={styles.errorText}>Rappel introuvable</Text>
+        <Text style={styles.errorText}>{t("reminders.error")}</Text>
         <TouchableOpacity onPress={() => router.back()}>
           <Text
             style={{ color: colors.primary, fontFamily: fontFamily.semiBold }}
           >
-            Retour
+            {t("common.back")}
           </Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -207,7 +204,7 @@ export default function ReminderDetailScreen() {
           >
             <Ionicons name="arrow-back" size={16} color={colors.ink} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Rappel</Text>
+          <Text style={styles.headerTitle}>{t("reminders.title")}</Text>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
@@ -231,14 +228,14 @@ export default function ReminderDetailScreen() {
           <View style={styles.heroInfo}>
             <Text style={styles.heroName}>{reminder.medicationName}</Text>
             <Text style={styles.heroDosage}>
-              {reminder.dosage || "Dosage non spécifié"}
+              {reminder.dosage || t("reminders.addForm.dosage")}
               {reminder.form ? ` · ${reminder.form}` : ""}
             </Text>
           </View>
           <View style={[styles.statusPill, { backgroundColor: statusCfg.bg }]}>
             <Ionicons name={statusCfg.icon} size={12} color={statusCfg.color} />
             <Text style={[styles.statusText, { color: statusCfg.color }]}>
-              {statusCfg.label}
+              {t(`reminders.filters.${reminder.status}` as any)}
             </Text>
           </View>
         </View>
@@ -247,7 +244,7 @@ export default function ReminderDetailScreen() {
         <View style={styles.detailCard}>
           <View style={styles.detailRow}>
             <Ionicons name="time-outline" size={16} color={colors.inkLight} />
-            <Text style={styles.detailLabel}>Heure</Text>
+            <Text style={styles.detailLabel}>{t("reminders.addForm.time")}</Text>
             <Text style={styles.detailValue}>{reminder.scheduledHour}</Text>
           </View>
           <View style={styles.rowDivider} />
@@ -272,7 +269,7 @@ export default function ReminderDetailScreen() {
           <View style={styles.rowDivider} />
           <View style={styles.detailRow}>
             <Ionicons name="repeat-outline" size={16} color={colors.inkLight} />
-            <Text style={styles.detailLabel}>Fréquence</Text>
+            <Text style={styles.detailLabel}>{t("reminders.addForm.frequency")}</Text>
             <Text style={styles.detailValue}>
               {reminder.frequency || "Non définie"}
             </Text>
@@ -280,7 +277,7 @@ export default function ReminderDetailScreen() {
           <View style={styles.rowDivider} />
           <View style={styles.detailRow}>
             <Ionicons name="flask-outline" size={16} color={colors.inkLight} />
-            <Text style={styles.detailLabel}>Dosage</Text>
+            <Text style={styles.detailLabel}>{t("reminders.addForm.dosage")}</Text>
             <Text style={styles.detailValue}>
               {reminder.dosage || "Non spécifié"}
             </Text>
@@ -288,7 +285,7 @@ export default function ReminderDetailScreen() {
           <View style={styles.rowDivider} />
           <View style={styles.detailRow}>
             <Ionicons name="cube-outline" size={16} color={colors.inkLight} />
-            <Text style={styles.detailLabel}>Forme</Text>
+            <Text style={styles.detailLabel}>{t("reminders.addForm.form")}</Text>
             <Text style={styles.detailValue}>
               {reminder.form || "Non spécifiée"}
             </Text>
@@ -298,7 +295,7 @@ export default function ReminderDetailScreen() {
         {/* Notes */}
         {reminder.notes && (
           <View style={styles.detailCard}>
-            <Text style={styles.notesLabel}>Notes</Text>
+            <Text style={styles.notesLabel}>{t("reminders.addForm.notes")}</Text>
             <Text style={styles.notesText}>{reminder.notes}</Text>
           </View>
         )}
@@ -306,7 +303,7 @@ export default function ReminderDetailScreen() {
         {/* Actions de report */}
         {isActionable && (
           <>
-            <Text style={styles.sectionLabel}>Reporter</Text>
+            <Text style={styles.sectionLabel}>{t("reminders.snooze")}</Text>
             <View style={styles.snoozeRow}>
               {[15, 30, 60].map((min) => (
                 <TouchableOpacity
@@ -315,7 +312,7 @@ export default function ReminderDetailScreen() {
                   onPress={() => performSnooze(min)}
                 >
                   <Text style={styles.snoozeChipText}>
-                    {min < 60 ? `${min} min` : "1 heure"}
+                    {min < 60 ? `${min} min` : t("reminders.snooze1hour")}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -332,12 +329,12 @@ export default function ReminderDetailScreen() {
               disabled={isUpdating}
             >
               <Ionicons name="checkmark" size={17} color="#fff" />
-              <Text style={styles.btnPrimaryText}>Marquer comme pris</Text>
+              <Text style={styles.btnPrimaryText}>{t("reminders.markAsTaken")}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity style={styles.btnDanger} onPress={handleDelete}>
             <Ionicons name="trash-outline" size={16} color={colors.error} />
-            <Text style={styles.btnDangerText}>Supprimer ce rappel</Text>
+            <Text style={styles.btnDangerText}>{t("reminders.delete")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

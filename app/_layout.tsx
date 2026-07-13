@@ -2,6 +2,7 @@ import "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
 import messaging from "@react-native-firebase/messaging";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import "@/i18n";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router, useSegments } from "expo-router";

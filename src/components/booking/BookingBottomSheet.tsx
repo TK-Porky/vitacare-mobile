@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { AppBottomSheet, AppBottomSheetRef } from "../generics";
@@ -101,6 +102,7 @@ const DatePreview = ({ date }: { date: Date }) => (
 
 export const BookingBottomSheet = forwardRef<BookingBottomSheetRef, Props>(
   ({ provider = DEFAULT_PROVIDER, onClose }, ref) => {
+    const { t } = useTranslation();
     const sheetRef = useRef<AppBottomSheetRef>(null);
     const router = useRouter();
 
@@ -158,7 +160,7 @@ export const BookingBottomSheet = forwardRef<BookingBottomSheetRef, Props>(
         containerStyle={styles.sheet}
       >
         <View style={styles.topBar}>
-          <Text style={styles.title}>Nouvelle réservation</Text>
+          <Text style={styles.title}>{t('booking.title')}</Text>
         </View>
 
         <ProgressBar step={step} total={TOTAL_STEPS} />
@@ -200,11 +202,11 @@ export const BookingBottomSheet = forwardRef<BookingBottomSheetRef, Props>(
           {step > 1 && !isLastStep && (
             <TouchableOpacity onPress={handleBack} style={styles.backBtn} hitSlop={8}>
               <Ionicons name="chevron-back" size={20} color={colors.ink} />
-              <Text style={styles.backText}>Retour</Text>
+              <Text style={styles.backText}>{t('common.back')}</Text>
             </TouchableOpacity>
           )}
           <PrimaryButton
-            label={isLastStep ? "Confirmer la réservation" : "Continuer"}
+            label={isLastStep ? t('booking.confirm') : t('common.continue')}
             variant="solid"
             size="md"
             fullWidth={step === 1 || isLastStep}
@@ -214,10 +216,7 @@ export const BookingBottomSheet = forwardRef<BookingBottomSheetRef, Props>(
         </View>
 
         {isLastStep && (
-          <Text style={styles.termsFooter}>
-            En confirmant, j'accepte les{" "}
-            <Text style={styles.termsLink}>Termes de Réservation.</Text>
-          </Text>
+          <Text style={styles.termsFooter}>{t('booking.confirm')}</Text>
         )}
       </AppBottomSheet>
     );

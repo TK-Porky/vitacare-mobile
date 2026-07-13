@@ -1,8 +1,10 @@
 import { View, Text, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
 
 export const EmptyState = () => {
+  const { t } = useTranslation();
   return (
     <View style={styles.empty}>
       <View style={styles.emptyIcon}>
@@ -12,9 +14,9 @@ export const EmptyState = () => {
           color={colors.inkLight}
         />
       </View>
-      <Text style={styles.emptyTitle}>Aucune notification</Text>
+      <Text style={styles.emptyTitle}>{t('notifications.empty')}</Text>
       <Text style={styles.emptyBody}>
-        Vos rappels de rendez-vous et de traitement apparaîtront ici.
+        {t('profile.notificationsScreen.appointments')}
       </Text>
     </View>
   );

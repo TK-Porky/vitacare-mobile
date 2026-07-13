@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Image } from "react-native";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { PrimaryButton } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 
@@ -7,6 +8,7 @@ import { colors, fontFamily, fontSize } from "@/themes";
 // Main
 // ================================================================================== //
 export default function OnboardingSuccessScreen() {
+  const { t } = useTranslation();
   // ================================================================================== //
   // Render
   // ================================================================================== //
@@ -19,17 +21,16 @@ export default function OnboardingSuccessScreen() {
         </View>
 
         <View style={styles.textBlock}>
-          <Text style={styles.title}>Félicitations !</Text>
+          <Text style={styles.title}>{t("onboarding.success.title")}</Text>
           <Text style={styles.subtitle}>
-            Votre compte a été créé et activer avec succès !{"\n"}
-            Nous sommes très heureux de pouvoir vous aider.
+            {t("onboarding.success.message")}
           </Text>
         </View>
       </View>
 
       <View style={styles.footer}>
         <PrimaryButton
-          label="Terminer"
+          label={t("common.finish")}
           fullWidth
           onPress={() => router.replace("/(main)")}
         />

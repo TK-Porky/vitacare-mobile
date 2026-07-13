@@ -2,6 +2,7 @@ import { TouchableOpacity, View, Text, StyleSheet, StatusBar } from 'react-nativ
 import { ChevronLeft } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { colors, fontFamily, fontSize } from '../../themes';
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export function TopBar({ title, onBack }: Props) {
+  const { t } = useTranslation();
   const handleBack = onBack ?? (() => router.back());
   const statusBarHeight = StatusBar.currentHeight ?? 44;
 
@@ -24,7 +26,7 @@ export function TopBar({ title, onBack }: Props) {
       >
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <ChevronLeft size={20} color={colors.white} />
-          <Text style={styles.backText}>Retour</Text>
+          <Text style={styles.backText}>{t('common.back')}</Text>
         </TouchableOpacity>
         {title && <Text style={styles.title}>{title}</Text>}
       </LinearGradient>

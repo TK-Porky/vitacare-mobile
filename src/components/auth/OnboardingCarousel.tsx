@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import LottieView from "lottie-react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { AuthButton } from "@/components/auth/AuthButton";
 
@@ -34,6 +35,7 @@ export const OnboardingCarousel = ({
   onComplete,
   onSkip,
 }: OnboardingCarouselProps) => {
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const animationRefs = useRef<(LottieView | null)[]>([]);
 
@@ -137,7 +139,7 @@ export const OnboardingCarousel = ({
       {/* Bouton Next / Get Started */}
       <View style={styles.bottomContainer}>
         <AuthButton
-          label={currentIndex === slides.length - 1 ? "Commencer" : "Suivant"}
+          label={currentIndex === slides.length - 1 ? t('onboarding.getStarted') : t('common.next')}
           onPress={handleNext}
           variant="primary"
           fullWidth

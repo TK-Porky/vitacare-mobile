@@ -16,6 +16,7 @@ import * as Haptics from "expo-haptics";
 import { HelperText, NameInput } from "@/components";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { AuthButton } from "@/components/auth/AuthButton";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useAuth } from "@/hooks";
 import { useAuthStore } from "@/store";
@@ -28,6 +29,7 @@ import {
 } from "@/utils/register-validation";
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   // ── States ──────────────────────────────────────────────────────────────
   const [mode, setMode] = useState<RegisterMode>("email");
   const [fullName, setFullName] = useState("");
@@ -145,13 +147,13 @@ export default function RegisterScreen() {
     } catch (error: any) {
       if (error?.code === "auth/too-many-requests") {
         Alert.alert(
-          "Trop de tentatives",
-          "Veuillez patienter quelques minutes avant de réessayer.",
+          t("auth.register.tooManyAttempts"),
+          t("auth.register.tooManyAttemptsMessage"),
         );
       } else if (error?.message?.includes("reCAPTCHA")) {
         Alert.alert(
-          "Vérification de sécurité",
-          "Une vérification de sécurité est nécessaire. Veuillez réessayer.",
+          t("auth.register.securityCheck"),
+          t("auth.register.securityCheckMessage"),
         );
       }
     } finally {
@@ -167,6 +169,7 @@ export default function RegisterScreen() {
     countryCode,
     register,
     clearStoreError,
+    t,
   ]);
 
   const handleBack = useCallback(() => {
@@ -212,8 +215,8 @@ export default function RegisterScreen() {
         bounces={false}
       >
         <AuthHeader
-          title="Créer un compte"
-          subtitle="Rejoignez VitaCare et prenez soin de votre santé"
+          title={t("auth.register.title")}
+          subtitle={t("auth.register.subtitle")}
           showBack
           onBack={handleBack}
         />
@@ -222,7 +225,7 @@ export default function RegisterScreen() {
           {/* Nom complet */}
           <View style={styles.fieldWrapper}>
             <Text style={styles.label}>
-              Nom complet <Text style={styles.required}>*</Text>
+              {t("auth.register.fullNameLabel")} <Text style={styles.required}>*</Text>
             </Text>
             <NameInput
               value={fullName}
@@ -230,7 +233,7 @@ export default function RegisterScreen() {
                 setFullName(text);
                 clearError("fullName");
               }}
-              placeholder="Jean Ateba Mbarga"
+              placeholder={t("auth.register.fullNamePlaceholder")}
               error={!!localErrors.fullName}
             />
             {localErrors.fullName && (
@@ -277,7 +280,7 @@ export default function RegisterScreen() {
         {/* Actions */}
         <View style={styles.actions}>
           <AuthButton
-            label={isEmailMode ? "Créer mon compte" : "Continuer"}
+            label={isEmailMode ? t("auth.register.createButton") : t("auth.register.continueButton")}
             onPress={handleSubmit}
             variant="primary"
             fullWidth
@@ -301,21 +304,26 @@ export default function RegisterScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Vous avez déjà un compte ?{" "}
+            {t("auth.register.hasAccount")}{" "}
             <Text style={styles.legalLink} onPress={handleLogin}>
-              Se connecter
+              {t("auth.register.login")}
             </Text>
           </Text>
           <Text style={styles.legal}>
-            En continuant, vous acceptez nos{" "}
-            <Text style={styles.legalLink} onPress={handleTerms}>
-              Conditions d'utilisation
-            </Text>{" "}
-            et notre{" "}
-            <Text style={styles.legalLink} onPress={handlePrivacy}>
-              Politique de confidentialité
-            </Text>
-            .
+            {(() => {
+              const legalText = t("auth.register.legalNotice", { terms: "||TERMS||", privacy: "||PRIVACY||" });
+              const [before, afterTerms] = legalText.split("||TERMS||");
+              const [middle, afterPrivacy] = afterTerms.split("||PRIVACY||");
+              return (
+                <>
+                  <Text>{before}</Text>
+                  <Text style={styles.legalLink} onPress={handleTerms}>{t("auth.register.terms")}</Text>
+                  <Text>{middle}</Text>
+                  <Text style={styles.legalLink} onPress={handlePrivacy}>{t("auth.register.privacy")}</Text>
+                  <Text>{afterPrivacy}</Text>
+                </>
+              );
+            })()}
           </Text>
         </View>
       </ScrollView>

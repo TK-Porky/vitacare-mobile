@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { ChevronLeft } from "lucide-react-native";
 import { colors, fontFamily, fontSize } from "@/themes";
 
@@ -13,29 +14,30 @@ export const NotificationHeader = ({
   onBack,
   onMarkAllAsRead,
 }: NotificationHeaderProps) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.header}>
       <TouchableOpacity
         style={styles.backBtn}
         onPress={onBack}
         accessibilityRole="button"
-        accessibilityLabel="Retour"
-        accessibilityHint="Retour à l'écran précédent"
+        accessibilityLabel={t('accessibility.back')}
+        accessibilityHint={t('accessibility.back')}
       >
         <ChevronLeft size={22} color={colors.ink} />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>
-        Notifications{unreadCount > 0 ? ` (${unreadCount})` : ""}
+        {t('notifications.title')}{unreadCount > 0 ? ` (${unreadCount})` : ""}
       </Text>
       {unreadCount > 0 ? (
         <TouchableOpacity
           onPress={onMarkAllAsRead}
           style={styles.readAllBtn}
           accessibilityRole="button"
-          accessibilityLabel="Tout lire"
-          accessibilityHint="Marquer toutes les notifications comme lues"
+          accessibilityLabel={t('notifications.markAllRead')}
+          accessibilityHint={t('notifications.markAllRead')}
         >
-          <Text style={styles.readAllText}>Tout lire</Text>
+          <Text style={styles.readAllText}>{t('notifications.markAllRead')}</Text>
         </TouchableOpacity>
       ) : (
         <View style={styles.headerRightPlaceholder} />

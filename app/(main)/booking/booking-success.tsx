@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { PrimaryButton } from "../../../src/components/buttons";
 import { colors, fontFamily, fontSize } from "../../../src/themes";
@@ -18,6 +19,7 @@ import { colors, fontFamily, fontSize } from "../../../src/themes";
 // Main
 // ================================================================================== //
 export default function BookingSuccessScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   // ── Récupération des paramètres ─────────────────────────────────────────────
@@ -39,20 +41,20 @@ export default function BookingSuccessScreen() {
     location?: string;
   }>();
 
-  const isOnlinePayment = paymentMode === "en ligne";
+  const isOnlinePayment = paymentMode === t('booking.payNow');
 
   // ── Message d'information selon le mode de paiement ──────────────────────
   const getNextStepMessage = () => {
     if (isOnlinePayment) {
       return {
-        title: "Paiement en ligne",
+        title: t('booking.payNow'),
         description:
           "Le praticien doit d'abord valider votre demande. Une notification vous sera envoyée pour procéder au paiement en ligne.",
         icon: "card-outline" as const,
       };
     }
     return {
-      title: "Paiement sur place",
+      title: t('booking.payLater'),
       description:
         "Le praticien doit d'abord valider votre demande. Vous recevrez une confirmation par notification. Le paiement se fera au cabinet.",
       icon: "cash-outline" as const,
@@ -72,10 +74,8 @@ export default function BookingSuccessScreen() {
         </View>
 
         {/* ── Title ── */}
-        <Text style={styles.title}>Demande envoyée !</Text>
-        <Text style={styles.subtitle}>
-          Votre demande de rendez-vous a bien été transmise au praticien.
-        </Text>
+        <Text style={styles.title}>{t('booking.success')}</Text>
+        <Text style={styles.subtitle}>{t('booking.successMessage')}</Text>
 
         {/* ── Summary card ── */}
         <View style={styles.card}>
@@ -109,7 +109,7 @@ export default function BookingSuccessScreen() {
               color={colors.ink}
             />
             <Text style={styles.infoText}>
-              {isOnlinePayment ? "Paiement en ligne" : "Paiement sur place"}
+              {isOnlinePayment ? t('booking.payNow') : t('booking.payLater')}
             </Text>
           </View>
 
@@ -126,12 +126,11 @@ export default function BookingSuccessScreen() {
         <View style={styles.nextStepBox}>
           <View style={styles.nextStepHeader}>
             <Ionicons name={nextStep.icon} size={20} color={colors.primary} />
-            <Text style={styles.nextStepTitle}>Prochaine étape</Text>
+            <Text style={styles.nextStepTitle}>{t('common.next')}</Text>
           </View>
           <Text style={styles.nextStepDescription}>{nextStep.description}</Text>
           <Text style={styles.nextStepStatus}>
-            Statut :{" "}
-            <Text style={styles.statusPending}>En attente de validation</Text>
+            {t('appointments.status.PENDING')}
           </Text>
         </View>
       </View>
@@ -139,7 +138,7 @@ export default function BookingSuccessScreen() {
       {/* ── CTA ── */}
       <View style={styles.footer}>
         <PrimaryButton
-          label="Voir mes réservations"
+          label={t('common.seeAll')}
           variant="solid"
           size="md"
           onPress={() => router.replace("/(main)/(tabs)/appointments" as never)}

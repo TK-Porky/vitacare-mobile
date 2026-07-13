@@ -1,3 +1,4 @@
+import i18next from "@/i18n";
 import { create } from "zustand";
 import { mapService } from "../services/map.service";
 import { ClinicProviderResponse } from "../types/api-responses";
@@ -180,7 +181,7 @@ export const useMapStore = create<MapState>((set, get) => ({
         error: null,
       });
     } catch (e: any) {
-      set({ error: e.message || "Erreur de chargement" });
+      set({ error: e.message || i18next.t('errors.loadingFailed') });
     } finally {
       if (refresh) {
         set({ isRefreshing: false });
@@ -221,7 +222,7 @@ export const useMapStore = create<MapState>((set, get) => ({
         error: null,
       }));
     } catch (e: any) {
-      set({ error: e.message || "Erreur de chargement" });
+      set({ error: e.message || i18next.t('errors.loadingFailed') });
     } finally {
       set({ isLoadingMore: false });
     }
@@ -271,7 +272,7 @@ export const useMapStore = create<MapState>((set, get) => ({
         error: null,
       });
     } catch (e: any) {
-      set({ error: e.message || "Erreur de recherche" });
+      set({ error: e.message || i18next.t('errors.searchFailed') });
     } finally {
       if (reset) {
         set({ isSearching: false });
@@ -332,7 +333,7 @@ export const useMapStore = create<MapState>((set, get) => ({
       const clinic = await mapService.getClinicDetails(id);
       set({ selectedClinic: clinic, error: null });
     } catch (e: any) {
-      set({ error: e.message || "Erreur de chargement du profil" });
+      set({ error: e.message || i18next.t('errors.profileLoadFailed') });
     } finally {
       set({ isLoadingDetail: false });
     }

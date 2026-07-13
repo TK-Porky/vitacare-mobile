@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "../../../src/themes";
 import {
   TopBar,
@@ -22,14 +23,12 @@ import {
 import { router } from "expo-router";
 import { useProfile } from "../../../src/hooks";
 import {
-  changePasswordSchema,
+  getChangePasswordSchema,
   ChangePasswordInput,
 } from "../../../src/schemas";
 
 export default function ChangePasswordScreen() {
-  // ================================================================================== //
-  // Store & Hooks
-  // ================================================================================== //
+  const { t } = useTranslation();
 
   const { changePassword, isChangingPassword, error, clearState, success } =
     useProfile();
@@ -39,7 +38,7 @@ export default function ChangePasswordScreen() {
     handleSubmit,
     formState: { errors },
   } = useForm<ChangePasswordInput>({
-    resolver: zodResolver(changePasswordSchema),
+    resolver: zodResolver(getChangePasswordSchema(t)),
     defaultValues: {
       currentPassword: "",
       newPassword: "",
@@ -47,30 +46,22 @@ export default function ChangePasswordScreen() {
     },
   });
 
-  // ================================================================================== //
-  // Effects
-  // ================================================================================== //
-
   useEffect(() => {
     if (success) {
-      Alert.alert("Succès", "Votre mot de passe a été modifié.");
+      Alert.alert(t("common.success"), t("profile.changePasswordScreen.success"));
       clearState();
       router.back();
     }
-  }, [success]);
+  }, [success, clearState, t]);
 
   const onUpdate = async (data: ChangePasswordInput) => {
     await changePassword(data);
   };
 
-  // ================================================================================== //
-  // JSX
-  // ================================================================================== //
-
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
-      <TopBar title="Modifier le mot de passe" />
+      <TopBar title={t("profile.changePasswordScreen.title")} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -81,22 +72,21 @@ export default function ChangePasswordScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Sécurité du compte</Text>
+            <Text style={styles.title}>{t("profile.changePasswordScreen.securityTitle")}</Text>
             <Text style={styles.subtitle}>
-              Choisissez un mot de passe robuste pour protéger vos données
-              médicales
+              {t("profile.changePasswordScreen.securitySubtitle")}
             </Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Mot de passe actuel</Text>
+              <Text style={styles.label}>{t("profile.changePasswordScreen.currentPassword")}</Text>
               <Controller
                 control={control}
                 name="currentPassword"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <PasswordInput
-                    placeholder="Entrez votre mot de passe actuel"
+                    placeholder={t("profile.changePasswordScreen.currentPasswordPlaceholder")}
                     value={value}
                     onBlur={onBlur}
                     onChangeText={onChange}
@@ -115,13 +105,13 @@ export default function ChangePasswordScreen() {
             <View style={styles.divider} />
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nouveau mot de passe</Text>
+              <Text style={styles.label}>{t("profile.changePasswordScreen.newPassword")}</Text>
               <Controller
                 control={control}
                 name="newPassword"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <PasswordInput
-                    placeholder="Minimum 8 caractères"
+                    placeholder={t("profile.changePasswordScreen.newPasswordPlaceholder")}
                     value={value}
                     onBlur={onBlur}
                     onChangeText={onChange}
@@ -139,14 +129,14 @@ export default function ChangePasswordScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                Confirmer le nouveau mot de passe
+                {t("profile.changePasswordScreen.confirmPassword")}
               </Text>
               <Controller
                 control={control}
                 name="confirmPassword"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <PasswordInput
-                    placeholder="Répétez le mot de passe"
+                    placeholder={t("profile.changePasswordScreen.confirmPasswordPlaceholder")}
                     value={value}
                     onBlur={onBlur}
                     onChangeText={onChange}
@@ -167,7 +157,7 @@ export default function ChangePasswordScreen() {
 
           <View style={styles.footer}>
             <PrimaryButton
-              label="Mettre à jour"
+              label={t("profile.changePasswordScreen.change")}
               fullWidth
               isLoading={isChangingPassword}
               onPress={handleSubmit(onUpdate)}
