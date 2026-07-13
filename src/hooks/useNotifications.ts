@@ -48,7 +48,7 @@ export function useNotifications(): UseNotificationsReturn {
   // ── Refs ────────────────────────────────────────────────────────────────
   const foregroundSub = useRef<ExpoNotifications.Subscription | null>(null);
   const responseSub = useRef<ExpoNotifications.Subscription | null>(null);
-  const refreshTimeout = useRef<NodeJS.Timeout | null>(null);
+  const refreshTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstLoad = useRef(true);
 
   // ── Nettoyage ──────────────────────────────────────────────────────────

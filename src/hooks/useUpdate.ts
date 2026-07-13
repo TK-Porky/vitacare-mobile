@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { updateService } from '../services/update.service';
-import type { UpdateCheckResult } from '@vitacare/shared-types';
+import type { UpdateCheckResult } from '../types/update';
 
 interface UseUpdateReturn {
   result: UpdateCheckResult | null;

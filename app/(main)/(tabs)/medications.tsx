@@ -117,8 +117,11 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
 
       try {
         await createReminder({
-          name: drug.name,
+          medicationId: Number(drug.id) || 0,
+          medicationName: drug.name,
+          form: drug.dosageForm || "COMPRIME",
           dosage: drug.dosage!,
+          frequency: "QUOTIDIEN",
           times: ["08:00"],
           notes: drug.dosageForm ? `Forme: ${drug.dosageForm}` : undefined,
         });

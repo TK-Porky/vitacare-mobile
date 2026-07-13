@@ -58,7 +58,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
     try {
       const res = await profileService.updateProfile({
         fullName: data.fullName,
-        phoneNumber: data.phoneNumber,
+        email: data.email,
         dateOfBirth: data.dateOfBirth,
         bloodGroup: data.bloodGroup,
         medicalHistory: data.medicalHistory,

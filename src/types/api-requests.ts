@@ -280,7 +280,7 @@ export interface MarkReminderReadRequest {
 }
 
 // Re-export status type for convenience
-export type ReminderStatus = "PENDING" | "TAKEN" | "MISSED";
+export type ReminderStatus = "PENDING" | "TAKEN" | "MISSED" | "SNOOZED";
 
 // ---------------------------------------------------------------------------
 // Profil utilisateur

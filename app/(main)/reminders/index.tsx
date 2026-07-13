@@ -27,6 +27,8 @@ import { ReminderCard } from "@/components/reminders/ReminderCard";
 import { EmptyState } from "@/components/reminders/EmptyState";
 import { LimitBanner } from "@/components/reminders/LimitBanner";
 import { FilterStatus, FREE_LIMIT } from "@/constants/reminders";
+import type { ReminderData } from "@/components/modals";
+import type { ReminderResponse } from "@/types/api-responses";
 import {
   validateReminderData,
   mapReminderDataToRequest,
@@ -282,7 +284,7 @@ export default function RemindersScreen({ onStore }: Props) {
             {reminderList.length === 0 ? (
               <EmptyState onAdd={() => addSheetRef.current?.open()} />
             ) : (
-              reminderList.map((item) => (
+              reminderList.map((item: ReminderResponse) => (
                 <ReminderCard
                   key={item.id}
                   item={item}

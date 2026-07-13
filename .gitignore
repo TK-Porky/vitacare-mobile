@@ -35,6 +35,10 @@ yarn-error.*
 .env
 .env*.local
 
+# secrets (generate locally or use EAS Secrets)
+google-services.json
+vitacare-release.keystore
+
 # typescript
 *.tsbuildinfo
 

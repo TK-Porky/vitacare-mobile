@@ -29,8 +29,11 @@ const mapDoctorToClinic = (doctor: any): ClinicProviderResponse => {
       longitude: doctor.longitude,
     } : undefined,
     imageUri: doctor.serviceLocationImageUrl || doctor.cabinetPhotoUrl,
-    rating: doctor.rating || 4.5, // Mock rating if not in DDTO
+    rating: doctor.rating || 4.5,
     reviewCount: doctor.reviewCount || 10,
+    phone: doctor.phone,
+    email: doctor.email,
+    website: doctor.website,
   };
 };
 
@@ -73,7 +76,12 @@ export const mapService = {
     return {
       success: true,
       data: doctors.map(mapDoctorToClinic),
-      pagination
+      pagination: {
+        ...pagination,
+        pageSize: pagination.limit,
+        hasNextPage: pagination.page < pagination.totalPages,
+        hasPreviousPage: pagination.page > 1,
+      }
     };
   },
 

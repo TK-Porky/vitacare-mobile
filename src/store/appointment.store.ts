@@ -108,10 +108,10 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
     }
   },
 
-  cancel: async (id, data) => {
+  cancel: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await appointmentService.cancelAppointment(id, data);
+      await appointmentService.cancelAppointment(id);
       await get().fetchAppointments();
     } catch (e: any) {
       set({ error: e.message });
@@ -126,9 +126,9 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
     try {
       const updated = await appointmentService.rescheduleAppointment(id, data);
       set((state) => ({
-        appointments: state.appointments.map(a => a.id === id ? updated : a),
-        upcomingAppointments: state.upcomingAppointments.map(a => a.id === id ? updated : a),
-        selectedAppointment: state.selectedAppointment?.id === id ? updated : state.selectedAppointment,
+        appointments: state.appointments.map(a => String(a.id) === id ? updated : a),
+        upcomingAppointments: state.upcomingAppointments.map(a => String(a.id) === id ? updated : a),
+        selectedAppointment: String(state.selectedAppointment?.id) === id ? updated : state.selectedAppointment,
         lastFetch: Date.now(),
       }));
     } catch (e: any) {

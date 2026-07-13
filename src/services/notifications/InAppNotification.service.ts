@@ -26,7 +26,7 @@ const NOTIFICATION_EXPIRY_DAYS = 30;
  */
 export class InAppNotificationService {
   private static instance: InAppNotificationService;
-  private _cleanupInterval: NodeJS.Timeout | null = null;
+  private _cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   static getInstance(): InAppNotificationService {
     if (!InAppNotificationService.instance) {

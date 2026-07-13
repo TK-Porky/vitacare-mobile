@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import type { UpdateCheckResult } from '@vitacare/shared-types';
+import type { UpdateCheckResult } from '../../types/update';
 import { updateService } from '../../services/update.service';
 
 interface Props {

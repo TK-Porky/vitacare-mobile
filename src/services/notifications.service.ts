@@ -65,7 +65,7 @@ class NotificationService {
   private static instance: NotificationService;
   private _pushToken: string | null = null;
   private _isRegistered = false;
-  private _cleanupInterval: NodeJS.Timeout | null = null;
+  private _cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   static getInstance(): NotificationService {
     if (!NotificationService.instance) {

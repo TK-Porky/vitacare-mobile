@@ -22,6 +22,7 @@ const LEFT_BG: Record<AppointmentStatus, string> = {
   RESCHEDULED: colors.blue,
   NO_SHOW: colors.purple,
   IN_PROGRESS: colors.blue,
+  PAYMENT_PENDING: colors.warning,
 };
 
 const STATUS_CONFIG: Record<
@@ -80,6 +81,12 @@ const STATUS_CONFIG: Record<
     color: colors.warning,
     bg: colors.warningLight,
     label: "En cours",
+  },
+  PAYMENT_PENDING: {
+    icon: "time",
+    color: colors.warning,
+    bg: colors.warningLight,
+    label: "Paiement en attente",
   },
 };
 

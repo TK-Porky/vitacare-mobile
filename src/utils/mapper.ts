@@ -39,6 +39,7 @@ export function toAppointment(r: AppointmentResponse): Appointment {
     dateTime: r.dateTime,
     status: normalizeStatus(r.status),
     paymentMethod: defaultPayment,
+    paymentProvider: "",
     total: r.total ?? undefined,
   };
 }

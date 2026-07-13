@@ -17,7 +17,7 @@ import * as ExpoUpdates from 'expo-updates';
 import * as Application from 'expo-application';
 import { Platform, Linking, Alert } from 'react-native';
 import Constants from 'expo-constants';
-import type { AppVersion, UpdateCheckResult, UpdateChannel } from '@vitacare/shared-types';
+import type { AppVersion, UpdateCheckResult, UpdateChannel } from '../types/update';
 
 // ── Configuration ─────────────────────────────────────────────────────────
 

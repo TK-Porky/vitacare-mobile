@@ -70,7 +70,7 @@ export const appointmentService = {
   ): Promise<AppointmentResponse> {
     const startTime = `${data.newDate}T${data.newTime}:00`;
     const [sh, sm] = data.newTime.split(":").map(Number);
-    let m = sh * 60 + sm + 30;
+    const m = sh * 60 + sm + 30;
     const eh = Math.floor(m / 60) % 24;
     const em = m % 60;
     const newEndTime = `${data.newDate}T${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}:00`;
@@ -139,7 +139,7 @@ export const appointmentService = {
   ): Promise<AppointmentResponse> {
     const startTime = `${data.newDate}T${data.newTime}:00`;
     const [sh, sm] = data.newTime.split(":").map(Number);
-    let m = sh * 60 + sm + 30;
+    const m = sh * 60 + sm + 30;
     const eh = Math.floor(m / 60) % 24;
     const em = m % 60;
     const newEndTime = `${data.newDate}T${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}:00`;

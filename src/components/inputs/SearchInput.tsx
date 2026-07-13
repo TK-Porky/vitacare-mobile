@@ -91,7 +91,7 @@ export const SearchInput = forwardRef<SearchInputRef, SearchInputProps>(
     const inputRef = useRef<TextInput>(null);
     const [isFocused, setIsFocused] = React.useState(false);
     const [localValue, setLocalValue] = React.useState(value || "");
-    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Expose methods via ref
     useImperativeHandle(ref, () => ({

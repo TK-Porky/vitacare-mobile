@@ -49,13 +49,13 @@ export default function OnboardingLocationScreen() {
   // ================================================================================== //
   useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         setLocation("Permission de localisation refusée");
         return;
       }
 
-      let currentLoc = await Location.getCurrentPositionAsync({});
+      const currentLoc = await Location.getCurrentPositionAsync({});
       const newRegion = {
         latitude: currentLoc.coords.latitude,
         longitude: currentLoc.coords.longitude,
@@ -69,7 +69,7 @@ export default function OnboardingLocationScreen() {
       });
 
       // Reverse geocoding to get address
-      let reverse = await Location.reverseGeocodeAsync({
+      const reverse = await Location.reverseGeocodeAsync({
         latitude: currentLoc.coords.latitude,
         longitude: currentLoc.coords.longitude,
       });

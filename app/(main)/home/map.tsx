@@ -139,13 +139,13 @@ export default function MapScreen() {
   useEffect(() => {
     InteractionManager.runAfterInteractions(async () => {
       try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
           setIsLoadingLocation(false);
           return;
         }
 
-        let currentLoc = await Location.getCurrentPositionAsync({});
+        const currentLoc = await Location.getCurrentPositionAsync({});
         setUserLocation(currentLoc.coords);
         const newRegion = {
           latitude: currentLoc.coords.latitude,

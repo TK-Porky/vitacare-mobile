@@ -40,7 +40,7 @@ function ActivityCard({ item }: { item: Appointment }) {
       <View style={styles.cardBody}>
         <Text style={styles.doctorName}>{item.doctorName}</Text>
         <Text style={styles.specialty}>{item.specialty}</Text>
-        <Text style={styles.motif} numberOfLines={1}>{item.motif}</Text>
+        <Text style={styles.motif} numberOfLines={1}>{item.reason}</Text>
         <View style={styles.cardMeta}>
           <Ionicons name="calendar-outline" size={13} color={colors.inkMuted} />
           <Text style={styles.metaText}>{item.date} · {item.time}</Text>
@@ -81,9 +81,9 @@ export default function ActivityScreen() {
       try {
         const res = tab === 'upcoming'
           ? await appointmentService.getUpcomingAppointments()
-          : await appointmentService.getPastAppointments();
+          : await appointmentService.getAll();
         if (!mounted) return;
-        setData(res as Appointment[]);
+        setData((res ?? []) as unknown as Appointment[]);
       } catch (err) {
         console.warn('Failed to fetch activity appointments', err);
         if (mounted) setData([]);
