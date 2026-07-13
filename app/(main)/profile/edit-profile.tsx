@@ -21,7 +21,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { colors, fontFamily, fontSize } from "../../../src/themes";
+import { colors, fontFamily, fontSize } from "@/themes";
 import {
   TopBar,
   NameInput,
@@ -29,11 +29,11 @@ import {
   EmailInput,
   PhoneInput,
   HelperText,
-} from "../../../src/components";
+} from "@/components";
 import { router } from "expo-router";
-import { useProfile } from "../../../src/hooks";
-import { useAuthStore } from "../../../src/store";
-import { updateProfileSchema, UpdateProfileInput } from "../../../src/schemas";
+import { useProfile } from "@/hooks";
+import { useAuthStore } from "@/store";
+import { updateProfileSchema, UpdateProfileInput } from "@/schemas";
 
 // Types
 type AvatarStatus = "idle" | "uploading" | "success" | "error";
@@ -78,7 +78,6 @@ export default function EditProfileScreen() {
       () => ({
         fullName: user?.fullName || "",
         email: user?.email || "",
-        phoneNumber: user?.phoneNumber || "",
         dateOfBirth: user?.dateOfBirth || "",
         bloodGroup: user?.bloodGroup || "",
         medicalHistory: user?.medicalHistory || "",
@@ -293,7 +292,6 @@ export default function EditProfileScreen() {
         const cleanData = {
           fullName: data.fullName.trim(),
           email: data.email.trim(),
-          phoneNumber: data.phoneNumber?.trim(),
           dateOfBirth: data.dateOfBirth,
           bloodGroup: data.bloodGroup,
           medicalHistory: data.medicalHistory,
@@ -312,25 +310,6 @@ export default function EditProfileScreen() {
     },
     [isDirty, updateProfile],
   );
-
-  const handleCancel = useCallback(() => {
-    if (isDirty) {
-      Alert.alert(
-        "Quitter sans sauvegarder",
-        "Vous avez des modifications non sauvegardées. Voulez-vous vraiment quitter ?",
-        [
-          { text: "Rester", style: "cancel" },
-          {
-            text: "Quitter",
-            style: "destructive",
-            onPress: () => router.back(),
-          },
-        ],
-      );
-    } else {
-      router.back();
-    }
-  }, [isDirty]);
 
   // ================================================================================== //
   // UI Helpers
@@ -422,16 +401,6 @@ export default function EditProfileScreen() {
               >
                 {getAvatarStatusText}
               </Text>
-
-              {user?.avatarUrl && !localAvatarUri && (
-                <TouchableOpacity
-                  onPress={handleRemoveAvatar}
-                  style={styles.removeAvatarBtn}
-                >
-                  <X size={14} color={colors.inkLight} />
-                  <Text style={styles.removeAvatarText}>Supprimer</Text>
-                </TouchableOpacity>
-              )}
             </View>
 
             {/* ── Form Section ── */}
@@ -480,29 +449,6 @@ export default function EditProfileScreen() {
                 {errors.email && (
                   <HelperText
                     message={errors.email.message || ""}
-                    type="error"
-                  />
-                )}
-              </View>
-
-              {/* Phone */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Numéro de téléphone</Text>
-                <Controller
-                  control={control}
-                  name="phoneNumber"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <PhoneInput
-                      value={value}
-                      onBlur={onBlur}
-                      onChangeText={onChange}
-                      error={!!errors.phoneNumber}
-                    />
-                  )}
-                />
-                {errors.phoneNumber && (
-                  <HelperText
-                    message={errors.phoneNumber.message || ""}
                     type="error"
                   />
                 )}

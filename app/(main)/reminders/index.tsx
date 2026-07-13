@@ -197,40 +197,6 @@ export default function RemindersScreen({ onStore }: Props) {
     router.push("/notifications");
   }, [router]);
 
-  // ─── Render States ────────────────────────────────────────────────────────
-
-  if (!isHydrated || isLoadingReminders) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>
-          {!isHydrated
-            ? "Chargement du profil..."
-            : "Chargement des rappels..."}
-        </Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    const errorMessage =
-      typeof error === "string"
-        ? error
-        : error?.message || "Une erreur est survenue";
-
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Une erreur est survenue</Text>
-        <Text style={styles.errorSubtext}>{errorMessage}</Text>
-        <PrimaryButton
-          label="Réessayer"
-          onPress={() => refetch()}
-          style={{ marginTop: 16 }}
-        />
-      </View>
-    );
-  }
-
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -252,64 +218,87 @@ export default function RemindersScreen({ onStore }: Props) {
         }
       />
 
-      <ScrollView
-        style={styles.root}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isFetching}
-            onRefresh={refetch}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
-          />
-        }
-      >
-        <FilterTabs value={filterStatus} onChange={setFilterStatus} />
-
-        {limitReached && <LimitBanner onUpgrade={handleUpgrade} />}
-
-        {summary && reminderList.length > 0 && (
-          <View style={styles.summaryContainer}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryNumber}>{summary.pending}</Text>
-              <Text style={styles.summaryLabel}>En attente</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryNumber, { color: colors.success }]}>
-                {summary.taken}
-              </Text>
-              <Text style={styles.summaryLabel}>Pris</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryNumber, { color: colors.error }]}>
-                {summary.missed}
-              </Text>
-              <Text style={styles.summaryLabel}>Manqué</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.list}>
-          {reminderList.length === 0 ? (
-            <EmptyState onAdd={() => addSheetRef.current?.open()} />
-          ) : (
-            reminderList.map((item) => (
-              <ReminderCard
-                key={item.id}
-                item={item}
-                onView={handleViewReminder}
-                onMarkAsTaken={handleMarkAsTaken}
-                onSnooze={handleSnooze}
-                onDelete={handleDelete}
-                isMarkingAsTaken={isMarkingAsTaken}
-                isSnoozing={isSnoozing}
-                isDeleting={isDeleting}
-              />
-            ))
-          )}
+      {!isHydrated || isLoadingReminders ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>
+            {!isHydrated
+              ? "Chargement du profil..."
+              : "Chargement des rappels..."}
+          </Text>
         </View>
-      </ScrollView>
+      ) : error ? (
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>Une erreur est survenue</Text>
+          <Text style={styles.errorSubtext}>
+            {typeof error === "string" ? error : error?.message || "Une erreur est survenue"}
+          </Text>
+          <PrimaryButton
+            label="Réessayer"
+            onPress={() => refetch()}
+            style={{ marginTop: 16 }}
+          />
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.root}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isFetching}
+              onRefresh={refetch}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+        >
+          <FilterTabs value={filterStatus} onChange={setFilterStatus} />
+
+          {limitReached && <LimitBanner onUpgrade={handleUpgrade} />}
+
+          {summary && reminderList.length > 0 && (
+            <View style={styles.summaryContainer}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryNumber}>{summary.pending}</Text>
+                <Text style={styles.summaryLabel}>En attente</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryNumber, { color: colors.success }]}>
+                  {summary.taken}
+                </Text>
+                <Text style={styles.summaryLabel}>Pris</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryNumber, { color: colors.error }]}>
+                  {summary.missed}
+                </Text>
+                <Text style={styles.summaryLabel}>Manqué</Text>
+              </View>
+            </View>
+          )}
+
+          <View style={styles.list}>
+            {reminderList.length === 0 ? (
+              <EmptyState onAdd={() => addSheetRef.current?.open()} />
+            ) : (
+              reminderList.map((item) => (
+                <ReminderCard
+                  key={item.id}
+                  item={item}
+                  onView={handleViewReminder}
+                  onMarkAsTaken={handleMarkAsTaken}
+                  onSnooze={handleSnooze}
+                  onDelete={handleDelete}
+                  isMarkingAsTaken={isMarkingAsTaken}
+                  isSnoozing={isSnoozing}
+                  isDeleting={isDeleting}
+                />
+              ))
+            )}
+          </View>
+        </ScrollView>
+      )}
 
       {!limitReached && (
         <TouchableOpacity

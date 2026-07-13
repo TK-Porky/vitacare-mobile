@@ -172,6 +172,33 @@ export default function DownloadsScreen() {
     );
   };
 
+  const keyExtractor = useCallback((item: DownloadedFile) => item.uri, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: DownloadedFile }) => (
+      <FileCard
+        file={item}
+        onShare={() => handleShare(item)}
+        onDelete={() => handleDelete(item)}
+      />
+    ),
+    [],
+  );
+
+  const renderHeader = useCallback(() => {
+    if (files.length === 0) return null;
+    return (
+      <Text style={styles.countLabel}>
+        {files.length} fichier{files.length > 1 ? 's' : ''}
+      </Text>
+    );
+  }, [files.length]);
+
+  const renderSeparator = useCallback(
+    () => <View style={{ height: 10 }} />,
+    [],
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <StatusBar barStyle="dark-content" />
@@ -179,27 +206,19 @@ export default function DownloadsScreen() {
 
       <FlatList
         data={files}
-        keyExtractor={(item) => item.uri}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         onRefresh={loadFiles}
         refreshing={isLoading}
-        ListHeaderComponent={
-          files.length > 0 ? (
-            <Text style={styles.countLabel}>
-              {files.length} fichier{files.length > 1 ? 's' : ''}
-            </Text>
-          ) : null
-        }
+        ListHeaderComponent={renderHeader}
         ListEmptyComponent={isLoading ? null : <EmptyState />}
-        renderItem={({ item }) => (
-          <FileCard
-            file={item}
-            onShare={() => handleShare(item)}
-            onDelete={() => handleDelete(item)}
-          />
-        )}
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        ItemSeparatorComponent={renderSeparator}
+        removeClippedSubviews={true}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
       />
     </SafeAreaView>
   );

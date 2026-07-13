@@ -141,9 +141,9 @@ export class InAppNotificationService {
       // Fallback: cache local
       const cached = await this.getCachedInbox();
       if (cached) {
-        console.log("[InAppNotificationService] Using cached inbox data");
-        return cached;
-      }
+      if (__DEV__) console.log("[InAppNotificationService] Using cached inbox data");
+      return cached;
+    }
 
       throw new Error("No data available");
     } catch (error) {
@@ -151,7 +151,7 @@ export class InAppNotificationService {
 
       const cached = await this.getCachedInbox();
       if (cached) {
-        console.log("[InAppNotificationService] Using cached inbox data");
+        if (__DEV__) console.log("[InAppNotificationService] Using cached inbox data");
         return cached;
       }
 

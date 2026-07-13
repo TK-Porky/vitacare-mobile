@@ -139,14 +139,14 @@ class ApiClient {
     if (controller) {
       controller.abort();
       this.abortControllers.delete(id);
-      console.log(`[API] Cancelled request: ${id}`);
+      if (__DEV__) console.log(`[API] Cancelled request: ${id}`);
     }
   }
 
   cancelAllRequests() {
     this.abortControllers.forEach((controller, id) => {
       controller.abort();
-      console.log(`[API] Cancelled request: ${id}`);
+      if (__DEV__) console.log(`[API] Cancelled request: ${id}`);
     });
     this.abortControllers.clear();
   }
@@ -206,7 +206,7 @@ class ApiClient {
 
         if (attempt < retries - 1) {
           const delay = this.getRetryDelay(attempt);
-          console.log(`[API] Retry ${attempt + 1}/${retries} in ${delay}ms`);
+          if (__DEV__) console.log(`[API] Retry ${attempt + 1}/${retries} in ${delay}ms`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       } catch (error) {

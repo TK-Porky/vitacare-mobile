@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   View,
   Text,
@@ -31,10 +32,13 @@ export const AppointmentListView = ({
   onRefresh,
   onCardPress,
 }: AppointmentListViewProps) => {
-  const displayed = appointments.filter((a) =>
-    activeTab === "upcoming"
-      ? isUpcoming(a.dateTime ?? a.date)
-      : !isUpcoming(a.dateTime ?? a.date),
+  const displayed = useMemo(() =>
+    appointments.filter((a) =>
+      activeTab === "upcoming"
+        ? isUpcoming(a.dateTime ?? a.date)
+        : !isUpcoming(a.dateTime ?? a.date),
+    ),
+    [appointments, activeTab],
   );
 
   return (

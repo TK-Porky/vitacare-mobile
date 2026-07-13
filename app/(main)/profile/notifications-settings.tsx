@@ -149,69 +149,62 @@ export default function NotificationsSettingsScreen() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <TopBar title="Notifications" />
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
       <TopBar title="Notifications" />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.section}>
-          <View style={styles.card}>
-            <ToggleItem
-              label="Rappels de médicaments"
-              description="Recevoir une notification pour chaque prise prévue."
-              isEnabled={reminders}
-              onToggle={handleToggle("treatmentReminders")}
-            />
-            <ToggleItem
-              label="Alertes de rendez-vous"
-              description="Rappels avant vos rendez-vous médicaux."
-              isEnabled={appointments}
-              onToggle={handleToggle("appointmentReminders")}
-            />
-            <ToggleItem
-              label="Conseils santé"
-              description="Conseils et actualités santé de VitaCare."
-              isEnabled={healthTips}
-              onToggle={handleToggle("healthTips")}
-            />
+      {isLoading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.section}>
+            <View style={styles.card}>
+              <ToggleItem
+                label="Rappels de médicaments"
+                description="Recevoir une notification pour chaque prise prévue."
+                isEnabled={reminders}
+                onToggle={handleToggle("treatmentReminders")}
+              />
+              <ToggleItem
+                label="Alertes de rendez-vous"
+                description="Rappels avant vos rendez-vous médicaux."
+                isEnabled={appointments}
+                onToggle={handleToggle("appointmentReminders")}
+              />
+              <ToggleItem
+                label="Conseils santé"
+                description="Conseils et actualités santé de VitaCare."
+                isEnabled={healthTips}
+                onToggle={handleToggle("healthTips")}
+              />
+            </View>
           </View>
-        </View>
 
-        {/* Test Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tester le système</Text>
-          <TouchableOpacity
-            style={styles.testButton}
-            onPress={handleTestNotification}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.testButtonText}>
-              Envoyer une notification de test (3s)
+          {/* Test Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Tester le système</Text>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={handleTestNotification}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.testButtonText}>
+                Envoyer une notification de test (3s)
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ marginBottom: 20 }}>
+            <Text style={styles.infoText}>
+              Note : Vous pouvez également gérer ces permissions dans les
+              réglages système de votre téléphone.
             </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ marginBottom: 20 }}>
-          <Text style={styles.infoText}>
-            Note : Vous pouvez également gérer ces permissions dans les réglages
-            système de votre téléphone.
-          </Text>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -224,6 +217,11 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingTop: 24,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   section: {
     marginBottom: 32,

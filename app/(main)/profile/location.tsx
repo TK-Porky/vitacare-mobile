@@ -12,7 +12,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MapPin, Crosshair } from "lucide-react-native";
-import LegacyMapView, { UrlTile as LegacyUrlTile, Marker as LegacyMarker, Circle } from "react-native-maps";
+import LegacyMapView, {
+  UrlTile as LegacyUrlTile,
+  Marker as LegacyMarker,
+  Circle,
+} from "react-native-maps";
 import * as Location from "expo-location";
 import { colors, fontFamily, fontSize } from "../../../src/themes";
 import { TopBar, PrimaryButton, SearchInput } from "../../../src/components";
@@ -54,7 +58,13 @@ const INITIAL_REGION = {
   longitudeDelta: 0.05,
 };
 
-const ZOOM_LEVELS = { city: 12, street: 16, building: 18, default: 14, user: 15 };
+const ZOOM_LEVELS = {
+  city: 12,
+  street: 16,
+  building: 18,
+  default: 14,
+  user: 15,
+};
 
 const isUsingMapLibre = mapLibreLoaded && Platform.OS !== "ios";
 
@@ -78,10 +88,12 @@ export default function LocationScreen() {
     coordinate: { latitude: number; longitude: number };
     title?: string;
   } | null>(null);
-  const [searchMarkers, setSearchMarkers] = useState<{
-    id: string;
-    coordinate: { latitude: number; longitude: number };
-  }[]>([]);
+  const [searchMarkers, setSearchMarkers] = useState<
+    {
+      id: string;
+      coordinate: { latitude: number; longitude: number };
+    }[]
+  >([]);
   const [locationAccuracy, setLocationAccuracy] = useState(0);
   const [locationSet, setLocationSet] = useState(false);
 
@@ -112,8 +124,12 @@ export default function LocationScreen() {
         if (results.length > 0) {
           const item = results[0];
           const parts = [
-            item.street, item.streetNumber, item.district,
-            item.city, item.region, item.country,
+            item.street,
+            item.streetNumber,
+            item.district,
+            item.city,
+            item.region,
+            item.country,
           ].filter(Boolean);
           setAddress(parts.join(", ") || "Position détectée");
           setCoordinates(coords);
@@ -133,8 +149,15 @@ export default function LocationScreen() {
   );
 
   const animateToCoords = useCallback(
-    (coords: { latitude: number; longitude: number }, zoomLevel = ZOOM_LEVELS.default) => {
-      const newRegion = { ...coords, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+    (
+      coords: { latitude: number; longitude: number },
+      zoomLevel = ZOOM_LEVELS.default,
+    ) => {
+      const newRegion = {
+        ...coords,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
       setRegion(newRegion);
 
       if (isUsingMapLibre) {
@@ -195,10 +218,14 @@ export default function LocationScreen() {
       getCurrentLocation();
     } else {
       setHasPermission(false);
-      Alert.alert("Permission refusée", "Activez la localisation dans les réglages.", [
-        { text: "Annuler", style: "cancel" },
-        { text: "Réglages", onPress: () => Linking.openSettings() },
-      ]);
+      Alert.alert(
+        "Permission refusée",
+        "Activez la localisation dans les réglages.",
+        [
+          { text: "Annuler", style: "cancel" },
+          { text: "Réglages", onPress: () => Linking.openSettings() },
+        ],
+      );
     }
   }, [getCurrentLocation]);
 
@@ -252,18 +279,26 @@ export default function LocationScreen() {
     } else {
       await getCurrentLocation();
     }
-  }, [hasPermission, requestPermissionAndLocate, userMarker, animateToCoords, getCurrentLocation]);
+  }, [
+    hasPermission,
+    requestPermissionAndLocate,
+    userMarker,
+    animateToCoords,
+    getCurrentLocation,
+  ]);
 
   const handleSave = useCallback(async () => {
     if (!locationSet) {
-      Alert.alert("Position non définie", "Sélectionnez une position sur la carte.");
+      Alert.alert(
+        "Position non définie",
+        "Sélectionnez une position sur la carte.",
+      );
       return;
     }
     try {
       await updateProfile({
         fullName: user?.fullName ?? "",
         email: user?.email ?? "",
-        phoneNumber: user?.phoneNumber ?? "",
         address,
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
@@ -349,7 +384,10 @@ export default function LocationScreen() {
                 {userMarker && MapLibreMarker && (
                   <MapLibreMarker
                     id="user"
-                    lngLat={[userMarker.coordinate.longitude, userMarker.coordinate.latitude]}
+                    lngLat={[
+                      userMarker.coordinate.longitude,
+                      userMarker.coordinate.latitude,
+                    ]}
                   >
                     <View style={styles.userPin}>
                       <View style={styles.userPinDot} />
@@ -361,10 +399,17 @@ export default function LocationScreen() {
                   <MapLibreMarker
                     key={marker.id}
                     id={marker.id}
-                    lngLat={[marker.coordinate.longitude, marker.coordinate.latitude]}
+                    lngLat={[
+                      marker.coordinate.longitude,
+                      marker.coordinate.latitude,
+                    ]}
                   >
                     <View style={styles.searchPin}>
-                      <MapPin size={18} color={colors.primary} fill={colors.primary} />
+                      <MapPin
+                        size={18}
+                        color={colors.primary}
+                        fill={colors.primary}
+                      />
                     </View>
                   </MapLibreMarker>
                 ))}
@@ -392,15 +437,17 @@ export default function LocationScreen() {
                   tileSize={256}
                 />
 
-                {userMarker && locationAccuracy > 0 && locationAccuracy < 100 && (
-                  <Circle
-                    center={userMarker.coordinate}
-                    radius={locationAccuracy}
-                    strokeWidth={1}
-                    strokeColor={colors.primary + "40"}
-                    fillColor={colors.primary + "20"}
-                  />
-                )}
+                {userMarker &&
+                  locationAccuracy > 0 &&
+                  locationAccuracy < 100 && (
+                    <Circle
+                      center={userMarker.coordinate}
+                      radius={locationAccuracy}
+                      strokeWidth={1}
+                      strokeColor={colors.primary + "40"}
+                      fillColor={colors.primary + "20"}
+                    />
+                  )}
 
                 {userMarker && (
                   <LegacyMarker
@@ -421,7 +468,11 @@ export default function LocationScreen() {
                     tracksViewChanges={false}
                   >
                     <View style={styles.searchPin}>
-                      <MapPin size={18} color={colors.primary} fill={colors.primary} />
+                      <MapPin
+                        size={18}
+                        color={colors.primary}
+                        fill={colors.primary}
+                      />
                     </View>
                   </LegacyMarker>
                 ))}
@@ -464,10 +515,7 @@ export default function LocationScreen() {
             activeOpacity={0.7}
             onPress={handleCenterOnUser}
           >
-            <MapPin
-              size={16}
-              color={error ? colors.error : colors.inkMuted}
-            />
+            <MapPin size={16} color={error ? colors.error : colors.inkMuted} />
             <View style={styles.locationTextContainer}>
               <Text
                 style={[styles.locationText, error && styles.locationTextError]}
@@ -478,7 +526,9 @@ export default function LocationScreen() {
               {error && <Text style={styles.locationError}>{error}</Text>}
             </View>
             {locationAccuracy > 0 && locationAccuracy < 100 && (
-              <Text style={styles.accuracyText}>±{Math.round(locationAccuracy)}m</Text>
+              <Text style={styles.accuracyText}>
+                ±{Math.round(locationAccuracy)}m
+              </Text>
             )}
           </TouchableOpacity>
         </View>

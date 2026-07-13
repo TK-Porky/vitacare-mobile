@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from "react";
+import React, { useRef, useState, useMemo, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,67 +10,16 @@ import {
   ScrollView,
   StatusBar,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
+import { useMapStore } from "@/store";
+import { useDebounce } from "@/hooks/useDebounce";
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-type Provider = {
-  id: string;
-  name: string;
-  specialty: string;
-  avatarUri: string;
-};
-
-const ALL_PROVIDERS: Provider[] = [
-  {
-    id: "1",
-    name: "Dr. Aminou Ousman",
-    specialty: "Généraliste",
-    avatarUri: "https://randomuser.me/api/portraits/men/32.jpg",
-  },
-  {
-    id: "2",
-    name: "Dr. Mariama Siantou",
-    specialty: "Pédiatre",
-    avatarUri: "https://randomuser.me/api/portraits/women/44.jpg",
-  },
-  {
-    id: "3",
-    name: "Dr. Christian Mba",
-    specialty: "Ophtalmologue",
-    avatarUri: "https://randomuser.me/api/portraits/men/15.jpg",
-  },
-  {
-    id: "4",
-    name: "Dr. Aïssatou Diallo",
-    specialty: "Cardiologue",
-    avatarUri: "https://randomuser.me/api/portraits/women/68.jpg",
-  },
-  {
-    id: "5",
-    name: "Dr. Sylvain Nkoulou",
-    specialty: "Dermatologue",
-    avatarUri: "https://randomuser.me/api/portraits/men/52.jpg",
-  },
-  {
-    id: "6",
-    name: "Dr. Fatou Camara",
-    specialty: "Gynécologue",
-    avatarUri: "https://randomuser.me/api/portraits/women/23.jpg",
-  },
-  {
-    id: "7",
-    name: "Dr. Ibrahima Baldé",
-    specialty: "Chirurgien",
-    avatarUri: "https://randomuser.me/api/portraits/men/71.jpg",
-  },
-];
-
-const ALL_SUGGESTIONS = [
+const SUGGESTIONS = [
   "Maux de gorge",
   "Maux d'estomac",
   "Maux de tête",
@@ -85,70 +34,120 @@ const ALL_SUGGESTIONS = [
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const SuggestionChip = ({
-  label,
-  query,
-  onPress,
-}: {
-  label: string;
-  query: string;
-  onPress: () => void;
-}) => {
-  const lower = label.toLowerCase();
-  const q = query.toLowerCase();
-  const idx = q.length > 0 ? lower.indexOf(q) : -1;
-
-  return (
-    <TouchableOpacity style={styles.chip} onPress={onPress} activeOpacity={0.7}>
-      {idx === -1 || q.length === 0 ? (
-        <Text style={styles.chipLabel}>{label}</Text>
-      ) : (
-        <Text style={styles.chipLabel}>
-          {label.slice(0, idx)}
-          <Text style={styles.chipLabelBold}>
-            {label.slice(idx, idx + query.length)}
-          </Text>
-          {label.slice(idx + query.length)}
-        </Text>
-      )}
-    </TouchableOpacity>
-  );
-};
-
-const ProviderRow = ({ item }: { item: Provider }) => (
-  <TouchableOpacity style={styles.providerRow} activeOpacity={0.75}>
-    <Image source={{ uri: item.avatarUri }} style={styles.avatar} />
-    <View style={styles.providerInfo}>
-      <Text style={styles.providerName}>{item.name}</Text>
-      <Text style={styles.providerSpecialty}>{item.specialty}</Text>
-    </View>
-    <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-  </TouchableOpacity>
-);
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
-
 export default function ExploreSearchScreen() {
   const router = useRouter();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 300);
+
+  const clinics = useMapStore((s) => s.clinics);
+  const searchResults = useMapStore((s) => s.searchResults);
+  const isSearching = useMapStore((s) => s.isSearching);
+  const searchClinics = useMapStore((s) => s.searchClinics);
+  const setSelectedClinic = useMapStore((s) => s.setSelectedClinic);
+
+  useEffect(() => {
+    if (debouncedQuery.trim().length > 0) {
+      searchClinics({ query: debouncedQuery });
+    }
+  }, [debouncedQuery, searchClinics]);
+
+  const providers = useMemo(() => {
+    const list = searchResults.length > 0 ? searchResults : clinics;
+    if (debouncedQuery.trim().length === 0) return list.slice(0, 10);
+    return list;
+  }, [clinics, searchResults, debouncedQuery]);
 
   const suggestions = useMemo(() => {
-    if (query.trim().length === 0) return ALL_SUGGESTIONS.slice(0, 6);
-    return ALL_SUGGESTIONS.filter((s) =>
+    if (query.trim().length === 0) return SUGGESTIONS.slice(0, 6);
+    return SUGGESTIONS.filter((s) =>
       s.toLowerCase().includes(query.toLowerCase()),
     );
   }, [query]);
 
-  const results = useMemo(() => {
-    if (query.trim().length === 0) return ALL_PROVIDERS;
-    const q = query.toLowerCase();
-    return ALL_PROVIDERS.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.specialty.toLowerCase().includes(q),
-    );
-  }, [query]);
+  const handleProviderPress = useCallback(
+    (id: string) => {
+      const provider = providers.find((c) => c.id === id);
+      if (provider) {
+        setSelectedClinic(provider);
+        router.back();
+      }
+    },
+    [providers, setSelectedClinic, router],
+  );
+
+  const keyExtractor = useCallback((item: any) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: any }) => (
+      <TouchableOpacity
+        style={styles.providerRow}
+        activeOpacity={0.75}
+        onPress={() => handleProviderPress(item.id)}
+      >
+        <Image
+          source={{ uri: item.avatarUri || "https://via.placeholder.com/48" }}
+          style={styles.avatar}
+        />
+        <View style={styles.providerInfo}>
+          <Text style={styles.providerName}>
+            {item.doctorName || item.name}
+          </Text>
+          <Text style={styles.providerSpecialty}>
+            {item.specialty || "Spécialiste"}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+      </TouchableOpacity>
+    ),
+    [handleProviderPress],
+  );
+  const renderHeader = useCallback(
+    () => (
+      <>
+        {suggestions.length > 0 && query.length === 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Termes suggérés</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipsRow}
+            >
+              {suggestions.map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={styles.chip}
+                  onPress={() => setQuery(s)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.chipLabel}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+        {providers.length > 0 && (
+          <Text style={styles.sectionLabel}>Meilleures correspondances</Text>
+        )}
+      </>
+    ),
+    [suggestions, query, providers.length],
+  );
+  const renderEmpty = useCallback(
+    () =>
+      isSearching ? (
+        <View style={styles.empty}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : query.length > 0 ? (
+        <View style={styles.empty}>
+          <Ionicons name="search-outline" size={40} color={colors.inkFaint} />
+          <Text style={styles.emptyText}>
+            Aucun résultat pour « {query} »
+          </Text>
+        </View>
+      ) : null,
+    [isSearching, query],
+  );
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -185,47 +184,18 @@ export default function ExploreSearchScreen() {
       </View>
 
       <FlatList
-        data={results}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ProviderRow item={item} />}
+        data={providers}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
-          <>
-            {/* ── Suggestions ── */}
-            {suggestions.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Termes suggérés</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.chipsRow}
-                >
-                  {suggestions.map((s) => (
-                    <SuggestionChip
-                      key={s}
-                      label={s}
-                      query={query}
-                      onPress={() => setQuery(s)}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* ── Results label ── */}
-            <Text style={styles.sectionLabel}>Meilleures correspondances</Text>
-          </>
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="search-outline" size={40} color={colors.inkFaint} />
-            <Text style={styles.emptyText}>
-              Aucun résultat pour « {query} »
-            </Text>
-          </View>
-        }
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmpty}
+        removeClippedSubviews={true}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
       />
     </SafeAreaView>
   );

@@ -1,3 +1,4 @@
+import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { parseAppointmentDate } from "@/utils";
@@ -37,7 +38,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-export function AppointmentItem({
+export const AppointmentItem = React.memo(function AppointmentItem({
   doctorName,
   date,
   time,
@@ -82,7 +83,7 @@ export function AppointmentItem({
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

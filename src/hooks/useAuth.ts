@@ -45,15 +45,15 @@ export const useAuth = () => {
       if (!idToken) throw new Error("Pas de idToken reçu");
 
       // Crée le credential Firebase
-      console.log("ID Token:", idToken);
+      if (__DEV__) console.log("ID Token:", idToken);
       const credential = GoogleAuthProvider.credential(idToken);
-      console.log("Credential:", credential);
+      if (__DEV__) console.log("Credential:", credential);
       const userCredential = await signInWithCredential(auth, credential);
-      console.log("User Credential:", userCredential);
+      if (__DEV__) console.log("User Credential:", userCredential);
       const user = userCredential.user;
-      console.log("User:", user);
+      if (__DEV__) console.log("User:", user);
       const firebaseToken = await user.getIdToken();
-      console.log("Firebase Token:", firebaseToken);
+      if (__DEV__) console.log("Firebase Token:", firebaseToken);
 
       // Met à jour ton store
       await store.loginWithGoogle({
@@ -62,9 +62,9 @@ export const useAuth = () => {
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         // L'utilisateur a annulé — pas d'alerte
-        console.log("Google sign-in annulé");
+        if (__DEV__) console.log("Google sign-in annulé");
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        console.log("Google sign-in déjà en cours");
+        if (__DEV__) console.log("Google sign-in déjà en cours");
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         Alert.alert("Erreur", "Google Play Services non disponible");
       } else {

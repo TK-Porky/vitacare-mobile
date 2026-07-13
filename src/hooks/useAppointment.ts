@@ -5,9 +5,14 @@ import { Appointment } from "@/types";
 import { appointmentService } from "@/services";
 import { toAppointment } from "@/utils";
 
+// Session cache – survives component remounts within the same app session
+let sessionCache: Appointment[] | null = null;
+
 export const useAppointments = () => {
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>(
+    () => sessionCache ?? [],
+  );
+  const [isLoading, setIsLoading] = useState(sessionCache === null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,6 +20,7 @@ export const useAppointments = () => {
   const isFetching = useRef(false);
 
   const fetchAll = useCallback(async (refresh = false) => {
+    if (sessionCache && !refresh) return;
     if (isFetching.current) return;
     isFetching.current = true;
 
@@ -27,15 +33,18 @@ export const useAppointments = () => {
 
     try {
       const items = await appointmentService.getAll();
-      setAllAppointments(items.map(toAppointment));
+      const mapped = items.map(toAppointment);
+      sessionCache = mapped;
+      setAllAppointments(mapped);
     } catch (err) {
       const errorMessage =
         err instanceof Error
           ? err.message
           : "Erreur lors du chargement des rendez-vous";
-      setError(errorMessage);
-      console.warn("Failed to fetch appointments", err);
-      setAllAppointments([]);
+      if (!sessionCache) {
+        setError(errorMessage);
+        console.warn("Failed to fetch appointments", err);
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -44,6 +53,7 @@ export const useAppointments = () => {
   }, []);
 
   const refresh = useCallback(() => {
+    sessionCache = null;
     return fetchAll(true);
   }, [fetchAll]);
 

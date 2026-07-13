@@ -67,6 +67,8 @@ export default function MedicationsSearchScreen() {
     console.log("Drug pressed:", item.name);
   }, []);
 
+  const keyExtractor = useCallback((item: Drug) => item.id, []);
+
   const renderItem = useCallback(
     ({ item, index }: { item: Drug; index: number }) => (
       <View
@@ -120,7 +122,7 @@ export default function MedicationsSearchScreen() {
 
       <FlatList
         data={results}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         renderItem={renderItem}
         numColumns={2}
         keyboardShouldPersistTaps="handled"
@@ -129,6 +131,10 @@ export default function MedicationsSearchScreen() {
         columnWrapperStyle={styles.row}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
+        removeClippedSubviews={true}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
       />
     </SafeAreaView>
   );

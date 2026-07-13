@@ -1,11 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import {
   ScrollView,
   View,
   Text,
   StyleSheet,
   StatusBar,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from "react-native";
@@ -20,7 +19,7 @@ import {
   AppointmentItem,
 } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
-import { useDashboardStore, useAuthStore } from "@/store";
+import { useDashboardStore, useAuthStore, useMapStore } from "@/store";
 import {
   ErrorScreen,
   SupportContactBottomSheet,
@@ -45,8 +44,11 @@ export default function DashboardScreen({
   // ================================================================================== //
   // Hooks
   // ================================================================================== //
-  const { data, isLoading, error, fetchOverview, updateMedicationStatus } =
-    useDashboardStore();
+  const data = useDashboardStore((s) => s.data);
+  const isLoading = useDashboardStore((s) => s.isLoading);
+  const error = useDashboardStore((s) => s.error);
+  const fetchOverview = useDashboardStore((s) => s.fetchOverview);
+  const updateMedicationStatus = useDashboardStore((s) => s.updateMedicationStatus);
   const user = useAuthStore((state) => state.user);
   const supportSheetRef = useRef<SupportContactBottomSheetRef>(null);
 
@@ -73,8 +75,15 @@ export default function DashboardScreen({
   };
 
   const handleSearch = () => {
-    router.push("/(main)/(tabs)/explore" as any);
+    router.push("/(main)/medications/search" as any);
   };
+
+  const fetchClinics = useMapStore((s) => s.fetchClinics);
+
+  const handleMap = useCallback(() => {
+    fetchClinics();
+    onMap?.();
+  }, [fetchClinics, onMap]);
 
   const handleNotifications = () => {
     router.push("/(modals)/notifications" as any);
@@ -132,6 +141,19 @@ export default function DashboardScreen({
   };
 
   /**
+   * Stable callbacks for list items (prevents re-render of memoized children)
+   */
+  const medicationHandlers = React.useMemo(
+    () => data?.medications.map(m => () => handleMedicationPress(m.id, m.status)) ?? [],
+    [data?.medications, handleMedicationPress],
+  );
+
+  const appointmentHandlers = React.useMemo(
+    () => data?.appointments.slice(0, 3).map(a => () => handleAppointmentPress(a.id)) ?? [],
+    [data?.appointments, handleAppointmentPress],
+  );
+
+  /**
    * Handle error retry
    */
   const handleErrorRetry = () => {
@@ -146,36 +168,10 @@ export default function DashboardScreen({
   };
 
   // ================================================================================== //
-  // Loading Render
+  // Loading / Error – always render structure, never block
   // ================================================================================== //
-  if (isLoading && !data) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  // ================================================================================== //
-  // Error Render
-  // ================================================================================== //
-  if (!data && error) {
-    return (
-      <ErrorScreen
-        visible={true}
-        type="server"
-        title="Chargement impossible"
-        message={error}
-        errorCode="ERR-500"
-        onRetry={handleErrorRetry}
-        onContactSupport={handleContactSupport}
-        retryLabel="Réessayer"
-        showSupport={true}
-      />
-    );
-  }
-
-  if (!data) return null;
+  const showError = !data && error;
+  const showLoading = isLoading && !data;
 
   // ================================================================================== //
   // Utility Functions
@@ -185,6 +181,12 @@ export default function DashboardScreen({
     day: "numeric",
     month: "long",
   });
+
+  const renderSkeletonItem = (key: string) => (
+    <View key={key} style={styles.skeletonRow}>
+      <View style={[styles.skeletonBlock, { flex: 1, height: 48 }]} />
+    </View>
+  );
 
   // ================================================================================== //
   // Render
@@ -198,10 +200,24 @@ export default function DashboardScreen({
       />
       <AppHeader
         onSearch={handleSearch}
-        onMap={onMap}
+        onMap={handleMap}
         notificationBell={notificationBell}
         onNotification={handleNotifications}
       />
+
+      {showError && (
+        <ErrorScreen
+          visible={true}
+          type="server"
+          title="Chargement impossible"
+          message={error!}
+          errorCode="ERR-500"
+          onRetry={handleErrorRetry}
+          onContactSupport={handleContactSupport}
+          retryLabel="Réessayer"
+          showSupport={true}
+        />
+      )}
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -220,95 +236,100 @@ export default function DashboardScreen({
           <Text style={styles.greetingText}>
             Bienvenue{" "}
             <Text style={styles.greetingName}>
-              {user?.fullName || data.currentUser}
+              {user?.fullName || data?.currentUser || "..."}
             </Text>{" "}
             !
           </Text>
           <Text style={styles.greetingDate}>Aujourd'hui, {todayStr}</Text>
         </View>
 
-        {/* Observance */}
-        <ObservanceCard
-          remainingDoses={data.stats.pending}
-          totalDoses={data.stats.total}
-          appointments={data.appointments.length}
-          observancePercent={data.stats.observance}
-        />
+        {showLoading ? (
+          <>
+            {Array.from({ length: 6 }).map((_, i) => renderSkeletonItem(String(i)))}
+          </>
+        ) : data ? (
+          <>
+            {/* Observance */}
+            <ObservanceCard
+              remainingDoses={data.stats.pending}
+              totalDoses={data.stats.total}
+              appointments={data.appointments.length}
+              observancePercent={data.stats.observance}
+            />
 
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          <StatCard
-            icon={<Flame size={20} color={colors.inkLight} />}
-            value={data.streak}
-            label={"Jours\nConsécutifs"}
-          />
-          <StatCard
-            icon={<Pill size={20} color={colors.inkLight} />}
-            value={data.activeMedications}
-            label={"Médicaments\nactifs"}
-          />
-          <StatCard
-            icon={<TrendingUp size={20} color={colors.inkLight} />}
-            value={`${data.monthlyProgress}%`}
-            label="Ce mois-ci"
-          />
-        </View>
+            {/* Stats */}
+            <View style={styles.statsRow}>
+              <StatCard
+                icon={<Flame size={20} color={colors.inkLight} />}
+                value={data.streak}
+                label={"Jours\nConsécutifs"}
+              />
+              <StatCard
+                icon={<Pill size={20} color={colors.inkLight} />}
+                value={data.activeMedications}
+                label={"Médicaments\nactifs"}
+              />
+              <StatCard
+                icon={<TrendingUp size={20} color={colors.inkLight} />}
+                value={`${data.monthlyProgress}%`}
+                label="Ce mois-ci"
+              />
+            </View>
 
-        {/* Prises du jour */}
-        <View style={styles.section}>
-          <SectionHeader
-            title="Prises du jour"
-            onSeeAll={handleSeeAllMedications}
-          />
-          {data.medications.length === 0 ? (
-            <Text style={styles.emptyText}>Aucune prise programmée</Text>
-          ) : (
-            <>
-              {data.medications.map((medication) => (
-                <MedicationItem
-                  key={medication.id}
-                  name={medication.name}
-                  dose={medication.dosage}
-                  status={medication.status}
-                  time={medication.time}
-                  onPress={() =>
-                    handleMedicationPress(medication.id, medication.status)
-                  }
-                />
-              ))}
-            </>
-          )}
-        </View>
+            {/* Prises du jour */}
+            <View style={styles.section}>
+              <SectionHeader
+                title="Prises du jour"
+                onSeeAll={handleSeeAllMedications}
+              />
+              {data.medications.length === 0 ? (
+                <Text style={styles.emptyText}>Aucune prise programmée</Text>
+              ) : (
+                <>
+                  {data.medications.map((medication, index) => (
+                    <MedicationItem
+                      key={medication.id}
+                      name={medication.name}
+                      dose={medication.dosage}
+                      status={medication.status}
+                      time={medication.time}
+                      onPress={medicationHandlers[index]}
+                    />
+                  ))}
+                </>
+              )}
+            </View>
 
-        {/* Rendez-vous */}
-        <View style={styles.section}>
-          <SectionHeader
-            title="Vos Rendez-vous"
-            onSeeAll={handleSeeAllAppointments}
-          />
-          {data.appointments.length === 0 ? (
-            <Text style={styles.emptyText}>Aucun rendez-vous prévu</Text>
-          ) : (
-            <>
-              {data.appointments.slice(0, 3).map((appointment) => {
-                const dateStr = appointment.date;
-                const timeStr = appointment.time;
-
-                return (
-                  <AppointmentItem
-                    key={appointment.id}
-                    doctorName={appointment.doctorName}
-                    date={dateStr}
-                    time={timeStr}
-                    status={appointment.status}
-                    avatarUrl={appointment.doctorAvatarUrl ?? undefined}
-                    onPress={() => handleAppointmentPress(appointment.id)}
-                  />
-                );
-              })}
-            </>
-          )}
-        </View>
+            {/* Rendez-vous */}
+            <View style={styles.section}>
+              <SectionHeader
+                title="Vos Rendez-vous"
+                onSeeAll={handleSeeAllAppointments}
+              />
+              {data.appointments.length === 0 ? (
+                <Text style={styles.emptyText}>Aucun rendez-vous prévu</Text>
+              ) : (
+                <>
+                  {data.appointments.slice(0, 3).map((appointment, index) => (
+                    <AppointmentItem
+                      key={appointment.id}
+                      doctorName={appointment.doctorName}
+                      date={appointment.date}
+                      time={appointment.time}
+                      status={appointment.status}
+                      avatarUrl={appointment.doctorAvatarUrl ?? undefined}
+                      onPress={appointmentHandlers[index]}
+                    />
+                  ))}
+                </>
+              )}
+            </View>
+          </>
+        ) : (
+          <>
+            {Array.from({ length: 6 }).map((_, i) => renderSkeletonItem(String(i)))}
+          </>
+        )}
       </ScrollView>
 
       {/* Support Bottom Sheet */}
@@ -328,13 +349,14 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     gap: 20,
   },
-  loader: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.surface,
+  skeletonRow: {
+    paddingVertical: 8,
   },
-  // ✅ Styles d'erreur supprimés car gérés par ErrorScreen
+  skeletonBlock: {
+    backgroundColor: colors.border,
+    borderRadius: 8,
+    opacity: 0.6,
+  },
   greeting: {
     gap: 4,
   },

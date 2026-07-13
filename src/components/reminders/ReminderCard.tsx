@@ -21,7 +21,7 @@ type ReminderCardProps = {
   isDeleting?: boolean;
 };
 
-export const ReminderCard = ({
+export const ReminderCard = React.memo(({
   item,
   onView,
   onMarkAsTaken,
@@ -148,7 +148,7 @@ export const ReminderCard = ({
       )}
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {

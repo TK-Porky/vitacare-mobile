@@ -1,3 +1,4 @@
+import React from "react";
 import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, fontFamily, fontSize } from "@/themes";
@@ -8,7 +9,7 @@ type SearchDrugCardProps = {
   onPress?: (item: Drug) => void;
 };
 
-export const SearchDrugCard = ({ item, onPress }: SearchDrugCardProps) => {
+export const SearchDrugCard = React.memo(({ item, onPress }: SearchDrugCardProps) => {
   return (
     <TouchableOpacity
       style={styles.drugCard}
@@ -49,7 +50,7 @@ export const SearchDrugCard = ({ item, onPress }: SearchDrugCardProps) => {
       </TouchableOpacity>
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   drugCard: {

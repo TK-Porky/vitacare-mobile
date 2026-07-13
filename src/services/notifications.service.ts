@@ -156,7 +156,7 @@ class NotificationService {
           lightColor: "#0D9488",
         },
       );
-      console.log("✅ Canaux Android créés");
+      if (__DEV__) console.log("✅ Canaux Android créés");
     } catch (error) {
       console.warn("⚠️ Could not create notification channels:", error);
     }
@@ -173,7 +173,7 @@ class NotificationService {
         authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
       if (!enabled) {
-        console.log("Permission de notification refusée");
+        if (__DEV__) console.log("Permission de notification refusée");
         return null;
       }
 
@@ -191,7 +191,7 @@ class NotificationService {
     try {
       await messaging().deleteToken();
       await AsyncStorage.removeItem(STORAGE_KEY_FCM_TOKEN);
-      console.log("✅ Token FCM supprimé");
+      if (__DEV__) console.log("✅ Token FCM supprimé");
     } catch (error) {
       console.error("Erreur deleteFCMToken:", error);
     }
@@ -240,7 +240,7 @@ class NotificationService {
 
       // ✅ Sauvegarder le token localement
       await AsyncStorage.setItem(STORAGE_KEY_FCM_TOKEN, deviceToken);
-      console.log("✅ Device enregistré avec succès");
+      if (__DEV__) console.log("✅ Device enregistré avec succès");
     } catch (error) {
       console.error("❌ Erreur lors de l'enregistrement du device:", error);
     }
@@ -264,7 +264,7 @@ class NotificationService {
       // Désenregistrer du backend
       await apiClient.delete(`/fcm/token/${this._pushToken}`);
 
-      console.log("✅ Device désenregistré");
+      if (__DEV__) console.log("✅ Device désenregistré");
     } catch (error) {
       console.error("❌ Erreur de désenregistrement:", error);
     }
@@ -274,7 +274,7 @@ class NotificationService {
 
   // Gérer l'ouverture d'une notification de rappel
   handleReminderNotification(data: ReminderNotificationData): void {
-    console.log("🔔 Notification de rappel ouverte:", data);
+    if (__DEV__) console.log("🔔 Notification de rappel ouverte:", data);
 
     if (!data.reminderId) {
       console.warn("❌ Pas de reminderId dans la notification");
@@ -337,7 +337,7 @@ class NotificationService {
         },
       });
 
-      console.log(`✅ Notification programmée: ${identifier}`);
+      if (__DEV__) console.log(`✅ Notification programmée: ${identifier}`);
       return identifier;
     } catch (error) {
       console.error("❌ Erreur de programmation:", error);
@@ -375,7 +375,7 @@ class NotificationService {
             },
           },
         ]);
-        console.log("✅ Catégories de notification configurées");
+        if (__DEV__) console.log("✅ Catégories de notification configurées");
       } catch (error) {
         console.error("❌ Erreur de configuration des catégories:", error);
       }
@@ -400,7 +400,7 @@ class NotificationService {
       action: (actionIdentifier as "take" | "snooze" | "skip") || undefined,
     };
 
-    console.log(`📱 Action de notification: ${actionIdentifier}`, reminderData);
+    if (__DEV__) console.log(`📱 Action de notification: ${actionIdentifier}`, reminderData);
 
     if (!reminderData.reminderId) {
       console.warn("⚠️ Pas de reminderId dans la notification");
@@ -428,7 +428,7 @@ class NotificationService {
   private async handleTakeAction(
     data: ReminderNotificationData,
   ): Promise<void> {
-    console.log("✅ Prise confirmée:", data.reminderId);
+    if (__DEV__) console.log("✅ Prise confirmée:", data.reminderId);
 
     try {
       const response = await apiClient.patch<ApiResponse>(
@@ -461,7 +461,7 @@ class NotificationService {
   private async handleSnoozeAction(
     data: ReminderNotificationData,
   ): Promise<void> {
-    console.log("⏰ Snooze:", data.reminderId);
+    if (__DEV__) console.log("⏰ Snooze:", data.reminderId);
 
     try {
       const response = await apiClient.patch<ApiResponse>(`/reminders/snooze`, {
@@ -499,7 +499,7 @@ class NotificationService {
   private async handleSkipAction(
     data: ReminderNotificationData,
   ): Promise<void> {
-    console.log("❌ Ignoré:", data.reminderId);
+    if (__DEV__) console.log("❌ Ignoré:", data.reminderId);
 
     try {
       const response = await apiClient.patch<ApiResponse>(`/reminders/skip`, {
@@ -616,7 +616,7 @@ class NotificationService {
       );
 
       if (!response.success) {
-        console.log(response);
+        if (__DEV__) console.log(response);
         throw new Error(response.message || "Failed to fetch notifications");
       }
 
@@ -671,7 +671,7 @@ class NotificationService {
 
       const cached = await this.getCachedInbox();
       if (cached) {
-        console.log("[NotificationService] Using cached inbox data");
+        if (__DEV__) console.log("[NotificationService] Using cached inbox data");
         return cached;
       }
 

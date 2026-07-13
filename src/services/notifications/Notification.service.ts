@@ -122,7 +122,7 @@ export class NotificationService {
           lightColor: "#0D9488",
         },
       );
-      console.log("✅ Canaux Android créés");
+      if (__DEV__) console.log("✅ Canaux Android créés");
     } catch (error) {
       console.warn(
         "[NotificationService] Could not create notification channels:",
@@ -141,18 +141,18 @@ export class NotificationService {
         authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
       if (!enabled) {
-        console.log("Permission de notification refusée");
+        if (__DEV__) console.log("Permission de notification refusée");
         return null;
       }
 
       const tokenStorage = await AsyncStorage.getItem(STORAGE_KEYS.FCM_TOKEN);
       if (tokenStorage) {
-        console.log("FCM Token déjà enregistré", tokenStorage);
+        if (__DEV__) console.log("FCM Token déjà enregistré", tokenStorage);
         return tokenStorage;
       }
 
       const fcmToken = await messaging().getToken();
-      console.log("FCM Token obtenu", fcmToken);
+      if (__DEV__) console.log("FCM Token obtenu", fcmToken);
       return fcmToken;
     } catch (error) {
       console.error("Erreur getFCMToken:", error);
@@ -164,7 +164,7 @@ export class NotificationService {
     try {
       await messaging().deleteToken();
       await AsyncStorage.removeItem(STORAGE_KEYS.FCM_TOKEN);
-      console.log("✅ Token FCM supprimé");
+      if (__DEV__) console.log("✅ Token FCM supprimé");
     } catch (error) {
       console.error("Erreur deleteFCMToken:", error);
     }
@@ -185,7 +185,7 @@ export class NotificationService {
       );
 
       if (deviceTokenStorage === deviceToken) {
-        console.log("✅ Device déjà enregistré");
+        if (__DEV__) console.log("✅ Device déjà enregistré");
         return;
       }
 
@@ -199,7 +199,7 @@ export class NotificationService {
       }
 
       await AsyncStorage.setItem(STORAGE_KEYS.FCM_TOKEN, deviceToken);
-      console.log("✅ Device enregistré avec succès");
+      if (__DEV__) console.log("✅ Device enregistré avec succès");
     } catch (error) {
       console.error("❌ Erreur lors de l'enregistrement du device:", error);
     }
@@ -236,7 +236,7 @@ export class NotificationService {
             },
           },
         ]);
-        console.log("✅ Catégories de notification configurées");
+        if (__DEV__) console.log("✅ Catégories de notification configurées");
       } catch (error) {
         console.error("❌ Erreur de configuration des catégories:", error);
       }
@@ -270,7 +270,7 @@ export class NotificationService {
         action: (actionIdentifier as "take" | "snooze" | "skip") || undefined,
       };
 
-      console.log("🔔 Données du rappel:", reminderData);
+      if (__DEV__) console.log("🔔 Données du rappel:", reminderData);
 
       // ✅ Actions spécifiques
       if (actionIdentifier === "take") {
@@ -297,7 +297,7 @@ export class NotificationService {
   private async handleTakeAction(
     data: ReminderNotificationData,
   ): Promise<void> {
-    console.log("✅ Prise confirmée:", data.reminderId);
+    if (__DEV__) console.log("✅ Prise confirmée:", data.reminderId);
 
     try {
       await apiClient.patch<ApiResponse>(`/reminders/${data.reminderId}/take`, {
@@ -320,7 +320,7 @@ export class NotificationService {
   private async handleSnoozeAction(
     data: ReminderNotificationData,
   ): Promise<void> {
-    console.log("⏰ Snooze:", data.reminderId);
+    if (__DEV__) console.log("⏰ Snooze:", data.reminderId);
 
     try {
       await apiClient.patch<ApiResponse>(
@@ -351,7 +351,7 @@ export class NotificationService {
   private async handleSkipAction(
     data: ReminderNotificationData,
   ): Promise<void> {
-    console.log("❌ Ignoré:", data.reminderId);
+    if (__DEV__) console.log("❌ Ignoré:", data.reminderId);
 
     try {
       await apiClient.patch<ApiResponse>(`/reminders/${data.reminderId}/skip`);
@@ -372,7 +372,7 @@ export class NotificationService {
   // ─── Gestion des notifications de rappel ──────────────────────────────
 
   handleReminderNotification(data: ReminderNotificationData): void {
-    console.log("🔔 Notification de rappel ouverte:", data);
+    if (__DEV__) console.log("🔔 Notification de rappel ouverte:", data);
 
     if (!data.reminderId) {
       console.warn("❌ Pas de reminderId dans la notification");
@@ -405,7 +405,7 @@ export class NotificationService {
     const prefs = await inAppNotificationService.getPreferences();
 
     if (!prefs.treatmentReminders) {
-      console.log("⚠️ Rappels de traitement désactivés");
+      if (__DEV__) console.log("⚠️ Rappels de traitement désactivés");
       return null;
     }
 
@@ -438,7 +438,7 @@ export class NotificationService {
     const prefs = await inAppNotificationService.getPreferences();
 
     if (!prefs.appointmentReminders) {
-      console.log("⚠️ Rappels de rendez-vous désactivés");
+      if (__DEV__) console.log("⚠️ Rappels de rendez-vous désactivés");
       return null;
     }
 
@@ -527,7 +527,7 @@ export class NotificationService {
       scheduledFor: scheduledFor.toISOString(),
     });
 
-    console.log(`✅ Notification planifiée: ${identifier}`);
+    if (__DEV__) console.log(`✅ Notification planifiée: ${identifier}`);
     return identifier;
   }
 

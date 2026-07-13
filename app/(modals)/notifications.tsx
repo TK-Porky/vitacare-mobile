@@ -145,7 +145,7 @@ export default function NotificationsScreen() {
             />
           }
           showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          removeClippedSubviews={true}
         />
       )}
     </SafeAreaView>

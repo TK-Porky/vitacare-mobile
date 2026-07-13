@@ -1,3 +1,4 @@
+import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
@@ -129,7 +130,7 @@ interface AppointmentCardProps {
   onReview?: () => void;
 }
 
-export function AppointmentCard({
+export const AppointmentCard = React.memo(function AppointmentCard({
   item,
   onPress,
   onRebook,
@@ -196,7 +197,7 @@ export function AppointmentCard({
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 export function AppointmentCardSkeleton() {

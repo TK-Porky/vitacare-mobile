@@ -5,6 +5,7 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
+  InteractionManager,
   NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -130,11 +131,13 @@ export default function MapScreen() {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
   useEffect(() => {
-    fetchClinics();
+    InteractionManager.runAfterInteractions(() => {
+      fetchClinics();
+    });
   }, []);
 
   useEffect(() => {
-    (async () => {
+    InteractionManager.runAfterInteractions(async () => {
       try {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
@@ -166,7 +169,7 @@ export default function MapScreen() {
       } finally {
         setIsLoadingLocation(false);
       }
-    })();
+    });
   }, []);
 
   const providers = useMemo(() => {
@@ -426,13 +429,8 @@ export default function MapScreen() {
 
       {/* ── Overlay layer ── */}
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-        {(isLoadingLocation || isLoading || isRouteLoading) && (
-          <View
-            style={[
-              styles.loaderContainer,
-              isRouteLoading && styles.routeLoaderContainer,
-            ]}
-          >
+        {isRouteLoading && (
+          <View style={styles.routeLoaderContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         )}

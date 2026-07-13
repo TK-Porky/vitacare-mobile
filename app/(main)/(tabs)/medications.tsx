@@ -199,7 +199,7 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         onSearch={handleSearchSubmit}
         onFilter={() => {}}
         onReminders={onReminders}
-        onSearchFocus={() => {}}
+        onSearchFocus={() => router.push("/(main)/medications/search" as never)}
       />
 
       {error && <ErrorBanner message={error} onRetry={handleRetry} />}

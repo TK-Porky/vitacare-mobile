@@ -342,7 +342,12 @@ export default function ExploreScreen() {
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.primary} />
 
-      <AppHeader showLogo={false} searchBar={true} searchValue={search} />
+      <AppHeader
+        showLogo={false}
+        searchBar={true}
+        searchValue={search}
+        onSearchFocus={() => router.push("/(main)/explore/search" as never)}
+      />
 
       {isLoading && clinics.length === 0 ? (
         <FlatList
@@ -382,6 +387,7 @@ export default function ExploreScreen() {
           initialNumToRender={5}
           maxToRenderPerBatch={5}
           windowSize={10}
+          removeClippedSubviews={true}
         />
       )}
 
