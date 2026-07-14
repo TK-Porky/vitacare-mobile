@@ -98,6 +98,14 @@ export default function ProfileLayout() {
           headerTitle: t("profile.termsScreen.title"),
         }}
       />
+
+      <Stack.Screen
+        name="confirm-delete"
+        options={{
+          ...HEADER_OPTIONS,
+          headerTitle: t("profile.deleteAccount"),
+        }}
+      />
     </Stack>
   );
 }

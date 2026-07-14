@@ -528,6 +528,12 @@
     },
     "chooseLanguage": "Choisissez votre langue",
     "deleteAccount": "Supprimer le compte",
+    "confirmDeleteScreen": {
+      "confirmButton": "Supprimer mon compte",
+      "description": "Cette action est irréversible. Entrez votre mot de passe pour confirmer.",
+      "passwordLabel": "Mot de passe",
+      "passwordPlaceholder": "Entrez votre mot de passe"
+    },
     "downloadsScreen": {
       "count": "{{count}} fichier",
       "count_one": "{{count}} téléchargement",
