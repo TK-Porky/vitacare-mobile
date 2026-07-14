@@ -22,6 +22,7 @@ export default function ProfileLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.surface },
+        animation: "slide_from_right",
       }}
     >
       <Stack.Screen name="index" />

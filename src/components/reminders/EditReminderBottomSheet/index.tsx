@@ -20,17 +20,15 @@ import * as Haptics from "expo-haptics";
 import { AppBottomSheet, AppBottomSheetRef } from "@/components/generics";
 import { PrimaryButton } from "@/components/buttons/PrimaryButton";
 import { colors, fontFamily, fontSize } from "@/themes";
-import {
-  InlineDropdown,
-  FieldInput,
-  TimePickerInline,
-} from "@/components/medications";
+import { InlineDropdown } from "../AddReminderBottomSheet/InlineDropdown";
+import { FieldInput } from "../AddReminderBottomSheet/FieldInput";
+import { TimePickerInline } from "../AddReminderBottomSheet/TimePickerInline";
 import {
   FREQUENCY_UNITS,
   DOSAGE_UNITS,
   FORMS,
   ReminderData,
-} from "@/components/medications";
+} from "../AddReminderBottomSheet/types";
 import { ReminderResponse } from "@/types/api-responses";
 import { useReminders } from "@/hooks";
 

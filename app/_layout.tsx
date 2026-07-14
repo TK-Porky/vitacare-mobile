@@ -6,7 +6,7 @@ import "@/i18n";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router, useSegments } from "expo-router";
-import { View, ActivityIndicator, LogBox, InteractionManager } from "react-native";
+import { View, ActivityIndicator, LogBox } from "react-native";
 import * as Device from "expo-device";
 import { useEffect, useRef, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
@@ -140,24 +140,33 @@ export default function RootLayout() {
   useEffect(() => {
     if (!ready) return;
 
-    InteractionManager.runAfterInteractions(() => {
-      const setupNotifications = async () => {
-        try {
-          await notificationService.register();
-          const fcmToken = await notificationService.getFCMToken();
-          if (fcmToken) {
-            const deviceInfo = await getDeviceInfo();
-            await notificationService.registerDevice(fcmToken, deviceInfo);
-          }
-          messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-            console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
-          });
-        } catch (error) {
-          console.error("❌ Erreur d'initialisation des notifications:", error);
+    const setupNotifications = async () => {
+      try {
+        await notificationService.register();
+        const fcmToken = await notificationService.getFCMToken();
+        if (fcmToken) {
+          const deviceInfo = await getDeviceInfo();
+          await notificationService.registerDevice(fcmToken, deviceInfo);
         }
-      };
-      setupNotifications();
-    });
+        messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+          console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
+        });
+      } catch (error) {
+        console.error("❌ Erreur d'initialisation des notifications:", error);
+      }
+    };
+
+    const handle = typeof requestIdleCallback === "function"
+      ? requestIdleCallback(() => { setupNotifications(); })
+      : setTimeout(() => { setupNotifications(); }, 0);
+
+    return () => {
+      if (typeof requestIdleCallback === "function") {
+        cancelIdleCallback(handle as number);
+      } else {
+        clearTimeout(handle as any);
+      }
+    };
   }, [ready]);
 
   // Listeners de notifications

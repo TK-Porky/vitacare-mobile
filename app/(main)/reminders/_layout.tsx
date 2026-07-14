@@ -29,8 +29,8 @@ export default function RemindersLayout() {
       <Stack.Screen
         name="[id]"
         options={{
-          ...HEADER_OPTIONS,
-          headerTitle: t("reminders.title"),
+          headerShown: false,
+          animation: "slide_from_right",
         }}
       />
 
