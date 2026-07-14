@@ -115,9 +115,12 @@ export default function RootLayout() {
   });
   const [fontsTimedOut, setFontsTimedOut] = useState(false);
 
+  const accessToken = useAuthStore((s) => s.accessToken);
+
   // ─── Refs ──────────────────────────────────────────────────────────────
 
   const notificationListener = useRef<Notifications.Subscription>(null);
+  const pendingFCM = useRef<{ token: string; deviceInfo: DeviceInfo } | null>(null);
 
   // ─── Effets ─────────────────────────────────────────────────────────────
 
@@ -140,23 +143,42 @@ export default function RootLayout() {
   useEffect(() => {
     if (!ready) return;
 
-    InteractionManager.runAfterInteractions(() => {
-      const setupNotifications = async () => {
-        try {
-          await notificationService.register();
-          const fcmToken = await notificationService.getFCMToken();
-          if (fcmToken) {
-            const deviceInfo = await getDeviceInfo();
+    InteractionManager.runAfterInteractions(async () => {
+      try {
+        await notificationService.register();
+        const fcmToken = await notificationService.getFCMToken();
+        if (fcmToken) {
+          const deviceInfo = await getDeviceInfo();
+          if (accessToken) {
             await notificationService.registerDevice(fcmToken, deviceInfo);
+          } else {
+            pendingFCM.current = { token: fcmToken, deviceInfo };
           }
-          messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-            console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
-          });
-        } catch (error) {
-          console.error("❌ Erreur d'initialisation des notifications:", error);
         }
-      };
-      setupNotifications();
+      } catch (error) {
+        console.error("❌ Erreur d'initialisation des notifications:", error);
+      }
+    });
+  }, [ready]);
+
+  // Enregistrement FCM après connexion
+  useEffect(() => {
+    if (!accessToken || !pendingFCM.current) return;
+    notificationService
+      .registerDevice(pendingFCM.current.token, pendingFCM.current.deviceInfo)
+      .then(() => {
+        pendingFCM.current = null;
+      })
+      .catch((error) => {
+        console.error("❌ Erreur enregistrement FCM après login:", error);
+      });
+  }, [accessToken]);
+
+  // Gestionnaire notifications arrière-plan
+  useEffect(() => {
+    if (!ready) return;
+    messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+      console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
     });
   }, [ready]);
 
