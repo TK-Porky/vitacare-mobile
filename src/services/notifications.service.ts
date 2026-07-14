@@ -2,7 +2,13 @@ import i18next from "@/i18n";
 import * as ExpoNotifications from "expo-notifications";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import messaging from "@react-native-firebase/messaging";
+import { 
+  getMessaging, 
+  getToken, 
+  deleteToken, 
+  requestPermission, 
+  AuthorizationStatus 
+} from "@react-native-firebase/messaging";
 import { router } from "expo-router";
 import { Platform, Alert } from "react-native";
 import {
@@ -168,10 +174,11 @@ class NotificationService {
   // Permission
   async getFCMToken(): Promise<string | null> {
     try {
-      const authStatus = await messaging().requestPermission();
+      const messaging = getMessaging();
+      const authStatus = await requestPermission(messaging);
       const enabled =
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+        authStatus === AuthorizationStatus.AUTHORIZED ||
+        authStatus === AuthorizationStatus.PROVISIONAL;
 
       if (!enabled) {
         if (__DEV__) console.log(i18next.t('notifications.permissionDenied'));
@@ -179,7 +186,7 @@ class NotificationService {
       }
 
       // Sur Android, cela fonctionne directement. Sur iOS, il faut parfois le token APNS d'abord.
-      const fcmToken = await messaging().getToken();
+      const fcmToken = await getToken(messaging);
       return fcmToken;
     } catch (error) {
       console.error("Erreur getFCMToken:", error);
@@ -190,7 +197,8 @@ class NotificationService {
   // Supprimer le token FCM
   async deleteFCMToken() {
     try {
-      await messaging().deleteToken();
+      const messaging = getMessaging();
+      await deleteToken(messaging);
       await AsyncStorage.removeItem(STORAGE_KEY_FCM_TOKEN);
       if (__DEV__) console.log("✅ Token FCM supprimé");
     } catch (error) {
