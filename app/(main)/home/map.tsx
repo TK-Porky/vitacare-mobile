@@ -5,7 +5,6 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
-  InteractionManager,
   NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -131,13 +130,21 @@ export default function MapScreen() {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
   useEffect(() => {
-    InteractionManager.runAfterInteractions(() => {
-      fetchClinics();
-    });
+    const handle = typeof requestIdleCallback === "function"
+      ? requestIdleCallback(() => { fetchClinics(); })
+      : setTimeout(() => { fetchClinics(); }, 0);
+
+    return () => {
+      if (typeof requestIdleCallback === "function") {
+        cancelIdleCallback(handle as number);
+      } else {
+        clearTimeout(handle as any);
+      }
+    };
   }, []);
 
   useEffect(() => {
-    InteractionManager.runAfterInteractions(async () => {
+    const setupLocation = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
@@ -169,7 +176,19 @@ export default function MapScreen() {
       } finally {
         setIsLoadingLocation(false);
       }
-    });
+    };
+
+    const handle = typeof requestIdleCallback === "function"
+      ? requestIdleCallback(() => { setupLocation(); })
+      : setTimeout(() => { setupLocation(); }, 0);
+
+    return () => {
+      if (typeof requestIdleCallback === "function") {
+        cancelIdleCallback(handle as number);
+      } else {
+        clearTimeout(handle as any);
+      }
+    };
   }, []);
 
   const providers = useMemo(() => {
