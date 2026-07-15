@@ -32,6 +32,7 @@ type Props = {
   drug?: Drug | null;
   onAddToReminder?: (drug: Drug) => void;
   onClose?: () => void;
+  onDrugPress?: (drug: Drug) => void;
   relatedDrugs?: Drug[];
   hasReminder?: boolean;
 };
@@ -139,10 +140,20 @@ const Tag = ({ label }: { label: string | undefined | null }) => {
   );
 };
 
-const RelatedCard = ({ item }: { item: Drug }) => {
+const RelatedCard = ({
+  item,
+  onPress,
+}: {
+  item: Drug;
+  onPress?: () => void;
+}) => {
   const { t } = useTranslation();
   return (
-    <TouchableOpacity style={styles.relatedCard} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={styles.relatedCard}
+      activeOpacity={0.8}
+      onPress={onPress}
+    >
       <View style={styles.relatedImageWrap}>
         <Image
           source={{ uri: item.imageUrl || "https://via.placeholder.com/150" }}
@@ -172,7 +183,7 @@ export const DrugDetailBottomSheet = forwardRef<
   Props
 >(
   (
-    { drug, onAddToReminder, onClose, relatedDrugs = [], hasReminder = false },
+    { drug, onAddToReminder, onClose, onDrugPress, relatedDrugs = [], hasReminder = false },
     ref,
   ) => {
     const { t } = useTranslation();
@@ -305,14 +316,21 @@ export const DrugDetailBottomSheet = forwardRef<
           <>
             <View style={styles.divider} />
             <View style={styles.relatedSection}>
-              <Text style={styles.relatedTitle}>{t("medications.title")}</Text>
+              <Text style={styles.relatedTitle}>Vous pourriez aussi aimer</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.relatedList}
               >
                 {relatedDrugs.map((item) => (
-                  <RelatedCard key={item.id} item={item} />
+                  <RelatedCard
+                    key={item.id}
+                    item={item}
+                    onPress={() => {
+                      sheetRef.current?.close();
+                      onDrugPress?.(item);
+                    }}
+                  />
                 ))}
               </ScrollView>
             </View>

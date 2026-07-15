@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "expo-router";
 import {
   View,
+  Text,
   StyleSheet,
   ScrollView,
   StatusBar,
@@ -61,7 +62,7 @@ export default function MedecineScreen() {
 
   // Auth & Reminders
   const user = useAuthStore((state) => state.user);
-  const { createReminder } = useReminders();
+  const { createReminderAsync } = useReminders();
 
   // ── Categories ──
   const categories = useMemo(() => {
@@ -121,13 +122,16 @@ export default function MedecineScreen() {
       }
 
       try {
-        await createReminder({
+        await createReminderAsync({
           medicationId: Number(drug.id) || 0,
           medicationName: drug.name,
           form: drug.dosageForm || "COMPRIME",
-          dosage: drug.dosage!,
+          dosage: drug.dosage || "",
           frequency: "QUOTIDIEN",
           times: ["08:00"],
+          patientId: user?.id ? Number(user.id) : undefined,
+          scheduledDate: new Date().toISOString().split("T")[0],
+          scheduledTime: "08:00",
           notes: drug.dosageForm ? `Forme: ${drug.dosageForm}` : undefined,
         });
 
@@ -153,14 +157,16 @@ export default function MedecineScreen() {
         );
       }
     },
-    [user, createReminder, router],
+    [user, createReminderAsync, router],
   );
 
   const handleCategoryPress = useCallback(
     (category: string) => {
-      fetchMedications({ searchQuery: category });
+      router.push(
+        `/(main)/medications/categories/${encodeURIComponent(category)}` as never,
+      );
     },
-    [fetchMedications],
+    [router],
   );
 
   const handleRetry = useCallback(() => {
@@ -237,7 +243,12 @@ export default function MedecineScreen() {
         {/* Categories */}
         {!isSearching && (
           <>
-            <SectionHeader title={t('medications.categories')} onSeeAll={() => {}} />
+            <SectionHeader
+              title={t('medications.categories')}
+              onSeeAll={() =>
+                router.push('/(main)/medications/categories' as never)
+              }
+            />
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -257,7 +268,9 @@ export default function MedecineScreen() {
         {/* Medications Grid */}
         <SectionHeader
           title={isSearching ? t('medications.results') : t('medications.available')}
-          onSeeAll={() => {}}
+          onSeeAll={() =>
+            router.push('/(main)/medications/all' as never)
+          }
         />
 
         {isLoading ? (
@@ -287,9 +300,13 @@ export default function MedecineScreen() {
         ref={drugSheetRef}
         drug={selectedDrug}
         relatedDrugs={displayedMedications.filter(
-          (d) => d.id !== selectedDrug?.id,
+          (d) => d.id !== selectedDrug?.id && d.dosageForm === selectedDrug?.dosageForm,
         )}
         onAddToReminder={handleAddToReminder}
+        onDrugPress={(drug) => {
+          setSelectedDrug(drug as StoreMedicationResponse);
+          drugSheetRef.current?.open();
+        }}
       />
     </SafeAreaView>
   );
