@@ -31,7 +31,6 @@ import {
 // Types
 // ================================================================================== //
 type BoardProps = {
-  onMap: () => void;
   notificationBell?: React.ReactNode;
 };
 
@@ -39,7 +38,6 @@ type BoardProps = {
 // Main
 // ================================================================================== //
 export default function DashboardScreen({
-  onMap,
   notificationBell,
 }: BoardProps) {
   // ================================================================================== //
@@ -84,8 +82,8 @@ export default function DashboardScreen({
 
   const handleMap = useCallback(() => {
     fetchClinics();
-    onMap?.();
-  }, [fetchClinics, onMap]);
+    router.push("/(main)/home/map" as never);
+  }, [fetchClinics, router]);
 
   const handleNotifications = () => {
     router.push("/(modals)/notifications" as any);

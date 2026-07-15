@@ -91,7 +91,7 @@ export default function RemindersScreen({ onStore }: Props) {
 
   const handleStorePress = useCallback(() => {
     if (onStore) onStore();
-    else router.push("/store");
+    else router.push("/(main)/(tabs)/medications" as never);
   }, [onStore, router]);
 
   const handleAdd = useCallback(

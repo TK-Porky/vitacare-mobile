@@ -26,7 +26,6 @@ import { useMedicationStore } from "@/store/medication.store";
 import { useReminders } from "@/hooks";
 import { useAuthStore } from "@/store/auth.store";
 import { StoreMedicationResponse } from "@/types/api-responses";
-import { MedicationScreenProps } from "@/types/medications";
 
 // ================================================================================== //
 // Constants
@@ -39,7 +38,7 @@ const HERO_IMAGE_URL =
 // Main
 // ================================================================================== //
 
-export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
+export default function MedecineScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -83,6 +82,10 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
   }, []);
 
   // ── Handlers ──
+
+  const handleReminders = useCallback(() => {
+    router.push("/(main)/reminders" as never);
+  }, [router]);
 
   const handleSearch = useCallback(
     async (query: string) => {
@@ -136,7 +139,7 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
               text: t('common.ok'),
               onPress: () => {
                 drugSheetRef.current?.close();
-                if (onReminders) onReminders();
+                router.push("/(main)/reminders" as never);
               },
             },
           ],
@@ -150,7 +153,7 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         );
       }
     },
-    [user, createReminder, onReminders],
+    [user, createReminder, router],
   );
 
   const handleCategoryPress = useCallback(
@@ -203,7 +206,7 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         onSearchChange={handleSearch}
         onSearch={handleSearchSubmit}
         onFilter={() => {}}
-        onReminders={onReminders}
+        onReminders={handleReminders}
         onSearchFocus={() => router.push("/(main)/medications/search" as never)}
       />
 
