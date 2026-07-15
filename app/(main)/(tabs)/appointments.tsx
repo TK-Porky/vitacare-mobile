@@ -2,7 +2,7 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import { StyleSheet, StatusBar, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { colors } from "@/themes";
 import { Appointment } from "@/types";
@@ -110,6 +110,12 @@ export default function AppointmentScreen() {
       );
     }
   }, [selectedAppointmentId, markAppointmentAsPaid, refresh]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
 
   // ── Rendu d'erreur ──
   if (error && !isLoading) {
