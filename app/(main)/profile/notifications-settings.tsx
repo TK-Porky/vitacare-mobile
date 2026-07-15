@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { TopBar } from "@/components";
 import { notificationService } from "@/services/notifications.service";
@@ -54,6 +55,7 @@ function ToggleItem({
 }
 
 export default function NotificationsSettingsScreen() {
+  const { t } = useTranslation();
   const [reminders, setReminders] = useState(true);
   const [appointments, setAppointments] = useState(true);
   const [healthTips, setHealthTips] = useState(true);
@@ -63,19 +65,14 @@ export default function NotificationsSettingsScreen() {
   useEffect(() => {
     async function loadPreferences() {
       try {
-        // Load from local AsyncStorage service
         const localPrefs = await notificationService.getPreferences();
         setReminders(localPrefs.treatmentReminders);
         setAppointments(localPrefs.appointmentReminders);
         setHealthTips(localPrefs.healthTips);
 
-        // Fetch latest profile from backend to sync
         await useProfileStore.getState().getProfile();
         const user = useAuthStore.getState().user as any;
         if (user?.preferences) {
-          // If backend has preferences, we sync push/medication/appointment preferences
-          // Backend properties: notifications, emailNotifications, smsNotifications, etc.
-          // Depending on API response properties, we could prioritize local for local scheduling.
         }
       } catch (err) {
         console.warn("[NotificationsSettings] Error loading preferences:", err);
@@ -90,19 +87,16 @@ export default function NotificationsSettingsScreen() {
     key: "treatmentReminders" | "appointmentReminders" | "healthTips",
   ) => {
     return async (value: boolean) => {
-      // Optimistically update UI
       if (key === "treatmentReminders") setReminders(value);
       if (key === "appointmentReminders") setAppointments(value);
       if (key === "healthTips") setHealthTips(value);
 
       setIsSaving(true);
       try {
-        // 1. Save locally to drive local reminder scheduler
         await notificationService.savePreferences({
           [key]: value,
         });
 
-        // 2. Map to backend properties and update API
         const backendKey =
           key === "treatmentReminders"
             ? "medicationReminders"
@@ -115,10 +109,9 @@ export default function NotificationsSettingsScreen() {
         });
       } catch (err: any) {
         Alert.alert(
-          "Erreur",
-          "Impossible d'enregistrer vos préférences sur le serveur.",
+          t("common.error"),
+          t("profile.notificationsScreen.saveError"),
         );
-        // Rollback on error
         if (key === "treatmentReminders") setReminders(!value);
         if (key === "appointmentReminders") setAppointments(!value);
         if (key === "healthTips") setHealthTips(!value);
@@ -130,21 +123,21 @@ export default function NotificationsSettingsScreen() {
 
   const handleTestNotification = async () => {
     try {
-      const triggerDate = new Date(Date.now() + 3000); // 3 seconds in the future
+      const triggerDate = new Date(Date.now() + 3000);
       await notificationService.schedule({
-        title: "Test de Notification",
-        body: "Ceci est une notification de test locale de VitaCare ! 🌟",
+        title: t("profile.notificationsScreen.testNotificationTitle"),
+        body: t("profile.notificationsScreen.testNotificationBody"),
         scheduledFor: triggerDate,
         type: "system",
       });
       Alert.alert(
-        "Notification programmée",
-        "Une notification de test a été programmée dans 3 secondes. Veuillez mettre l'application en arrière-plan pour la recevoir.",
+        t("profile.notificationsScreen.testScheduled"),
+        t("profile.notificationsScreen.testScheduledMessage"),
       );
     } catch (err: any) {
       Alert.alert(
-        "Erreur",
-        "Impossible de programmer la notification de test.",
+        t("common.error"),
+        t("profile.notificationsScreen.testErrorMessage"),
       );
     }
   };
@@ -152,7 +145,7 @@ export default function NotificationsSettingsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
-      <TopBar title="Notifications" />
+      <TopBar title={t("profile.notificationsScreen.title")} />
 
       {isLoading ? (
         <View style={styles.centerContainer}>
@@ -163,44 +156,42 @@ export default function NotificationsSettingsScreen() {
           <View style={styles.section}>
             <View style={styles.card}>
               <ToggleItem
-                label="Rappels de médicaments"
-                description="Recevoir une notification pour chaque prise prévue."
+                label={t("profile.notificationsScreen.medicationReminders")}
+                description={t("profile.notificationsScreen.medicationRemindersDesc")}
                 isEnabled={reminders}
                 onToggle={handleToggle("treatmentReminders")}
               />
               <ToggleItem
-                label="Alertes de rendez-vous"
-                description="Rappels avant vos rendez-vous médicaux."
+                label={t("profile.notificationsScreen.appointmentAlerts")}
+                description={t("profile.notificationsScreen.appointmentAlertsDesc")}
                 isEnabled={appointments}
                 onToggle={handleToggle("appointmentReminders")}
               />
               <ToggleItem
-                label="Conseils santé"
-                description="Conseils et actualités santé de VitaCare."
+                label={t("profile.notificationsScreen.healthTips")}
+                description={t("profile.notificationsScreen.healthTipsDesc")}
                 isEnabled={healthTips}
                 onToggle={handleToggle("healthTips")}
               />
             </View>
           </View>
 
-          {/* Test Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tester le système</Text>
+            <Text style={styles.sectionTitle}>{t("profile.notificationsScreen.testSection")}</Text>
             <TouchableOpacity
               style={styles.testButton}
               onPress={handleTestNotification}
               activeOpacity={0.8}
             >
               <Text style={styles.testButtonText}>
-                Envoyer une notification de test (3s)
+                {t("profile.notificationsScreen.testButton")}
               </Text>
             </TouchableOpacity>
           </View>
 
           <View style={{ marginBottom: 20 }}>
             <Text style={styles.infoText}>
-              Note : Vous pouvez également gérer ces permissions dans les
-              réglages système de votre téléphone.
+              {t("profile.notificationsScreen.testInfo")}
             </Text>
           </View>
         </ScrollView>

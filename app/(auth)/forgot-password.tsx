@@ -15,6 +15,7 @@ import * as Haptics from "expo-haptics";
 import { PasswordInput, HelperText, EmailInput, OTPInput } from "@/components";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { AuthButton } from "@/components/auth/AuthButton";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store";
@@ -126,6 +127,7 @@ const strength = StyleSheet.create({
 // Main
 // ================================================================================== //
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   // ================================================================================== //
   // States
   // ================================================================================== //
@@ -196,7 +198,7 @@ export default function ForgotPasswordScreen() {
   const handleEmailSubmit = useCallback(async () => {
     const newErrors: Record<string, string> = {};
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = "Adresse email invalide.";
+      newErrors.email = t("auth.forgotPassword.invalidEmail");
     }
     setLocalErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
@@ -216,7 +218,7 @@ export default function ForgotPasswordScreen() {
     } catch {
       // Error handled by storeError
     }
-  }, [email, forgotPassword]);
+  }, [email, forgotPassword, t]);
 
   // ✅ Soumission automatique de l'OTP après 6 chiffres
   const handleOtpChange = useCallback(
@@ -237,7 +239,7 @@ export default function ForgotPasswordScreen() {
 
   const handleOtpSubmit = useCallback(async () => {
     if (otp.length < 6) {
-      setLocalErrors({ otp: "Veuillez entrer le code complet." });
+      setLocalErrors({ otp: t("auth.forgotPassword.invalidOtp") });
       if (Platform.OS === "ios") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
@@ -255,20 +257,19 @@ export default function ForgotPasswordScreen() {
     } catch {
       // Error handled by storeError
     }
-  }, [otp, email, verifyPasswordResetOtp]);
+  }, [otp, email, verifyPasswordResetOtp, t]);
 
   const handleResetSubmit = useCallback(async () => {
     const newErrors: Record<string, string> = {};
     if (password.length < 8) {
-      newErrors.password = "Minimum 8 caractères.";
+      newErrors.password = t("auth.forgotPassword.invalidPassword");
     } else if (password.includes(" ")) {
-      newErrors.password = "Le mot de passe ne doit pas contenir d'espaces.";
+      newErrors.password = t("auth.forgotPassword.invalidPasswordSpace");
     }
     if (password !== confirmPassword) {
-      newErrors.confirmPassword = "Les mots de passe ne correspondent pas.";
+      newErrors.confirmPassword = t("auth.forgotPassword.passwordMismatch");
     } else if (confirmPassword && confirmPassword.includes(" ")) {
-      newErrors.confirmPassword =
-        "Le mot de passe ne doit pas contenir d'espaces.";
+      newErrors.confirmPassword = t("auth.forgotPassword.invalidPasswordSpace");
     }
     setLocalErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
@@ -288,7 +289,7 @@ export default function ForgotPasswordScreen() {
     } catch {
       // Error handled by storeError
     }
-  }, [password, confirmPassword, email, resetPassword]);
+  }, [password, confirmPassword, email, resetPassword, t]);
 
   const handleLogin = useCallback(() => {
     if (Platform.OS === "ios") {
@@ -337,10 +338,10 @@ export default function ForgotPasswordScreen() {
 
   const isResendingOrCooldown = isResending || cooldown > 0;
   const resendButtonText = isResending
-    ? "Envoi en cours..."
+    ? t("auth.forgotPassword.sending")
     : cooldown > 0
-      ? `Renvoyer (${cooldown}s)`
-      : "Renvoyer le code";
+      ? t("auth.forgotPassword.resendCooldown", { seconds: cooldown })
+      : t("auth.forgotPassword.resendCode");
 
   return (
     <KeyboardAvoidingView
@@ -357,21 +358,21 @@ export default function ForgotPasswordScreen() {
         <AuthHeader
           title={
             isEmailStep
-              ? "Mot de passe oublié"
+              ? t("auth.forgotPassword.emailTitle")
               : isOtpStep
-                ? "Vérification"
+                ? t("auth.forgotPassword.otpTitle")
                 : isResetStep
-                  ? "Nouveau mot de passe"
-                  : "Réinitialisation réussie"
+                  ? t("auth.forgotPassword.resetTitle")
+                  : t("auth.forgotPassword.successTitle")
           }
           subtitle={
             isEmailStep
-              ? "Entrez votre adresse email pour réinitialiser votre mot de passe"
+              ? t("auth.forgotPassword.emailSubtitle")
               : isOtpStep
-                ? `Un code a été envoyé à ${email}`
+                ? t("auth.forgotPassword.otpSubtitle", { email })
                 : isResetStep
-                  ? "Choisissez un mot de passe sécurisé"
-                  : "Votre mot de passe a été réinitialisé avec succès"
+                  ? t("auth.forgotPassword.resetSubtitle")
+                  : t("auth.forgotPassword.successSubtitle")
           }
           showBack={!isSuccessStep}
           onBack={handleBack}
@@ -387,7 +388,7 @@ export default function ForgotPasswordScreen() {
             <View style={styles.form}>
               <View style={styles.fieldWrapper}>
                 <Text style={styles.label}>
-                  Adresse email <Text style={styles.required}>*</Text>
+                  {t("auth.forgotPassword.emailLabel")} <Text style={styles.required}>*</Text>
                 </Text>
                 <EmailInput
                   value={email}
@@ -395,7 +396,7 @@ export default function ForgotPasswordScreen() {
                     setEmail(text);
                     clearError("email");
                   }}
-                  placeholder="exemple@email.com"
+                  placeholder={t("auth.forgotPassword.emailPlaceholder")}
                   error={!!localErrors.email || !!storeError}
                   autoFocus
                 />
@@ -407,7 +408,7 @@ export default function ForgotPasswordScreen() {
                 )}
                 {!localErrors.email && !storeError && (
                   <HelperText
-                    message="Un code de vérification sera envoyé à cette adresse"
+                    message={t("auth.forgotPassword.infoMessage")}
                     type="info"
                   />
                 )}
@@ -420,7 +421,7 @@ export default function ForgotPasswordScreen() {
             <View style={styles.form}>
               <View style={styles.fieldWrapper}>
                 <Text style={styles.label}>
-                  Code à 6 chiffres <Text style={styles.required}>*</Text>
+                  {t("auth.forgotPassword.otpLabel")} <Text style={styles.required}>*</Text>
                 </Text>
                 <OTPInput
                   length={6}
@@ -442,13 +443,13 @@ export default function ForgotPasswordScreen() {
                 disabled={isResendingOrCooldown || isSendingReset}
                 style={styles.resendButton}
                 accessibilityLabel={
-                  isResending ? "Envoi en cours" : "Renvoyer le code"
+                  isResending ? t("auth.forgotPassword.accessibilitySending") : t("auth.forgotPassword.accessibilityResend")
                 }
                 accessibilityRole="button"
                 accessibilityState={{ disabled: isResendingOrCooldown }}
               >
                 <Text style={styles.resendText}>
-                  Pas reçu ?{" "}
+                  {t("auth.forgotPassword.notReceived")}{" "}
                   <Text
                     style={[
                       styles.resendLink,
@@ -468,7 +469,7 @@ export default function ForgotPasswordScreen() {
             <View style={styles.form}>
               <View style={styles.fieldWrapper}>
                 <Text style={styles.label}>
-                  Nouveau mot de passe <Text style={styles.required}>*</Text>
+                  {t("auth.forgotPassword.newPasswordLabel")} <Text style={styles.required}>*</Text>
                 </Text>
                 <PasswordInput
                   value={password}
@@ -476,7 +477,7 @@ export default function ForgotPasswordScreen() {
                     setPassword(text);
                     clearError("password");
                   }}
-                  placeholder="Minimum 8 caractères"
+                  placeholder={t("auth.forgotPassword.newPasswordPlaceholder")}
                   error={!!localErrors.password}
                 />
                 <PasswordStrength password={password} />
@@ -484,16 +485,13 @@ export default function ForgotPasswordScreen() {
                   <HelperText message={localErrors.password} type="error" />
                 )}
                 <Text style={styles.hint}>
-                  • Minimum 8 caractères
-                  {"\n"}• Au moins une majuscule
-                  {"\n"}• Au moins un chiffre
-                  {"\n"}• Sans espaces
+                  {t("auth.forgotPassword.passwordHint")}
                 </Text>
               </View>
 
               <View style={styles.fieldWrapper}>
                 <Text style={styles.label}>
-                  Confirmer le mot de passe{" "}
+                  {t("auth.forgotPassword.confirmPasswordLabel")}{" "}
                   <Text style={styles.required}>*</Text>
                 </Text>
                 <PasswordInput
@@ -502,7 +500,7 @@ export default function ForgotPasswordScreen() {
                     setConfirmPassword(text);
                     clearError("confirmPassword");
                   }}
-                  placeholder="Confirmez votre mot de passe"
+                  placeholder={t("auth.forgotPassword.confirmPasswordPlaceholder")}
                   error={!!localErrors.confirmPassword}
                 />
                 {localErrors.confirmPassword && (
@@ -526,10 +524,9 @@ export default function ForgotPasswordScreen() {
                 <Ionicons name="checkmark" size={48} color={colors.white} />
               </View>
               <View style={styles.successText}>
-                <Text style={styles.successTitle}>Mot de passe modifié !</Text>
+                <Text style={styles.successTitle}>{t("auth.forgotPassword.successModified")}</Text>
                 <Text style={styles.successSubtitle}>
-                  Votre mot de passe a été réinitialisé avec succès. Vous pouvez
-                  maintenant vous connecter.
+                  {t("auth.forgotPassword.successMessage")}
                 </Text>
               </View>
             </View>
@@ -540,7 +537,7 @@ export default function ForgotPasswordScreen() {
         <View style={styles.actions}>
           {isEmailStep && (
             <AuthButton
-              label="Envoyer le code"
+              label={t("auth.forgotPassword.sendCode")}
               onPress={handleEmailSubmit}
               variant="primary"
               fullWidth
@@ -554,7 +551,7 @@ export default function ForgotPasswordScreen() {
 
           {isOtpStep && (
             <AuthButton
-              label="Vérifier"
+              label={t("auth.forgotPassword.verifyButton")}
               onPress={handleOtpSubmit}
               variant="primary"
               fullWidth
@@ -572,7 +569,7 @@ export default function ForgotPasswordScreen() {
 
           {isResetStep && (
             <AuthButton
-              label="Réinitialiser"
+              label={t("auth.forgotPassword.resetButton")}
               onPress={handleResetSubmit}
               variant="primary"
               fullWidth
@@ -590,7 +587,7 @@ export default function ForgotPasswordScreen() {
 
           {isSuccessStep && (
             <AuthButton
-              label="Se connecter"
+              label={t("auth.forgotPassword.loginButton")}
               onPress={handleLogin}
               variant="primary"
               fullWidth

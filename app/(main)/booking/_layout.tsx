@@ -7,6 +7,7 @@ export default function BookingLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.surface },
+        animation: "slide_from_right",
       }}
     >
       {/* ── Écran principal (réservation) ── */}

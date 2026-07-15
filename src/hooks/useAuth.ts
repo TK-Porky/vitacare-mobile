@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Alert } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/store/auth.store";
 import type {
   LoginEmailInput,
@@ -21,6 +22,7 @@ GoogleSignin.configure({
 });
 
 export const useAuth = () => {
+  const { t } = useTranslation();
   const store = useAuthStore();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -66,10 +68,10 @@ export const useAuth = () => {
       } else if (error.code === statusCodes.IN_PROGRESS) {
         if (__DEV__) console.log("Google sign-in déjà en cours");
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert("Erreur", "Google Play Services non disponible");
+        Alert.alert(t('common.error'), t('auth.googlePlayNotAvailable'));
       } else {
         console.error("Google sign-in error:", error);
-        Alert.alert("Erreur", "Impossible de se connecter avec Google");
+        Alert.alert(t('common.error'), t('auth.googleSignInFailed'));
       }
     } finally {
       setIsGoogleLoading(false);

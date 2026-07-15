@@ -1,5 +1,6 @@
 import React from "react";
 import { TouchableOpacity, Image, Text, View, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { StoreMedicationResponse } from "@/types/api-responses";
 
@@ -10,6 +11,7 @@ type DrugCardProps = {
 };
 
 export const DrugCard = React.memo(({ item, onPress, hasReminder }: DrugCardProps) => {
+  const { t } = useTranslation();
   return (
     <TouchableOpacity
       style={styles.drugCard}
@@ -30,7 +32,7 @@ export const DrugCard = React.memo(({ item, onPress, hasReminder }: DrugCardProp
       </View>
       <View style={styles.drugInfo}>
         <Text style={styles.drugCategory}>
-          {item.dosageForm || "Médicament"}
+          {item.dosageForm || t("medications.available")}
         </Text>
         <Text style={styles.drugName} numberOfLines={2}>
           {item.name}

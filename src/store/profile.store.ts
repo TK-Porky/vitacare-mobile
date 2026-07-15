@@ -7,13 +7,13 @@ import {
 } from "../schemas/profile.schema";
 import { useAuthStore } from "./auth.store";
 import { UserProfileResponse } from "@/types/api-responses";
+import i18next from "@/i18n";
 
 interface ProfileState {
   isLoading: boolean;
   error: string | null;
   success: boolean;
 
-  // Actions
   getProfile: () => Promise<void>;
   updateProfile: (data: UpdateProfileInput) => Promise<UserProfileResponse>;
   changePassword: (data: ChangePasswordInput) => Promise<void>;
@@ -31,10 +31,6 @@ export const useProfileStore = create<ProfileState>((set) => ({
   error: null,
   success: false,
 
-  /**
-   *
-   * @param data
-   */
   getProfile: async () => {
     set({ isLoading: true, error: null, success: false });
     try {
@@ -44,15 +40,12 @@ export const useProfileStore = create<ProfileState>((set) => ({
 
       set({ success: true });
     } catch (e: any) {
-      set({ error: e?.message ?? "Erreur lors de la récupération du profil." });
+      set({ error: e?.message ?? i18next.t("errors.generic") });
     } finally {
       set({ isLoading: false });
     }
   },
 
-  /**
-   * Update user profile
-   */
   updateProfile: async (data) => {
     set({ isLoading: true, error: null, success: false });
     try {
@@ -77,16 +70,13 @@ export const useProfileStore = create<ProfileState>((set) => ({
       set({ success: true });
       return res;
     } catch (e: any) {
-      set({ error: e?.message ?? "Erreur lors de la mise à jour du profil." });
-      throw new Error(e?.message ?? "Erreur lors de la mise à jour du profil.");
+      set({ error: e?.message ?? i18next.t("profile.editScreen.error") });
+      throw new Error(e?.message ?? i18next.t("profile.editScreen.error"));
     } finally {
       set({ isLoading: false });
     }
   },
 
-  /**
-   * Change user password
-   */
   changePassword: async (data) => {
     set({ isLoading: true, error: null, success: false });
     try {
@@ -97,16 +87,13 @@ export const useProfileStore = create<ProfileState>((set) => ({
       set({ success: true });
     } catch (e: any) {
       set({
-        error: e?.message ?? "Erreur lors du changement de mot de passe.",
+        error: e?.message ?? i18next.t("profile.changePasswordScreen.error"),
       });
     } finally {
       set({ isLoading: false });
     }
   },
 
-  /**
-   * Update user preferences
-   */
   updatePreferences: async (data) => {
     set({ isLoading: true, error: null, success: false });
     try {
@@ -133,16 +120,13 @@ export const useProfileStore = create<ProfileState>((set) => ({
       set({ success: true });
     } catch (e: any) {
       set({
-        error: e?.message ?? "Erreur lors de la mise à jour des préférences.",
+        error: e?.message ?? i18next.t("errors.generic"),
       });
     } finally {
       set({ isLoading: false });
     }
   },
 
-  /**
-   * Upload user avatar
-   */
   uploadAvatar: async (fileUri, fileName, fileType) => {
     set({ isLoading: true, error: null, success: false });
     try {
@@ -156,7 +140,6 @@ export const useProfileStore = create<ProfileState>((set) => ({
         JSON.stringify(result),
       );
 
-      // Immediately update the auth store user with the new avatar URL
       const authState = useAuthStore.getState();
       if (authState.user && result.avatarUrl) {
         useAuthStore.setState({
@@ -168,7 +151,6 @@ export const useProfileStore = create<ProfileState>((set) => ({
         );
       }
 
-      // Also re-fetch the full profile from backend to ensure consistency
       try {
         await authState.hydrate();
       } catch (hydrateError) {
@@ -181,8 +163,8 @@ export const useProfileStore = create<ProfileState>((set) => ({
       set({ success: true });
     } catch (e: any) {
       console.error("[ProfileStore] Avatar upload error:", e);
-      set({ error: e?.message ?? "Erreur lors de l'envoi de l'avatar." });
-      throw e; // Re-throw so the UI can handle it
+      set({ error: e?.message ?? i18next.t("profile.editScreen.saveErrorMessage") });
+      throw e;
     } finally {
       set({ isLoading: false });
     }

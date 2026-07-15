@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { PrimaryButton } from "@/components/buttons/PrimaryButton";
@@ -43,6 +44,7 @@ export function PaymentResultModal({
   onPrimary,
   onSecondary,
 }: Props) {
+  const { t } = useTranslation();
   const isSuccess = type === "success";
 
   return (
@@ -70,15 +72,15 @@ export function PaymentResultModal({
 
           {/* Title */}
           <Text style={styles.title}>
-            {isSuccess ? "Paiement réussi !" : "Paiement échoué"}
+            {isSuccess ? t('common.success') : t('common.error')}
           </Text>
 
           {/* Body */}
           <Text style={styles.body}>
             {isSuccess
-              ? `${amount ? fmt(amount) + " ont été débités avec succès." : ""}\nVotre réservation est confirmée.`
+              ? `${amount ? fmt(amount) + " " + t('common.success') : ""}\n${t('booking.success')}`
               : (errorMessage ??
-                "Une erreur est survenue. Veuillez vérifier vos informations et réessayer.")}
+                t('errors.somethingWrong'))}
           </Text>
 
           {/* Actions */}
@@ -89,12 +91,12 @@ export function PaymentResultModal({
                 onPress={onSecondary}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cancelBtnText}>Annuler</Text>
+                <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             )}
             <View style={styles.primaryBtnWrap}>
               <PrimaryButton
-                label={isSuccess ? "Voir ma réservation" : "Réessayer"}
+                label={isSuccess ? t('appointments.title') : t('common.retry')}
                 fullWidth
                 onPress={onPrimary}
               />

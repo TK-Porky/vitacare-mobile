@@ -1,3 +1,4 @@
+import i18next from "@/i18n";
 import { apiClient } from "../lib/api.client";
 import { API_ENDPOINTS } from "../types/api-endpoints";
 import { ClinicSearchRequest, ClinicsListQuery } from "../types/api-requests";
@@ -15,12 +16,12 @@ const mapDoctorToClinic = (doctor: any): ClinicProviderResponse => {
   return {
     id: String(doctor.id),
     avatarUri: doctor.avatarUrl,
-    doctorName: doctor.fullName || "Médecin",
-    specialty: doctor.specialization || "Généraliste",
+    doctorName: doctor.fullName || i18next.t('provider.doctorNameDefault'),
+    specialty: doctor.specialization || i18next.t('provider.specialtyDefault'),
     price: doctor.consultationFee ? `${doctor.consultationFee} XCFA` : undefined,
     priceXCFA: doctor.consultationFee,
-    clinicName: doctor.cabinet || doctor.clinicName || "Cabinet Médical",
-    description: doctor.bio || "Spécialiste de santé qualifié.",
+    clinicName: doctor.cabinet || doctor.clinicName || i18next.t('provider.clinicNameDefault'),
+    description: doctor.bio || i18next.t('provider.descriptionDefaultQualified'),
     hours: doctor.hours,
     days: doctor.days,
     location: doctor.address || "Yaoundé",

@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { View, Text, StyleSheet, Image, Platform } from "react-native";
+import { useTranslation } from "react-i18next";
 import {
   AppBottomSheet,
   AppBottomSheetRef,
@@ -45,6 +46,7 @@ const formatPhone = useCallback((phone: string) => {
 
 export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
   ({ appointmentId, amount, onSuccess }, ref) => {
+    const { t } = useTranslation();
     const sheetRef = useRef<AppBottomSheetRef>(null);
     const [phone, setPhone] = useState("");
     const [processing, setProcessing] = useState(false);
@@ -75,7 +77,7 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
             visible: true,
             type: "error",
             message:
-              result.failureReason || "Paiement refusé. Veuillez réessayer.",
+              result.failureReason || t('errors.somethingWrong'),
           });
         }
       } catch (err: any) {
@@ -83,7 +85,7 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
         setModal({
           visible: true,
           type: "error",
-          message: err?.message || "Erreur de paiement. Veuillez réessayer.",
+          message: err?.message || t('errors.somethingWrong'),
         });
       }
     };
@@ -122,20 +124,20 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.title}>Paiement Orange Money</Text>
+            <Text style={styles.title}>{t('booking.payNow')}</Text>
             <Text style={styles.subtitle}>Orange Money Cameroun</Text>
           </View>
 
           {/* ── Amount pill ── */}
           <View style={styles.amountPill}>
-            <Text style={styles.amountLabel}>Montant à payer</Text>
+            <Text style={styles.amountLabel}>{t('booking.payment')}</Text>
             <Text style={styles.amountValue}>{fmt(amount)}</Text>
           </View>
 
           {/* ── Phone field ── */}
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>
-              Numéro de téléphone Orange Money
+              {t('common.phone')}
             </Text>
             <PhoneInput
               value={phone}
@@ -147,8 +149,7 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
           {/* ── USSD notice ── */}
           <View style={styles.notice}>
             <Text style={styles.noticeText}>
-              Vous recevrez une demande de confirmation USSD sur le numéro
-              renseigné. Assurez-vous d'avoir un solde suffisant.
+              {t('booking.payNow')}
             </Text>
           </View>
 
@@ -156,7 +157,7 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
           <View style={styles.buttonWrap}>
             <PrimaryButton
               label={
-                processing ? "Traitement en cours…" : `Payer ${fmt(amount)}`
+                processing ? t('common.loading') : `${t('booking.payNow')} ${fmt(amount)}`
               }
               fullWidth
               isLoading={processing}

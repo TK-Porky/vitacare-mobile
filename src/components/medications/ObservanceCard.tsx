@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Svg, Circle } from 'react-native-svg';
 import { colors, fontFamily, fontSize } from '../../themes';
 
@@ -18,17 +19,18 @@ export function ObservanceCard({
   appointments,
   observancePercent,
 }: Props) {
+  const { t } = useTranslation();
   const strokeDashoffset = CIRCUMFERENCE * (1 - observancePercent / 100);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>AUJOURD'HUI</Text>
+      <Text style={styles.label}>{t("common.info")}</Text>
 
       <View style={styles.row}>
         <View style={styles.left}>
-          <Text style={styles.title}>{remainingDoses} prises{'\n'}restantes</Text>
+          <Text style={styles.title}>{remainingDoses} {t("reminders.taken")}{'\n'}{t("reminders.pending")}</Text>
           <Text style={styles.subtitle}>
-            {totalDoses} prises planifiés • {appointments} RDV planifiés
+            {totalDoses} {t("reminders.taken")} • {appointments} {t("reminders.filters.ALL")}
           </Text>
         </View>
 
@@ -58,7 +60,7 @@ export function ObservanceCard({
           </Svg>
           <View style={styles.circleContent}>
             <Text style={styles.percent}>{observancePercent}%</Text>
-            <Text style={styles.observanceLabel}>OBSERVANCE</Text>
+            <Text style={styles.observanceLabel}>{t("reminders.taken")}</Text>
           </View>
         </View>
       </View>

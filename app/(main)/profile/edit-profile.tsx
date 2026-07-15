@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -14,13 +14,15 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Linking,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Camera, X } from "lucide-react-native";
+import { Camera } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import {
   TopBar,
@@ -29,20 +31,36 @@ import {
   EmailInput,
   PhoneInput,
   HelperText,
+  ChipSelector,
+  ConfirmSheet,
+  DatePickerSheet,
 } from "@/components";
+import type { ConfirmSheetRef, DatePickerSheetRef } from "@/components";
 import { router } from "expo-router";
 import { useProfile } from "@/hooks";
 import { useAuthStore } from "@/store";
-import { updateProfileSchema, UpdateProfileInput } from "@/schemas";
+import { getUpdateProfileSchema, UpdateProfileInput } from "@/schemas";
 
-// Types
 type AvatarStatus = "idle" | "uploading" | "success" | "error";
 
-export default function EditProfileScreen() {
-  // ================================================================================== //
-  // Store & Hooks
-  // ================================================================================== //
+const GENDER_OPTIONS = [
+  { labelKey: "male", value: "male" },
+  { labelKey: "female", value: "female" },
+];
 
+const BLOOD_GROUP_OPTIONS = [
+  { label: "A+", value: "A+" },
+  { label: "A-", value: "A-" },
+  { label: "B+", value: "B+" },
+  { label: "B-", value: "B-" },
+  { label: "AB+", value: "AB+" },
+  { label: "AB-", value: "AB-" },
+  { label: "O+", value: "O+" },
+  { label: "O-", value: "O-" },
+];
+
+export default function EditProfileScreen() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const {
     updateProfile,
@@ -54,17 +72,13 @@ export default function EditProfileScreen() {
     success,
   } = useProfile();
 
-  // ================================================================================== //
-  // Local State
-  // ================================================================================== //
-
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
   const [avatarStatus, setAvatarStatus] = useState<AvatarStatus>("idle");
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
-  // ================================================================================== //
-  // Form Setup
-  // ================================================================================== //
+  const confirmSheetRef = useRef<ConfirmSheetRef>(null);
+  const datePickerSheetRef = useRef<DatePickerSheetRef>(null);
+  const [dateFieldTarget, setDateFieldTarget] = useState<string>("");
 
   const {
     control,
@@ -72,52 +86,41 @@ export default function EditProfileScreen() {
     formState: { errors, isDirty, isValid },
     reset,
     watch,
+    setValue,
   } = useForm<UpdateProfileInput>({
-    resolver: zodResolver(updateProfileSchema),
+    resolver: zodResolver(getUpdateProfileSchema(t)),
     defaultValues: useMemo(
       () => ({
         fullName: user?.fullName || "",
         email: user?.email || "",
+        phoneNumber: user?.phoneNumber || "",
+        gender: user?.gender || "",
         dateOfBirth: user?.dateOfBirth || "",
         bloodGroup: user?.bloodGroup || "",
         medicalHistory: user?.medicalHistory || "",
         address: user?.address || "",
+        emergencyName: user?.emergencyName || "",
+        emergencyPhone: user?.emergencyPhone || "",
       }),
       [user],
     ),
-    mode: "onChange", // Validation en temps réel
+    mode: "onChange",
   });
 
-  // Watch form values for debugging
   const formValues = watch();
 
-  // ================================================================================== //
-  // Effects
-  // ================================================================================== //
-
-  // Keyboard listeners
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
-      () => setKeyboardVisible(true),
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => setKeyboardVisible(false),
-    );
+    if (user) {
+      const timer = setTimeout(() => setProfileLoaded(true), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
-
-  // Handle success
   useEffect(() => {
     if (success) {
-      Alert.alert("Succès", "Votre profil a été mis à jour.", [
+      Alert.alert(t("common.success"), t("profile.editScreen.success"), [
         {
-          text: "OK",
+          text: t("common.ok"),
           onPress: () => {
             clearState();
             router.back();
@@ -125,227 +128,190 @@ export default function EditProfileScreen() {
         },
       ]);
     }
-  }, [success, clearState]);
+  }, [success, clearState, t]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      clearState();
+    const onBackPress = () => {
+      if (isDirty) {
+        confirmSheetRef.current?.open();
+        return true;
+      }
+      return false;
     };
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => sub.remove();
+  }, [isDirty]);
+
+  const handleDiscardBack = useCallback(() => {
+    reset();
+    clearState();
+    router.back();
+  }, [reset, clearState]);
+
+  useEffect(() => {
+    return () => clearState();
   }, [clearState]);
 
-  // ================================================================================== //
-  // Handlers
-  // ================================================================================== //
-
   const handleAvatarPress = useCallback(async () => {
-    // Vérifier si un upload est déjà en cours
     if (avatarStatus === "uploading" || isUploadingAvatar) {
-      Alert.alert("En cours", "L'upload de l'avatar est déjà en cours.");
+      Alert.alert(t("common.loading"), t("profile.editScreen.avatarUploadInProgress"));
       return;
     }
-
     try {
-      // Demander la permission
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
-          "Permission requise",
-          "Autorisez l'accès à votre galerie dans les réglages pour changer votre photo.",
+          t("profile.editScreen.permissionRequired"),
+          t("profile.editScreen.galleryPermissionMessage"),
           [
-            { text: "Annuler", style: "cancel" },
+            { text: t("common.cancel"), style: "cancel" },
             {
-              text: "Ouvrir les réglages",
+              text: t("profile.editScreen.openSettings"),
               onPress: () => Linking.openSettings(),
             },
           ],
         );
         return;
       }
-
-      // Ouvrir la galerie avec des options optimisées
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8, // Réduit à 0.8 pour optimiser la taille
-        base64: false, // Évite de charger en mémoire
-        exif: false, // Pas besoin des métadonnées
+        quality: 0.8,
+        base64: false,
+        exif: false,
       });
-
-      if (result.canceled || !result.assets[0]) {
-        return;
-      }
-
+      if (result.canceled || !result.assets[0]) return;
       const asset = result.assets[0];
-
-      // Validation de la taille du fichier (max 5MB)
       try {
         const fileInfo = await FileSystem.getInfoAsync(asset.uri);
-        if (
-          fileInfo.exists &&
-          fileInfo.size &&
-          fileInfo.size > 5 * 1024 * 1024
-        ) {
+        if (fileInfo.exists && fileInfo.size && fileInfo.size > 5 * 1024 * 1024) {
           Alert.alert(
-            "Fichier trop volumineux",
-            "La taille de l'image ne doit pas dépasser 5 Mo.",
-            [{ text: "OK" }],
+            t("profile.editScreen.fileTooLarge"),
+            t("profile.editScreen.fileTooLargeMessage"),
+            [{ text: t("common.ok") }],
           );
           return;
         }
-      } catch (error) {
-        console.warn("Failed to get file info:", error);
-      }
-
-      // Générer un nom de fichier unique
+      } catch (_) { /* file info not critical */ }
       const fileExtension = asset.uri.split(".").pop() || "jpg";
       const fileName = `avatar-${Date.now()}.${fileExtension}`;
       const fileType = asset.mimeType || `image/${fileExtension}`;
-
-      // Afficher l'aperçu local immédiatement
       setLocalAvatarUri(asset.uri);
       setAvatarStatus("uploading");
-
-      // Upload de l'avatar
       try {
-        await uploadAvatar({
-          fileUri: asset.uri,
-          fileName,
-          fileType,
-        });
+        await uploadAvatar({ fileUri: asset.uri, fileName, fileType });
         setAvatarStatus("success");
-
-        // Petit feedback visuel
-        Alert.alert(
-          "Photo mise à jour",
-          "Votre photo de profil a été changée avec succès.",
-          [{ text: "OK" }],
-        );
-      } catch (uploadError) {
-        console.error("Avatar upload error:", uploadError);
+        Alert.alert(t("profile.editScreen.avatarUpdated"), t("profile.editScreen.photoUpdatedMessage"), [{ text: t("common.ok") }]);
+      } catch {
         setAvatarStatus("error");
         setLocalAvatarUri(null);
-        Alert.alert(
-          "Erreur",
-          "Impossible d'envoyer la photo. Vérifiez votre connexion et réessayez.",
-          [{ text: "OK" }],
-        );
+        Alert.alert(t("common.error"), t("profile.editScreen.uploadErrorMessage"), [{ text: t("common.ok") }]);
       }
-    } catch (error) {
-      console.error("Avatar picker error:", error);
+    } catch {
       setAvatarStatus("error");
-      Alert.alert(
-        "Erreur",
-        "Une erreur inattendue est survenue. Veuillez réessayer.",
-        [{ text: "OK" }],
-      );
+      Alert.alert(t("common.error"), t("profile.editScreen.unexpectedError"), [{ text: t("common.ok") }]);
     }
-  }, [isUploadingAvatar, avatarStatus, uploadAvatar]);
+  }, [isUploadingAvatar, avatarStatus, uploadAvatar, t]);
 
   const handleRemoveAvatar = useCallback(() => {
-    Alert.alert(
-      "Supprimer la photo",
-      "Voulez-vous vraiment supprimer votre photo de profil ?",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // Appeler l'API pour supprimer l'avatar
-              // await deleteAvatar();
-              setLocalAvatarUri(null);
-              setAvatarStatus("idle");
-              Alert.alert(
-                "Photo supprimée",
-                "Votre photo de profil a été supprimée.",
-              );
-            } catch (error) {
-              Alert.alert("Erreur", "Impossible de supprimer la photo.");
-            }
-          },
+    Alert.alert(t("profile.editScreen.deletePhoto"), t("profile.editScreen.deletePhotoConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("common.delete"),
+        style: "destructive",
+        onPress: async () => {
+          setLocalAvatarUri(null);
+          setAvatarStatus("idle");
+          Alert.alert(t("profile.editScreen.photoDeleted"), t("profile.editScreen.photoDeletedMessage"));
         },
-      ],
-    );
-  }, []);
+      },
+    ]);
+  }, [t]);
 
   const onSave = useCallback(
     async (data: UpdateProfileInput) => {
       try {
-        // Désactiver le clavier avant la soumission
         Keyboard.dismiss();
-
-        // Vérifier si des champs ont été modifiés
         if (!isDirty) {
-          Alert.alert(
-            "Aucune modification",
-            "Vous n'avez apporté aucune modification à votre profil.",
-            [{ text: "OK" }],
-          );
+          Alert.alert(t("profile.editScreen.noChanges"), t("profile.editScreen.noChangesMessage"), [{ text: t("common.ok") }]);
           return;
         }
-
-        // Nettoyer les données avant l'envoi
         const cleanData = {
           fullName: data.fullName.trim(),
           email: data.email.trim(),
-          dateOfBirth: data.dateOfBirth,
-          bloodGroup: data.bloodGroup,
-          medicalHistory: data.medicalHistory,
-          address: data.address,
+          phoneNumber: data.phoneNumber?.trim() || undefined,
+          gender: data.gender || undefined,
+          dateOfBirth: data.dateOfBirth || undefined,
+          bloodGroup: data.bloodGroup || undefined,
+          medicalHistory: data.medicalHistory || undefined,
+          address: data.address || undefined,
+          emergencyName: data.emergencyName?.trim() || undefined,
+          emergencyPhone: data.emergencyPhone?.trim() || undefined,
         };
-
         await updateProfile(cleanData);
-      } catch (error) {
-        console.error("Save profile error:", error);
-        Alert.alert(
-          "Erreur",
-          "Impossible de sauvegarder les modifications. Veuillez réessayer.",
-          [{ text: "OK" }],
-        );
+      } catch {
+        Alert.alert(t("common.error"), t("profile.editScreen.saveErrorMessage"), [{ text: t("common.ok") }]);
       }
     },
-    [isDirty, updateProfile],
+    [isDirty, updateProfile, t],
   );
-
-  // ================================================================================== //
-  // UI Helpers
-  // ================================================================================== //
 
   const getAvatarUri = useMemo(() => {
     if (localAvatarUri) return localAvatarUri;
     if (user?.avatarUrl) return user.avatarUrl;
-    return "https://randomuser.me/api/portraits/men/75.jpg";
+    return undefined;
   }, [localAvatarUri, user?.avatarUrl]);
 
   const getAvatarStatusText = useMemo(() => {
     switch (avatarStatus) {
-      case "uploading":
-        return "Envoi en cours…";
-      case "success":
-        return "Photo mise à jour";
-      case "error":
-        return "Échec de l'upload";
-      default:
-        return "Appuyez pour changer la photo";
+      case "uploading": return t("profile.editScreen.avatarUploading");
+      case "success": return t("profile.editScreen.avatarUpdated");
+      case "error": return t("profile.editScreen.avatarFailed");
+      default: return t("profile.editScreen.avatarHint");
     }
-  }, [avatarStatus]);
+  }, [avatarStatus, t]);
 
   const isAvatarUploading = avatarStatus === "uploading" || isUploadingAvatar;
 
-  // ================================================================================== //
-  // Main
-  // ================================================================================== //
+  const handleDatePick = useCallback(
+    (field: string) => {
+      setDateFieldTarget(field);
+      datePickerSheetRef.current?.open();
+    },
+    [],
+  );
+
+  const handleDateChange = useCallback(
+    (dateString: string) => {
+      setValue(dateFieldTarget as any, dateString, { shouldDirty: true });
+    },
+    [setValue, dateFieldTarget],
+  );
+
+  if (!profileLoaded) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <StatusBar barStyle="dark-content" />
+        <TopBar title={t("profile.editScreen.title")} />
+        <View style={styles.skeletonContainer}>
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={styles.skeletonRow}>
+              <View style={styles.skeletonLabel} />
+              <View style={styles.skeletonField} />
+            </View>
+          ))}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <SafeAreaView style={styles.safe}>
         <StatusBar barStyle="dark-content" />
-
-        <TopBar title="Modifier le profil" />
+        <TopBar title={t("profile.editScreen.title")} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -357,7 +323,6 @@ export default function EditProfileScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* ── Avatar Section ── */}
             <View style={styles.avatarContainer}>
               <TouchableOpacity
                 style={styles.avatarWrapper}
@@ -365,33 +330,27 @@ export default function EditProfileScreen() {
                 onLongPress={handleRemoveAvatar}
                 activeOpacity={0.8}
                 disabled={isAvatarUploading}
-                accessibilityLabel="Changer la photo de profil"
-                accessibilityHint="Appuyez pour choisir une photo dans votre galerie"
+                accessibilityLabel={t("accessibility.changeAvatar")}
+                accessibilityHint={t("accessibility.chooseAvatarHint")}
               >
-                <Image
-                  source={{
-                    uri:
-                      getAvatarUri ||
-                      "https://randomuser.me/api/portraits/men/75.jpg",
-                  }}
-                  style={styles.avatar}
-                />
-
-                {/* Badge de statut */}
+                {getAvatarUri ? (
+                  <Image source={{ uri: getAvatarUri }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                    <Camera size={32} color={colors.inkLight} />
+                  </View>
+                )}
                 {isAvatarUploading && (
                   <View style={styles.uploadingOverlay}>
                     <ActivityIndicator size="large" color={colors.white} />
                   </View>
                 )}
-
-                {/* Bouton appareil photo */}
-                {!isAvatarUploading && (
+                {!isAvatarUploading && getAvatarUri && (
                   <View style={styles.cameraBtn}>
                     <Camera size={18} color={colors.white} />
                   </View>
                 )}
               </TouchableOpacity>
-
               <Text
                 style={[
                   styles.avatarHint,
@@ -403,106 +362,248 @@ export default function EditProfileScreen() {
               </Text>
             </View>
 
-            {/* ── Form Section ── */}
-            <View style={styles.form}>
-              {/* Full Name */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Nom complet</Text>
-                <Controller
-                  control={control}
-                  name="fullName"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <NameInput
-                      placeholder="Votre nom complet"
-                      value={value}
-                      onBlur={onBlur}
-                      onChangeText={onChange}
-                      error={!!errors.fullName?.message}
-                      autoCapitalize="words"
-                    />
-                  )}
-                />
-                {errors.fullName && (
-                  <HelperText
-                    message={errors.fullName.message || ""}
-                    type="error"
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("profile.editScreen.sectionPersonal")}</Text>
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.fullName")}</Text>
+                  <Controller
+                    control={control}
+                    name="fullName"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <NameInput
+                        placeholder={t("profile.editScreen.fullName")}
+                        value={value}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        error={!!errors.fullName?.message}
+                        autoCapitalize="words"
+                      />
+                    )}
                   />
-                )}
-              </View>
-
-              {/* Email */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Adresse Email</Text>
-                <Controller
-                  control={control}
-                  name="email"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <EmailInput
-                      value={value}
-                      onBlur={onBlur}
-                      onChangeText={onChange}
-                      error={!!errors.email}
-                      autoCapitalize="none"
-                    />
+                  {errors.fullName && (
+                    <HelperText message={errors.fullName.message || ""} type="error" />
                   )}
-                />
-                {errors.email && (
-                  <HelperText
-                    message={errors.email.message || ""}
-                    type="error"
-                  />
-                )}
-              </View>
-
-              {/* Display general error */}
-              {profileError && (
-                <HelperText
-                  message={
-                    typeof profileError === "string"
-                      ? profileError
-                      : "Une erreur est survenue"
-                  }
-                  type="error"
-                />
-              )}
-
-              {/* Modification status */}
-              {isDirty && (
-                <View style={styles.modificationStatus}>
-                  <Text style={styles.modificationText}>
-                    Modifications non sauvegardées
-                  </Text>
                 </View>
-              )}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.labelEmail")}</Text>
+                  <Controller
+                    control={control}
+                    name="email"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <EmailInput
+                        value={value}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        error={!!errors.email}
+                        autoCapitalize="none"
+                      />
+                    )}
+                  />
+                  {errors.email && (
+                    <HelperText message={errors.email.message || ""} type="error" />
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.phone")}</Text>
+                  <Controller
+                    control={control}
+                    name="phoneNumber"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <PhoneInput
+                        value={value || ""}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        error={!!errors.phoneNumber}
+                      />
+                    )}
+                  />
+                  {errors.phoneNumber && (
+                    <HelperText message={errors.phoneNumber.message || ""} type="error" />
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.gender")}</Text>
+                  <Controller
+                    control={control}
+                    name="gender"
+                    render={({ field: { onChange, value } }) => (
+                      <ChipSelector
+                        options={GENDER_OPTIONS.map((o) => ({
+                          label: t(`profile.gender.${o.labelKey}`),
+                          value: o.value,
+                        }))}
+                        value={value || ""}
+                        onChange={onChange}
+                      />
+                    )}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.dob")}</Text>
+                  <TouchableOpacity
+                    style={styles.dateField}
+                    onPress={() => handleDatePick("dateOfBirth")}
+                  >
+                    <Text
+                      style={[
+                        styles.dateText,
+                        !formValues.dateOfBirth && styles.datePlaceholder,
+                      ]}
+                    >
+                      {formValues.dateOfBirth || t("profile.editScreen.dob")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
 
-            {/* ── Action Section ── */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("profile.editScreen.sectionMedical")}</Text>
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.bloodGroup")}</Text>
+                  <Controller
+                    control={control}
+                    name="bloodGroup"
+                    render={({ field: { onChange, value } }) => (
+                      <ChipSelector
+                        options={BLOOD_GROUP_OPTIONS}
+                        value={value || ""}
+                        onChange={onChange}
+                      />
+                    )}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.medicalHistory")}</Text>
+                  <Controller
+                    control={control}
+                    name="medicalHistory"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <NameInput
+                        placeholder={t("profile.editScreen.medicalHistory")}
+                        value={value || ""}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        error={!!errors.medicalHistory?.message}
+                        autoCapitalize="sentences"
+                        multiline
+                      />
+                    )}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.address")}</Text>
+                  <Controller
+                    control={control}
+                    name="address"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <NameInput
+                        placeholder={t("profile.editScreen.address")}
+                        value={value || ""}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        error={!!errors.address?.message}
+                        autoCapitalize="sentences"
+                      />
+                    )}
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("profile.editScreen.sectionEmergency")}</Text>
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.emergencyName")}</Text>
+                  <Controller
+                    control={control}
+                    name="emergencyName"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <NameInput
+                        placeholder={t("profile.editScreen.emergencyNamePlaceholder")}
+                        value={value || ""}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        autoCapitalize="words"
+                      />
+                    )}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>{t("profile.editScreen.emergencyPhone")}</Text>
+                  <Controller
+                    control={control}
+                    name="emergencyPhone"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <PhoneInput
+                        value={value || ""}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                      />
+                    )}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {profileError && (
+              <HelperText
+                message={typeof profileError === "string" ? profileError : t("errors.generic")}
+                type="error"
+              />
+            )}
+
+            {isDirty && (
+              <View style={styles.modificationStatus}>
+                <Text style={styles.modificationText}>
+                  {t("profile.editScreen.unsavedChanges")}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.footer}>
               <PrimaryButton
-                label="Enregistrer les modifications"
+                label={t("profile.editScreen.save")}
                 fullWidth
                 isLoading={isUpdatingProfile}
                 onPress={handleSubmit(onSave)}
                 isDisabled={!isValid || !isDirty || isUpdatingProfile}
               />
-
               {!isValid && isDirty && (
-                <HelperText
-                  message="Certains champs contiennent des erreurs"
-                  type="error"
-                />
+                <HelperText message={t("profile.editScreen.formErrors")} type="error" />
               )}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        <ConfirmSheet
+          ref={confirmSheetRef}
+          title={t("profile.editScreen.discardTitle")}
+          message={t("profile.editScreen.discardMessage")}
+          confirmLabel={t("profile.editScreen.discardConfirm")}
+          cancelLabel={t("profile.editScreen.keepEditing")}
+          onConfirm={handleDiscardBack}
+        />
+
+        <DatePickerSheet
+          ref={datePickerSheetRef}
+          value={(formValues as any)[dateFieldTarget] || ""}
+          onChange={handleDateChange}
+        />
       </SafeAreaView>
     </TouchableWithoutFeedback>
   );
 }
-
-// ================================================================================== //
-// Styles
-// ================================================================================== //
 
 const styles = StyleSheet.create({
   safe: {
@@ -516,6 +617,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 40,
+  },
+  skeletonContainer: {
+    padding: 20,
+    gap: 24,
+    marginTop: 20,
+  },
+  skeletonRow: {
+    gap: 8,
+  },
+  skeletonLabel: {
+    width: "40%",
+    height: 14,
+    borderRadius: 6,
+    backgroundColor: "#EAE8EA",
+  },
+  skeletonField: {
+    width: "100%",
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#EAE8EA",
   },
   avatarContainer: {
     alignItems: "center",
@@ -533,6 +654,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
     backgroundColor: colors.gray50,
+  },
+  avatarPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surface,
   },
   uploadingOverlay: {
     position: "absolute",
@@ -569,24 +695,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
   },
-  avatarHintError: {
-    color: colors.error,
+  avatarHintError: { color: colors.error },
+  avatarHintSuccess: { color: colors.success },
+  section: {
+    marginBottom: 28,
   },
-  avatarHintSuccess: {
-    color: colors.success,
-  },
-  removeAvatarBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 8,
-    padding: 8,
-  },
-  removeAvatarText: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.xs,
-    color: colors.inkLight,
-    textDecorationLine: "underline",
+  sectionTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    marginBottom: 16,
+    paddingLeft: 4,
   },
   form: {
     gap: 20,
@@ -600,39 +719,39 @@ const styles = StyleSheet.create({
     color: colors.ink,
     marginLeft: 4,
   },
-  resetButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  dateField: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    paddingHorizontal: 14,
+    justifyContent: "center",
   },
-  resetText: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    color: colors.primary,
+  dateText: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  datePlaceholder: {
+    color: colors.inkLight,
   },
   modificationStatus: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 8,
-    backgroundColor: colors.warningLight || "#FFF3E0",
+    backgroundColor: "#FFF3E0",
     borderRadius: 8,
+    marginTop: 8,
   },
   modificationText: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.sm,
-    color: colors.warning || "#F57C00",
+    color: "#F57C00",
   },
   footer: {
     marginTop: 40,
     gap: 12,
   },
-  validationHint: {
-    marginTop: 4,
-    textAlign: "center",
-  },
 });
-
-// Export du type pour le débogage
-export type EditProfileScreenProps = {
-  // Aucune prop requise
-};

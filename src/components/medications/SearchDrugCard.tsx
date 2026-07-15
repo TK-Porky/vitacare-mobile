@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { LinearGradient } from "expo-linear-gradient";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { Drug } from "@/types";
@@ -10,6 +11,7 @@ type SearchDrugCardProps = {
 };
 
 export const SearchDrugCard = React.memo(({ item, onPress }: SearchDrugCardProps) => {
+  const { t } = useTranslation();
   return (
     <TouchableOpacity
       style={styles.drugCard}
@@ -25,7 +27,7 @@ export const SearchDrugCard = React.memo(({ item, onPress }: SearchDrugCardProps
       </View>
       <View style={styles.drugBody}>
         <Text style={styles.drugCategory} numberOfLines={1}>
-          {item.dosageForm || "Médicament"}
+          {item.dosageForm || t("medications.available")}
         </Text>
         <Text style={styles.drugName} numberOfLines={2}>
           {item.name}
@@ -45,7 +47,7 @@ export const SearchDrugCard = React.memo(({ item, onPress }: SearchDrugCardProps
           end={{ x: 1, y: 0.5 }}
           style={styles.voirGradient}
         >
-          <Text style={styles.voirLabel}>Voir</Text>
+          <Text style={styles.voirLabel}>{t("common.seeAll")}</Text>
         </LinearGradient>
       </TouchableOpacity>
     </TouchableOpacity>

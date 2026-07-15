@@ -1,30 +1,33 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Info } from "lucide-react-native";
 import { colors, fontFamily, fontSize } from "@/themes";
 
 type LimitBannerProps = { onUpgrade?: () => void };
 
-export const LimitBanner = ({ onUpgrade }: LimitBannerProps) => (
-  <TouchableOpacity
-    style={styles.banner}
-    activeOpacity={0.85}
-    onPress={onUpgrade}
-    accessibilityLabel="Voir les offres premium"
-    accessibilityRole="button"
-  >
-    <View style={styles.bannerIcon}>
-      <Info size={18} color={colors.primary} />
-    </View>
-    <View style={styles.bannerText}>
-      <Text style={styles.bannerTitle}>Limite de rappels gratuits</Text>
-      <Text style={styles.bannerSubtitle}>
-        Passez à VitaCare Premium pour ajouter un nombre illimité de
-        médicaments.
-      </Text>
-    </View>
-  </TouchableOpacity>
-);
+export const LimitBanner = ({ onUpgrade }: LimitBannerProps) => {
+  const { t } = useTranslation();
+  return (
+    <TouchableOpacity
+      style={styles.banner}
+      activeOpacity={0.85}
+      onPress={onUpgrade}
+      accessibilityLabel={t("reminders.premiumSee")}
+      accessibilityRole="button"
+    >
+      <View style={styles.bannerIcon}>
+        <Info size={18} color={colors.primary} />
+      </View>
+      <View style={styles.bannerText}>
+        <Text style={styles.bannerTitle}>{t("reminders.limitReached")}</Text>
+        <Text style={styles.bannerSubtitle}>
+          {t("reminders.premiumMessage")}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   banner: {

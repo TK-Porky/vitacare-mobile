@@ -17,10 +17,9 @@ import {
   deleteAsync,
 } from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { useTranslation } from 'react-i18next';
 import { colors, fontFamily, fontSize } from '../../../src/themes';
 import { TopBar } from '../../../src/components';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 type DownloadedFile = {
   name: string;
@@ -28,8 +27,6 @@ type DownloadedFile = {
   size: number;
   modifiedAt: number;
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
@@ -44,8 +41,6 @@ function formatDate(ts: number): string {
     year: 'numeric',
   });
 }
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function FileCard({
   file,
@@ -82,20 +77,21 @@ function FileCard({
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.empty}>
       <Ionicons name="cloud-download-outline" size={56} color={colors.border} />
-      <Text style={styles.emptyTitle}>Aucun téléchargement</Text>
+      <Text style={styles.emptyTitle}>{t('profile.downloadsScreen.emptyTitle')}</Text>
       <Text style={styles.emptySubtitle}>
-        Les tickets de rendez-vous que vous téléchargez apparaîtront ici.
+        {t('profile.downloadsScreen.emptySubtitle')}
       </Text>
     </View>
   );
 }
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
-
 export default function DownloadsScreen() {
+  const { t } = useTranslation();
   const [files, setFiles] = useState<DownloadedFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -122,10 +118,8 @@ export default function DownloadsScreen() {
         }),
       );
 
-      // Sort newest first
       setFiles(detailed.sort((a, b) => b.modifiedAt - a.modifiedAt));
     } catch {
-      // Directory might be empty or inaccessible — silently fail
     } finally {
       setIsLoading(false);
     }
@@ -146,25 +140,25 @@ export default function DownloadsScreen() {
         });
       }
     } catch {
-      Alert.alert('Erreur', 'Impossible de partager ce fichier.');
+      Alert.alert(t('common.error'), t('profile.downloadsScreen.shareError'));
     }
   };
 
   const handleDelete = (file: DownloadedFile) => {
     Alert.alert(
-      'Supprimer le fichier',
-      `Voulez-vous supprimer "${file.name.replace('.pdf', '')}" ?`,
+      t('profile.downloadsScreen.deleteTitle'),
+      t('profile.downloadsScreen.deleteConfirm', { name: file.name.replace('.pdf', '') }),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Supprimer',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteAsync(file.uri);
               setFiles((prev) => prev.filter((f) => f.uri !== file.uri));
             } catch {
-              Alert.alert('Erreur', 'Impossible de supprimer ce fichier.');
+              Alert.alert(t('common.error'), t('profile.downloadsScreen.deleteError'));
             }
           },
         },
@@ -182,17 +176,18 @@ export default function DownloadsScreen() {
         onDelete={() => handleDelete(item)}
       />
     ),
-    [],
+    [t],
   );
 
   const renderHeader = useCallback(() => {
     if (files.length === 0) return null;
+    const countKey = files.length === 1 ? 'profile.downloadsScreen.count' : 'profile.downloadsScreen.count_other';
     return (
       <Text style={styles.countLabel}>
-        {files.length} fichier{files.length > 1 ? 's' : ''}
+        {t(countKey, { count: files.length })}
       </Text>
     );
-  }, [files.length]);
+  }, [files.length, t]);
 
   const renderSeparator = useCallback(
     () => <View style={{ height: 10 }} />,
@@ -202,7 +197,7 @@ export default function DownloadsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <StatusBar barStyle="dark-content" />
-      <TopBar title="Mes Téléchargements" />
+      <TopBar title={t('profile.downloadsScreen.title')} />
 
       <FlatList
         data={files}
@@ -223,8 +218,6 @@ export default function DownloadsScreen() {
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.white },

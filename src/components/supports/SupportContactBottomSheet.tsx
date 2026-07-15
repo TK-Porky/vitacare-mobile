@@ -17,6 +17,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { AppBottomSheet, AppBottomSheetRef } from "@/components/generics";
 import { PrimaryButton } from "@/components/buttons";
@@ -39,11 +40,11 @@ type Props = {
 // ================================================================================== //
 
 const SUPPORT_INFO = {
-  email: "support@vitacare.com",
-  phone: "+237 6XX XX XX XX",
-  whatsapp: "+237 6XX XX XX XX",
+  email: "devignpro@gmail.com",
+  phone: "+237 681 518 489",
+  whatsapp: "+237 681 518 489",
   hours: "Lun - Ven, 8h - 18h",
-  website: "www.vitacare.com",
+  website: "vitacare-two.vercel.app",
 };
 
 interface ContactOption {
@@ -63,12 +64,13 @@ interface ContactOption {
  * Contact option button
  */
 const ContactOptionButton = memo(
-  ({ option, onPress }: { option: ContactOption; onPress: () => void }) => (
+  ({ option, onPress }: { option: ContactOption; onPress: () => void }) => {
+    const { t } = useTranslation();
+    return (
     <TouchableOpacity
       style={styles.optionButton}
       onPress={onPress}
-      activeOpacity={0.7}
-      accessibilityLabel={`Contacter par ${option.label}`}
+      accessibilityLabel={t('supports.accessibilityContactBy', { label: option.label })}
       accessibilityRole="button"
     >
       <View
@@ -84,7 +86,8 @@ const ContactOptionButton = memo(
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.inkLight} />
     </TouchableOpacity>
-  ),
+    );
+  },
 );
 
 ContactOptionButton.displayName = "ContactOptionButton";
@@ -92,14 +95,17 @@ ContactOptionButton.displayName = "ContactOptionButton";
 /**
  * Support hours component
  */
-const SupportHours = memo(() => (
+const SupportHours = memo(() => {
+  const { t } = useTranslation();
+  return (
   <View style={styles.hoursContainer}>
     <Ionicons name="time-outline" size={16} color={colors.inkLight} />
     <Text style={styles.hoursText}>
-      Disponible du <Text style={styles.hoursBold}>{SUPPORT_INFO.hours}</Text>
+      {t('supports.hours', { hours: SUPPORT_INFO.hours })}
     </Text>
   </View>
-));
+  );
+});
 
 SupportHours.displayName = "SupportHours";
 
@@ -111,6 +117,7 @@ export const SupportContactBottomSheet = forwardRef<
   SupportContactBottomSheetRef,
   Props
 >(({ onClose }, ref) => {
+  const { t } = useTranslation();
   const sheetRef = useRef<AppBottomSheetRef>(null);
 
   useImperativeHandle(ref, () => ({
@@ -130,9 +137,8 @@ export const SupportContactBottomSheet = forwardRef<
       sheetRef.current?.close();
     } catch (error) {
       Alert.alert(
-        "Erreur",
-        "Impossible d'ouvrir l'application email. Veuillez envoyer un email à " +
-          SUPPORT_INFO.email,
+        t('common.error'),
+        t('supports.emailError', { email: SUPPORT_INFO.email }),
       );
     }
   }, []);
@@ -147,9 +153,8 @@ export const SupportContactBottomSheet = forwardRef<
       sheetRef.current?.close();
     } catch (error) {
       Alert.alert(
-        "Erreur",
-        "Impossible d'ouvrir l'application téléphone. Veuillez appeler le " +
-          SUPPORT_INFO.phone,
+        t('common.error'),
+        t('supports.phoneError', { phone: SUPPORT_INFO.phone }),
       );
     }
   }, []);
@@ -164,9 +169,8 @@ export const SupportContactBottomSheet = forwardRef<
       sheetRef.current?.close();
     } catch (error) {
       Alert.alert(
-        "Erreur",
-        "WhatsApp n'est pas installé sur cet appareil. Veuillez contacter le " +
-          SUPPORT_INFO.whatsapp,
+        t('common.error'),
+        t('supports.whatsappError', { whatsapp: SUPPORT_INFO.whatsapp }),
       );
     }
   }, []);
@@ -178,8 +182,8 @@ export const SupportContactBottomSheet = forwardRef<
 
     await Clipboard.setStringAsync(SUPPORT_INFO.email);
     Alert.alert(
-      "Copié !",
-      "L'adresse email a été copiée dans le presse-papier.",
+      t('supports.copiedTitle'),
+      t('supports.copiedEmail'),
     );
     sheetRef.current?.close();
   }, []);
@@ -191,8 +195,8 @@ export const SupportContactBottomSheet = forwardRef<
 
     await Clipboard.setStringAsync(SUPPORT_INFO.phone);
     Alert.alert(
-      "Copié !",
-      "Le numéro de téléphone a été copié dans le presse-papier.",
+      t('supports.copiedTitle'),
+      t('supports.copiedPhone'),
     );
     sheetRef.current?.close();
   }, []);
@@ -203,7 +207,7 @@ export const SupportContactBottomSheet = forwardRef<
     {
       id: "email",
       icon: "mail-outline",
-      label: "Email",
+      label: t('supports.email'),
       value: SUPPORT_INFO.email,
       action: handleEmailPress,
       color: "#EA4335",
@@ -211,7 +215,7 @@ export const SupportContactBottomSheet = forwardRef<
     {
       id: "phone",
       icon: "call-outline",
-      label: "Téléphone",
+      label: t('supports.phone'),
       value: SUPPORT_INFO.phone,
       action: handlePhonePress,
       color: "#34A853",
@@ -219,7 +223,7 @@ export const SupportContactBottomSheet = forwardRef<
     {
       id: "whatsapp",
       icon: "logo-whatsapp",
-      label: "WhatsApp",
+      label: t('supports.whatsapp'),
       value: SUPPORT_INFO.whatsapp,
       action: handleWhatsAppPress,
       color: "#25D366",
@@ -236,8 +240,8 @@ export const SupportContactBottomSheet = forwardRef<
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.handle} />
-        <Text style={styles.title}>Contacter le support</Text>
-        <Text style={styles.subtitle}>Notre équipe est là pour vous aider</Text>
+        <Text style={styles.title}>{t('supports.title')}</Text>
+        <Text style={styles.subtitle}>{t('supports.subtitle')}</Text>
       </View>
 
       {/* ── Hours ── */}
@@ -262,7 +266,7 @@ export const SupportContactBottomSheet = forwardRef<
           activeOpacity={0.7}
         >
           <Ionicons name="copy-outline" size={16} color={colors.primary} />
-          <Text style={styles.copyButtonText}>Copier l'email</Text>
+          <Text style={styles.copyButtonText}>{t('supports.copyEmail')}</Text>
         </TouchableOpacity>
 
         <View style={styles.copyDivider} />
@@ -273,14 +277,14 @@ export const SupportContactBottomSheet = forwardRef<
           activeOpacity={0.7}
         >
           <Ionicons name="copy-outline" size={16} color={colors.primary} />
-          <Text style={styles.copyButtonText}>Copier le téléphone</Text>
+          <Text style={styles.copyButtonText}>{t('supports.copyPhone')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* ── Footer ── */}
       <View style={styles.footer}>
         <PrimaryButton
-          label="Fermer"
+          label={t('supports.close')}
           variant="outline"
           size="md"
           fullWidth

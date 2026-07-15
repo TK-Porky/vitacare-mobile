@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { View, Text, StyleSheet, FlatList, StatusBar } from "react-native";
+import { useTranslation } from "react-i18next";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { colors, fontFamily, fontSize } from "@/themes";
@@ -17,6 +18,7 @@ import { ALL_SUGGESTIONS, CARD_GAP } from "@/constants/medications-search";
 // ================================================================================== //
 
 export default function MedicationsSearchScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Drug[]>([]);
@@ -94,7 +96,7 @@ export default function MedicationsSearchScreen() {
       );
     }
     if (results.length > 0) {
-      return <Text style={styles.sectionLabel}>Résultats</Text>;
+      return <Text style={styles.sectionLabel}>{t("medications.results")}</Text>;
     }
     return null;
   }, [suggestions, query, results.length, handleSuggestionPress]);

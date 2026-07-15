@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { ChevronDown, Phone } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { BaseInput, BaseInputProps } from "@/components/generics/BaseInput";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { formatCMPhone } from "@/utils";
@@ -20,6 +21,7 @@ export function PhoneInput({
   value,
   ...baseProps
 }: Props) {
+  const { t } = useTranslation();
   const handleTextChange = (text: string) => {
     if (onChangeText) {
       const formatted = formatCMPhone(text);
@@ -30,7 +32,7 @@ export function PhoneInput({
   return (
     <BaseInput
       keyboardType="phone-pad"
-      placeholder="Numéro de téléphone"
+      placeholder={t('common.phone')}
       onChangeText={handleTextChange}
       value={value}
       maxLength={15}

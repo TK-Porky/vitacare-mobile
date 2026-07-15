@@ -4,8 +4,10 @@ import {
   Text,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Calendar } from "lucide-react-native";
 import {
   MonthHeader,
@@ -22,6 +24,8 @@ type AppointmentListViewProps = {
   activeTab: "upcoming" | "past";
   onRefresh: () => void;
   onCardPress: (item: Appointment) => void;
+  cancelledCount?: number;
+  onClearCancelled?: () => void;
 };
 
 export const AppointmentListView = ({
@@ -31,7 +35,10 @@ export const AppointmentListView = ({
   activeTab,
   onRefresh,
   onCardPress,
+  cancelledCount = 0,
+  onClearCancelled,
 }: AppointmentListViewProps) => {
+  const { t } = useTranslation();
   const displayed = useMemo(() =>
     appointments.filter((a) =>
       activeTab === "upcoming"
@@ -73,6 +80,17 @@ export const AppointmentListView = ({
               onPress={() => onCardPress(item)}
             />
           ))}
+          {activeTab === "past" && cancelledCount > 0 && (
+            <TouchableOpacity
+              style={styles.clearBtn}
+              onPress={onClearCancelled}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.clearBtnText}>
+                Nettoyer {cancelledCount} annulé{cancelledCount > 1 ? "s" : ""}
+              </Text>
+            </TouchableOpacity>
+          )}
         </>
       ) : (
         <View style={styles.empty}>
@@ -81,8 +99,8 @@ export const AppointmentListView = ({
           </View>
           <Text style={styles.emptyText}>
             {activeTab === "upcoming"
-              ? "Aucun rendez-vous à venir"
-              : "Aucun rendez-vous passé"}
+              ? t('appointments.noUpcoming')
+              : t('appointments.noPast')}
           </Text>
         </View>
       )}
@@ -124,5 +142,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: fontSize.base,
     color: colors.inkLight,
+  },
+  clearBtn: {
+    alignSelf: "center",
+    backgroundColor: colors.error + "15",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 16,
+  },
+  clearBtnText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
+    color: colors.error,
   },
 });

@@ -2,12 +2,14 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "expo-router";
 import {
   View,
+  Text,
   StyleSheet,
   ScrollView,
   StatusBar,
   Alert,
   RefreshControl,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "@/themes";
 import { SectionHeader, AppHeader } from "@/components";
@@ -25,7 +27,6 @@ import { useMedicationStore } from "@/store/medication.store";
 import { useReminders } from "@/hooks";
 import { useAuthStore } from "@/store/auth.store";
 import { StoreMedicationResponse } from "@/types/api-responses";
-import { MedicationScreenProps } from "@/types/medications";
 
 // ================================================================================== //
 // Constants
@@ -38,7 +39,8 @@ const HERO_IMAGE_URL =
 // Main
 // ================================================================================== //
 
-export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
+export default function MedecineScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDrug, setSelectedDrug] =
@@ -60,7 +62,7 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
 
   // Auth & Reminders
   const user = useAuthStore((state) => state.user);
-  const { createReminder } = useReminders();
+  const { createReminderAsync } = useReminders();
 
   // ── Categories ──
   const categories = useMemo(() => {
@@ -81,6 +83,10 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
   }, []);
 
   // ── Handlers ──
+
+  const handleReminders = useCallback(() => {
+    router.push("/(main)/reminders" as never);
+  }, [router]);
 
   const handleSearch = useCallback(
     async (query: string) => {
@@ -109,53 +115,58 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
     async (drug: StoreMedicationResponse) => {
       if (!user) {
         Alert.alert(
-          "Erreur",
-          "Vous devez être connecté pour ajouter un rappel",
+          t('common.error'),
+          t('medications.loginRequired'),
         );
         return;
       }
 
       try {
-        await createReminder({
+        await createReminderAsync({
           medicationId: Number(drug.id) || 0,
           medicationName: drug.name,
           form: drug.dosageForm || "COMPRIME",
-          dosage: drug.dosage!,
+          dosage: drug.dosage || "",
           frequency: "QUOTIDIEN",
           times: ["08:00"],
+          patientId: user?.id ? Number(user.id) : undefined,
+          scheduledDate: new Date().toISOString().split("T")[0],
+          scheduledTime: "08:00",
           notes: drug.dosageForm ? `Forme: ${drug.dosageForm}` : undefined,
         });
 
         Alert.alert(
-          "Succès",
-          `Le rappel pour ${drug.name} a été ajouté avec succès !`,
+          t('common.success'),
+          t('medications.addToReminderSuccess', { name: drug.name }),
           [
             {
-              text: "OK",
+              text: t('common.ok'),
               onPress: () => {
                 drugSheetRef.current?.close();
-                if (onReminders) onReminders();
+                router.push("/(main)/reminders" as never);
               },
             },
           ],
         );
       } catch (error) {
         Alert.alert(
-          "Erreur",
+          t('common.error'),
           error instanceof Error
             ? error.message
-            : "Impossible d'ajouter le rappel",
+            : t('medications.addToReminderError'),
         );
       }
     },
-    [user, createReminder, onReminders],
+    [user, createReminderAsync, router],
   );
 
   const handleCategoryPress = useCallback(
     (category: string) => {
-      fetchMedications({ searchQuery: category });
+      router.push(
+        `/(main)/medications/categories/${encodeURIComponent(category)}` as never,
+      );
     },
-    [fetchMedications],
+    [router],
   );
 
   const handleRetry = useCallback(() => {
@@ -200,8 +211,7 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         searchValue={searchQuery}
         onSearchChange={handleSearch}
         onSearch={handleSearchSubmit}
-        onFilter={() => {}}
-        onReminders={onReminders}
+        onReminders={handleReminders}
         onSearchFocus={() => router.push("/(main)/medications/search" as never)}
       />
 
@@ -220,11 +230,11 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         }
       >
         <HeroBanner
-          title="Espace Médicaments"
+          title={t('medications.title')}
           subtitle={
             isSearching
-              ? `Résultats pour "${searchQuery}"`
-              : "Découvrez nos médicaments classés par catégorie."
+              ? t('medications.searchResults', { query: searchQuery })
+              : t('medications.subtitle')
           }
           imageUrl={HERO_IMAGE_URL}
         />
@@ -232,7 +242,12 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         {/* Categories */}
         {!isSearching && (
           <>
-            <SectionHeader title="Catégories" onSeeAll={() => {}} />
+            <SectionHeader
+              title={t('medications.categories')}
+              onSeeAll={() =>
+                router.push('/(main)/medications/categories' as never)
+              }
+            />
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -251,8 +266,10 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
 
         {/* Medications Grid */}
         <SectionHeader
-          title={isSearching ? "Résultats" : "Médicaments disponibles"}
-          onSeeAll={() => {}}
+          title={isSearching ? t('medications.results') : t('medications.available')}
+          onSeeAll={() =>
+            router.push('/(main)/medications/all' as never)
+          }
         />
 
         {isLoading ? (
@@ -282,9 +299,13 @@ export default function MedecineScreen({ onReminders }: MedicationScreenProps) {
         ref={drugSheetRef}
         drug={selectedDrug}
         relatedDrugs={displayedMedications.filter(
-          (d) => d.id !== selectedDrug?.id,
+          (d) => d.id !== selectedDrug?.id && d.dosageForm === selectedDrug?.dosageForm,
         )}
         onAddToReminder={handleAddToReminder}
+        onDrugPress={(drug) => {
+          setSelectedDrug(drug as StoreMedicationResponse);
+          drugSheetRef.current?.open();
+        }}
       />
     </SafeAreaView>
   );

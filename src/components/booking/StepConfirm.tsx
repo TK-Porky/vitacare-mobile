@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ScrollView,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
 
@@ -165,13 +167,18 @@ export const StepConfirm = ({
   onChangeDate,
   onChange,
 }: Props) => {
+  const { t } = useTranslation();
   const consultationFee = provider.priceXCFA;
   const total = consultationFee; // Pas de calcul complexe ici, le paiement se fera plus tard
 
   return (
-    <>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={{ paddingBottom: 24 }}
+      showsVerticalScrollIndicator={false}
+    >
       {/* ── Page title ──────────────────────────────────────────────────── */}
-      <Text style={styles.pageTitle}>Confirmation de réservation</Text>
+      <Text style={styles.pageTitle}>{t('booking.confirm')}</Text>
 
       {/* ── Provider card ───────────────────────────────────────────────── */}
       <View style={styles.providerCard}>
@@ -188,11 +195,11 @@ export const StepConfirm = ({
 
           <View style={styles.details}>
             <View style={styles.detailsLeft}>
-              <Text style={styles.detailsTitle}>Détails du Rendez-vous</Text>
+              <Text style={styles.detailsTitle}>{t('appointments.detail')}</Text>
               <Text style={styles.dateTimeText}>
                 {booking.date
                   ? formatDateTime(booking.date, booking.time)
-                  : "Date à sélectionner"}
+                  : t('appointments.date')}
               </Text>
             </View>
 
@@ -202,7 +209,7 @@ export const StepConfirm = ({
                 onPress={onChangeDate}
                 activeOpacity={0.75}
               >
-                <Text style={styles.changerBtnText}>Changer</Text>
+                <Text style={styles.changerBtnText}>{t('common.edit')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -210,16 +217,16 @@ export const StepConfirm = ({
           <Divider />
 
           <View style={styles.detailCol}>
-            <Text style={styles.detailLabel}>Motif</Text>
+            <Text style={styles.detailLabel}>{t('appointments.reason')}</Text>
             <Text style={styles.detailValue}>
-              {booking.reason || "Consultation générale"}
+              {booking.reason || t('appointments.reason')}
             </Text>
           </View>
 
           <Divider />
 
           <View style={styles.detailCol}>
-            <Text style={styles.detailLabel}>Prix estimé</Text>
+            <Text style={styles.detailLabel}>{t('booking.payment')}</Text>
             <Text style={styles.detailValue}>
               {formatPrice(consultationFee)}
             </Text>
@@ -228,7 +235,7 @@ export const StepConfirm = ({
           <Divider />
 
           <View style={styles.detailCol}>
-            <Text style={styles.detailLabel}>Lieu</Text>
+            <Text style={styles.detailLabel}>{t('appointments.clinic')}</Text>
             <Text style={[styles.detailValue]} numberOfLines={1}>
               {provider.location}
             </Text>
@@ -237,19 +244,19 @@ export const StepConfirm = ({
           <Divider />
 
           <View style={styles.detailCol}>
-            <Text style={styles.cancelTitle}>Annulation Gratuite</Text>
+            <Text style={styles.cancelTitle}>{t('appointments.cancel')}</Text>
             <Text style={styles.cancelBody}>
-              Annuler avant le rendez-vous pour un remboursement total.{" "}
+              {t('appointments.cancel')}
               <Text
                 style={styles.cancelLink}
                 onPress={() =>
                   Alert.alert(
-                    "Politique d'utilisation",
-                    "Les conditions d'annulation complètes s'appliquent selon les termes de réservation VitaCare.",
+                    t('common.info'),
+                    t('errors.generic'),
                   )
                 }
               >
-                Politique d'utilisation
+                {t('common.info')}
               </Text>
             </Text>
           </View>
@@ -257,7 +264,7 @@ export const StepConfirm = ({
       </View>
 
       {/* ── Paiement ────────────────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Mode de paiement</Text>
+      <Text style={styles.sectionTitle}>{t('booking.payment')}</Text>
       <View style={styles.cardGroup}>
         <OptionCard
           selected={booking.paymentMethod === "now"}
@@ -271,8 +278,8 @@ export const StepConfirm = ({
               />
             </View>
           }
-          title="Payer en ligne"
-          subtitle="Paiement sécurisé après validation du praticien"
+          title={t('booking.payNow')}
+          subtitle={t('booking.payNow')}
         />
         <OptionCard
           selected={booking.paymentMethod === "later"}
@@ -282,15 +289,15 @@ export const StepConfirm = ({
               <Ionicons name="person-outline" size={20} color={colors.ink} />
             </View>
           }
-          title="Payer sur place"
-          subtitle="Règlement au cabinet le jour du rendez-vous"
+          title={t('booking.payLater')}
+          subtitle={t('booking.payLater')}
         />
       </View>
 
       {/* ── Choix du fournisseur (si paiement en ligne) ────────────────── */}
       {booking.paymentMethod === "now" && (
         <>
-          <Text style={styles.sectionTitle}>Moyen de paiement</Text>
+          <Text style={styles.sectionTitle}>{t('booking.payment')}</Text>
           <View style={styles.cardGroup}>
             <OptionCard
               selected={booking.paymentProvider === "mobile_money"}
@@ -325,13 +332,13 @@ export const StepConfirm = ({
         />
         <Text style={styles.noteText}>
           {booking.paymentMethod === "now"
-            ? "Vous recevrez une demande de paiement après validation du praticien."
-            : "Le paiement sera effectué au cabinet le jour du rendez-vous."}
+            ? t('booking.payNow')
+            : t('booking.payLater')}
         </Text>
       </View>
 
       <View style={{ height: 32 }} />
-    </>
+    </ScrollView>
   );
 };
 

@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useMapStore } from "@/store";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -35,6 +36,7 @@ const SUGGESTIONS = [
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 export default function ExploreSearchScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState("");
@@ -93,7 +95,7 @@ export default function ExploreSearchScreen() {
             {item.doctorName || item.name}
           </Text>
           <Text style={styles.providerSpecialty}>
-            {item.specialty || "Spécialiste"}
+            {item.specialty || t('provider.specialtyDefault')}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
@@ -106,7 +108,7 @@ export default function ExploreSearchScreen() {
       <>
         {suggestions.length > 0 && query.length === 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Termes suggérés</Text>
+            <Text style={styles.sectionLabel}>{t('search.suggestedTerms')}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -126,7 +128,7 @@ export default function ExploreSearchScreen() {
           </View>
         )}
         {providers.length > 0 && (
-          <Text style={styles.sectionLabel}>Meilleures correspondances</Text>
+          <Text style={styles.sectionLabel}>{t('search.bestMatches')}</Text>
         )}
       </>
     ),
@@ -142,7 +144,7 @@ export default function ExploreSearchScreen() {
         <View style={styles.empty}>
           <Ionicons name="search-outline" size={40} color={colors.inkFaint} />
           <Text style={styles.emptyText}>
-            Aucun résultat pour « {query} »
+            {t('search.noResults', { query })}
           </Text>
         </View>
       ) : null,
@@ -168,7 +170,7 @@ export default function ExploreSearchScreen() {
             style={styles.input}
             value={query}
             onChangeText={setQuery}
-            placeholder="Rechercher un professionnel..."
+            placeholder={t('search.professionalPlaceholder')}
             placeholderTextColor={colors.inkMuted}
             autoFocus
             returnKeyType="search"

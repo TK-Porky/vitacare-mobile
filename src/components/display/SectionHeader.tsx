@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ArrowRight } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, fontFamily, fontSize } from '../../themes';
 
 type Props = {
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export function SectionHeader({ title, onSeeAll }: Props) {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
@@ -17,7 +19,7 @@ export function SectionHeader({ title, onSeeAll }: Props) {
           onPress={onSeeAll}
           activeOpacity={0.7}
         >
-          <Text style={styles.seeAllText}>Tout voir</Text>
+          <Text style={styles.seeAllText}>{t('common.seeAll')}</Text>
           <ArrowRight size={14} color={colors.primary} />
         </TouchableOpacity>
       )}

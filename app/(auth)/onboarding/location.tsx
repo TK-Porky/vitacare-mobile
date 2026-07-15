@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -11,11 +11,45 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { MapPin } from "lucide-react-native";
-import MapView, { UrlTile, Marker, PROVIDER_DEFAULT } from "react-native-maps";
+import LegacyMapView, {
+  UrlTile as LegacyUrlTile,
+  Marker as LegacyMarker,
+} from "react-native-maps";
 import * as Location from "expo-location";
+import { useTranslation } from "react-i18next";
 import { StepHeader, SearchInput, PrimaryButton } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useProfile } from "@/hooks";
+
+let MapComponent: any = null;
+let CameraComponent: any = null;
+let MapLibreMarker: any = null;
+let mapLibreLoaded = false;
+
+try {
+  const MapLibre = require("@maplibre/maplibre-react-native");
+  MapComponent = MapLibre.Map;
+  CameraComponent = MapLibre.Camera;
+  MapLibreMarker = MapLibre.Marker;
+  mapLibreLoaded = true;
+} catch (e) {}
+
+const OSM_STYLE = {
+  version: 8,
+  sources: {
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors",
+    },
+  },
+  layers: [
+    { id: "osm", type: "raster", source: "osm", minzoom: 0, maxzoom: 19 },
+  ],
+};
+
+const isUsingMapLibre = mapLibreLoaded && Platform.OS !== "ios";
 
 // ================================================================================== //
 // Types
@@ -31,11 +65,25 @@ const INITIAL_REGION = {
 // Main
 // ================================================================================== //
 export default function OnboardingLocationScreen() {
+  const { t } = useTranslation();
   const { updateProfile, isUpdatingProfile } = useProfile();
+
+  // ================================================================================== //
+  // Refs
+  // ================================================================================== //
+  const mapRef = useRef<any>(null);
+  const cameraRef = useRef<any>(null);
+  const legacyMapRef = useRef<LegacyMapView>(null);
+  const mapReadyForCamera = useRef(false);
+  const pendingCamera = useRef<{
+    coords: { latitude: number; longitude: number };
+    zoomLevel: number;
+  } | null>(null);
+
   // ================================================================================== //
   // States
   // ================================================================================== //
-  const [location, setLocation] = useState("Recherche de votre position..."); // Location status
+  const [location, setLocation] = useState(t("onboarding.location.searching")); // Location status
   const [region, setRegion] = useState(INITIAL_REGION); // Map region
   const [markerCoords, setMarkerCoords] = useState({
     latitude: INITIAL_REGION.latitude,
@@ -44,6 +92,80 @@ export default function OnboardingLocationScreen() {
   const [searchQuery, setSearchQuery] = useState(""); // Search query
   const [isMapReady, setIsMapReady] = useState(false); // Map ready state
 
+  const animateToCoords = (
+    coords: { latitude: number; longitude: number },
+    zoomLevel = 15,
+  ) => {
+    const newRegion = {
+      ...coords,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+    setRegion(newRegion);
+
+    if (isUsingMapLibre) {
+      const execute = () => {
+        if (!cameraRef.current) return;
+        cameraRef.current.flyTo({
+          center: [coords.longitude, coords.latitude],
+          zoom: zoomLevel,
+          duration: 800,
+        });
+      };
+      if (mapReadyForCamera.current) execute();
+      else pendingCamera.current = { coords, zoomLevel };
+    } else if (legacyMapRef.current) {
+      legacyMapRef.current.animateToRegion(newRegion, 500);
+    }
+  };
+
+  const reverseGeocode = async (coords: { latitude: number; longitude: number }) => {
+    try {
+      const reverse = await Location.reverseGeocodeAsync(coords);
+      if (reverse.length > 0) {
+        const item = reverse[0];
+        const parts = [
+          item.street,
+          item.streetNumber,
+          item.district,
+          item.city,
+          item.region,
+          item.country,
+        ].filter(Boolean);
+        setLocation(parts.join(", ") || t("profile.locationScreen.addressFound"));
+      } else {
+        setLocation(t("profile.locationScreen.addressNotFound"));
+      }
+    } catch {
+      setLocation(t("profile.locationScreen.addressUnavailable"));
+    }
+  };
+
+  const handleMapPress = async (coords: { latitude: number; longitude: number }) => {
+    setMarkerCoords(coords);
+    await reverseGeocode(coords);
+  };
+
+  const onMapReady = () => {
+    setIsMapReady(true);
+    mapReadyForCamera.current = true;
+    if (pendingCamera.current && cameraRef.current?.flyTo) {
+      const { coords, zoomLevel } = pendingCamera.current;
+      cameraRef.current.flyTo({
+        center: [coords.longitude, coords.latitude],
+        zoom: zoomLevel,
+        duration: 800,
+      });
+      pendingCamera.current = null;
+    }
+  };
+
+  const handleLegacyMapPress = (e: any) => {
+    if (e?.nativeEvent?.coordinate) {
+      handleMapPress(e.nativeEvent.coordinate);
+    }
+  };
+
   // ================================================================================== //
   // Effects
   // ================================================================================== //
@@ -51,34 +173,18 @@ export default function OnboardingLocationScreen() {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        setLocation("Permission de localisation refusée");
+        setLocation(t("onboarding.location.permissionDenied"));
         return;
       }
 
       const currentLoc = await Location.getCurrentPositionAsync({});
-      const newRegion = {
+      const coords = {
         latitude: currentLoc.coords.latitude,
         longitude: currentLoc.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
       };
-      setRegion(newRegion);
-      setMarkerCoords({
-        latitude: currentLoc.coords.latitude,
-        longitude: currentLoc.coords.longitude,
-      });
-
-      // Reverse geocoding to get address
-      const reverse = await Location.reverseGeocodeAsync({
-        latitude: currentLoc.coords.latitude,
-        longitude: currentLoc.coords.longitude,
-      });
-      if (reverse.length > 0) {
-        const item = reverse[0];
-        setLocation(
-          `${item.street || ""} ${item.name || ""}, ${item.city || ""}`,
-        );
-      }
+      setMarkerCoords(coords);
+      animateToCoords(coords, 15);
+      await reverseGeocode(coords);
     })();
   }, []);
 
@@ -93,9 +199,9 @@ export default function OnboardingLocationScreen() {
         address: location,
       } as any);
 
-      router.push("/(auth)/onboarding-search");
+      router.push("/(auth)/onboarding/search");
     } catch (e) {
-      Alert.alert("Erreur", "Impossible de sauvegarder votre position.");
+      Alert.alert(t("errors.generic"), t("errors.somethingWrong"));
     }
   };
 
@@ -115,46 +221,91 @@ export default function OnboardingLocationScreen() {
       <StepHeader
         current={1}
         total={2}
-        onSkip={() => router.push("/(auth)/onboarding-search")}
+        onSkip={() => router.push("/(auth)/onboarding/search")}
       />
 
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Indiquer votre position</Text>
+          <Text style={styles.title}>{t("onboarding.location.title")}</Text>
           <Text style={styles.subtitle}>
-            Les recherches s'effectueront dans un périmètre de 15km, ajustable
-            plus tard
+            {t("onboarding.location.subtitle")}
           </Text>
         </View>
 
         <SearchInput
           value={searchQuery}
           onChangeText={handleChangeSearchQuery}
-          placeholder="Rechercher votre position..."
+          placeholder={t("common.search") + "..."}
         />
 
         {/* Map Container */}
         <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            provider={PROVIDER_DEFAULT}
-            region={region}
-            onRegionChangeComplete={setRegion}
-            onPress={(e) => setMarkerCoords(e.nativeEvent.coordinate)}
-            onMapReady={() => setIsMapReady(true)}
-          >
-            <UrlTile
-              urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-              maximumZ={19}
-              flipY={false}
-              tileSize={256}
-            />
-            <Marker coordinate={markerCoords}>
-              <View style={styles.customMarker}>
-                <MapPin size={24} color={colors.primary} fill={colors.white} />
-              </View>
-            </Marker>
-          </MapView>
+          {isUsingMapLibre && MapComponent && CameraComponent ? (
+            <MapComponent
+              ref={mapRef}
+              style={styles.map}
+              mapStyle={OSM_STYLE as any}
+              logo={false}
+              attribution={false}
+              onPress={(e: any) => {
+                if (e?.geometry?.coordinates) {
+                  const [longitude, latitude] = e.geometry.coordinates;
+                  handleMapPress({ latitude, longitude });
+                }
+              }}
+              onDidFinishLoadingMap={onMapReady}
+            >
+              <CameraComponent
+                ref={cameraRef}
+                initialViewState={{
+                  center: [INITIAL_REGION.longitude, INITIAL_REGION.latitude],
+                  zoom: 12,
+                }}
+              />
+
+              {markerCoords && MapLibreMarker && (
+                <MapLibreMarker
+                  id="onboarding-marker"
+                  lngLat={[
+                    markerCoords.longitude,
+                    markerCoords.latitude,
+                  ]}
+                >
+                  <View style={styles.customMarker}>
+                    <MapPin size={24} color={colors.primary} fill={colors.white} />
+                  </View>
+                </MapLibreMarker>
+              )}
+            </MapComponent>
+          ) : (
+            <LegacyMapView
+              ref={legacyMapRef}
+              style={styles.map}
+              region={region}
+              onRegionChangeComplete={setRegion}
+              onPress={handleLegacyMapPress}
+              onMapReady={() => setIsMapReady(true)}
+              showsUserLocation={false}
+              showsMyLocationButton={false}
+              showsCompass={false}
+              rotateEnabled
+              scrollEnabled
+              zoomEnabled
+              moveOnMarkerPress={false}
+            >
+              <LegacyUrlTile
+                urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                maximumZ={19}
+                flipY={false}
+                tileSize={256}
+              />
+              <LegacyMarker coordinate={markerCoords}>
+                <View style={styles.customMarker}>
+                  <MapPin size={24} color={colors.primary} fill={colors.white} />
+                </View>
+              </LegacyMarker>
+            </LegacyMapView>
+          )}
           {!isMapReady && (
             <View style={styles.loaderOverlay}>
               <ActivityIndicator color={colors.primary} />
@@ -172,7 +323,7 @@ export default function OnboardingLocationScreen() {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label="Continuer"
+          label={t("common.continue")}
           fullWidth
           isLoading={isUpdatingProfile}
           onPress={handleContinue}

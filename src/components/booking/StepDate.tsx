@@ -15,6 +15,7 @@ import { StepLabel } from './StepLabel';
 type Props = {
   selected: Date | null;
   onSelect: (d: Date) => void;
+  occupiedDates?: Set<string>;
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -44,7 +45,7 @@ function toWeeks(cells: (number | null)[]): (number | null)[][] {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export const StepDate = ({ selected, onSelect }: Props) => {
+export const StepDate = ({ selected, onSelect, occupiedDates = new Set<string>() }: Props) => {
   const { width: screenWidth } = useWindowDimensions();
 
   // Cell size adapts to screen width: fills exactly 7 columns with no gap
@@ -101,6 +102,11 @@ export const StepDate = ({ selected, onSelect }: Props) => {
     today.getMonth() === viewMonth &&
     today.getFullYear() === viewYear;
 
+  const isDayOccupied = (day: number) => {
+    const key = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return occupiedDates.has(key);
+  };
+
   return (
     <View>
       <StepLabel number={1} label="Choisissez la date" />
@@ -155,12 +161,14 @@ export const StepDate = ({ selected, onSelect }: Props) => {
               const past = isDayPast(day);
               const sel = isDaySelected(day);
               const isToday = isDayToday(day);
+              const occupied = isDayOccupied(day);
+              const disabled = past || occupied;
 
               return (
                 <TouchableOpacity
                   key={day}
                   activeOpacity={0.75}
-                  disabled={past}
+                  disabled={disabled}
                   onPress={() => onSelect(new Date(viewYear, viewMonth, day))}
                   style={[
                     styles.cell,
@@ -168,12 +176,14 @@ export const StepDate = ({ selected, onSelect }: Props) => {
                     isToday && !sel && styles.cellToday,
                     sel && styles.cellSelected,
                     past && styles.cellPast,
+                    occupied && !past && styles.cellOccupied,
                   ]}
                 >
                   <Text
                     style={[
                       styles.cellText,
                       past && styles.cellTextPast,
+                      occupied && !past && styles.cellTextOccupied,
                       isToday && !sel && styles.cellTextToday,
                       sel && styles.cellTextSelected,
                     ]}
@@ -258,6 +268,10 @@ const styles = StyleSheet.create({
   cellPast: {
     opacity: 0.3,
   },
+  cellOccupied: {
+    opacity: 0.5,
+    backgroundColor: colors.inkFaint + '20',
+  },
 
   // ── Cell text ──
   cellText: {
@@ -267,6 +281,10 @@ const styles = StyleSheet.create({
   },
   cellTextPast: {
     color: colors.inkMuted,
+  },
+  cellTextOccupied: {
+    color: colors.inkMuted,
+    textDecorationLine: 'line-through',
   },
   cellTextToday: {
     color: colors.primary,

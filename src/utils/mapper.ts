@@ -1,3 +1,4 @@
+import i18next from "@/i18n";
 import { AppointmentResponse } from "@/types/api-responses";
 import { Appointment } from "@/types";
 
@@ -22,11 +23,14 @@ export function isUpcoming(dateTime: string): boolean {
 
 export function toAppointment(r: AppointmentResponse): Appointment {
   const defaultPayment =
-    r.total && r.total > 0 ? "Payer à la consultation" : "Gratuit";
+    r.total && r.total > 0 ? i18next.t('appointments.payAtConsultation') : i18next.t('common.free');
+
+  const pm = r.paymentMethod;
+  const isOnlineProvider = pm === "mobile_money" || pm === "orange_money" || pm === "card";
 
   return {
     id: String(r.id),
-    title: `Visite`,
+    title: i18next.t('appointments.visit'),
     doctorName: r.doctorName,
     doctorAvatarUri: r.doctorAvatarUrl ?? "",
     avatarUri: r.doctorAvatarUrl ?? "",
@@ -38,19 +42,20 @@ export function toAppointment(r: AppointmentResponse): Appointment {
     time: r.time,
     dateTime: r.dateTime,
     status: normalizeStatus(r.status),
-    paymentMethod: defaultPayment,
-    paymentProvider: "",
+    paymentMethod: pm ?? defaultPayment,
+    paymentProvider: isOnlineProvider ? pm : "",
+    paymentStatus: r.paymentStatus ?? undefined,
     total: r.total ?? undefined,
   };
 }
 
 export function toSheetData(item: Appointment) {
   const defaultPayment =
-    item.total && item.total > 0 ? "Payer à la consultation" : "Gratuit";
+    item.total && item.total > 0 ? i18next.t('appointments.payAtConsultation') : i18next.t('common.free');
 
   return {
     id: item.id,
-    title: `Visite`,
+    title: i18next.t('appointments.visit'),
     doctorName: item.doctorName,
     doctorAvatarUri: item.doctorAvatarUri || item.avatarUri || "",
     specialty: item.specialty,

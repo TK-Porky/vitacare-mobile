@@ -8,6 +8,7 @@ import {
   FlatList,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { colors, fontFamily, fontSize } from "@/themes";
@@ -29,6 +30,7 @@ export const InlineDropdown = ({
   style,
   accessibilityLabel,
 }: InlineDropdownProps) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const handlePress = () => {
@@ -54,7 +56,7 @@ export const InlineDropdown = ({
         onPress={handlePress}
         activeOpacity={0.7}
         accessibilityLabel={
-          accessibilityLabel || `Sélectionner ${label || "une option"}`
+          accessibilityLabel || `${t("common.search")} ${label || ""}`
         }
         accessibilityRole="combobox"
         accessibilityState={{ expanded: open }}
@@ -92,7 +94,7 @@ export const InlineDropdown = ({
                     ]}
                     onPress={() => handleSelect(opt)}
                     activeOpacity={0.7}
-                    accessibilityLabel={`Sélectionner ${opt}`}
+                    accessibilityLabel={`${t("common.search")} ${opt}`}
                     accessibilityRole="button"
                   >
                     <Text

@@ -1,6 +1,7 @@
 // hooks/useAppointments.ts
 import { useCallback, useEffect, useState, useRef } from "react";
 import { Alert } from "react-native";
+import i18next from "@/i18n";
 import { Appointment } from "@/types";
 import { appointmentService } from "@/services";
 import { toAppointment } from "@/utils";
@@ -40,7 +41,7 @@ export const useAppointments = () => {
       const errorMessage =
         err instanceof Error
           ? err.message
-          : "Erreur lors du chargement des rendez-vous";
+          : i18next.t('appointments.error');
       if (!sessionCache) {
         setError(errorMessage);
         console.warn("Failed to fetch appointments", err);
@@ -61,24 +62,24 @@ export const useAppointments = () => {
     async (id: string): Promise<boolean> => {
       return new Promise((resolve) => {
         Alert.alert(
-          "Confirmer l'annulation",
-          "Voulez-vous vraiment annuler ce rendez-vous ?",
+          i18next.t('appointments.cancel'),
+          i18next.t('appointments.cancel'),
           [
-            { text: "Non", style: "cancel", onPress: () => resolve(false) },
+            { text: i18next.t('common.cancel'), style: "cancel", onPress: () => resolve(false) },
             {
-              text: "Oui, annuler",
+              text: i18next.t('common.confirm'),
               style: "destructive",
               onPress: async () => {
                 setIsCancelling(true);
                 try {
                   await appointmentService.cancel(id);
                   await fetchAll();
-                  Alert.alert("Succès", "Rendez-vous annulé avec succès");
+                  Alert.alert(i18next.t('common.success'), i18next.t('appointments.cancel'));
                   resolve(true);
                 } catch (err: any) {
                   Alert.alert(
-                    "Erreur",
-                    err?.message || "Impossible d'annuler le rendez-vous.",
+                    i18next.t('common.error'),
+                    err?.message || i18next.t('appointments.error'),
                   );
                   resolve(false);
                 } finally {
@@ -93,6 +94,62 @@ export const useAppointments = () => {
     [fetchAll],
   );
 
+  const deleteAppointment = useCallback(async (id: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      Alert.alert(
+        i18next.t('appointments.deleteTitle'),
+        i18next.t('appointments.deleteMessage'),
+        [
+          { text: i18next.t('common.cancel'), style: "cancel", onPress: () => resolve(false) },
+          {
+            text: i18next.t('common.delete'),
+            style: "destructive",
+            onPress: () => {
+              const updated = (sessionCache ?? []).filter(
+                (a) => String(a.id) !== id,
+              );
+              sessionCache = updated;
+              setAllAppointments(updated);
+              resolve(true);
+            },
+          },
+        ],
+      );
+    });
+  }, []);
+
+  const clearCancelledAppointments = useCallback(async (): Promise<boolean> => {
+    const cancelled = (sessionCache ?? []).filter(
+      (a) => a.status === "CANCELLED",
+    );
+    if (cancelled.length === 0) {
+      Alert.alert(i18next.t('common.info'), i18next.t('appointments.noCancelled'));
+      return false;
+    }
+
+    return new Promise((resolve) => {
+      Alert.alert(
+        i18next.t('appointments.clearCancelledTitle'),
+        i18next.t('appointments.clearCancelledMessage', { count: cancelled.length }),
+        [
+          { text: i18next.t('common.cancel'), style: "cancel", onPress: () => resolve(false) },
+          {
+            text: i18next.t('common.delete'),
+            style: "destructive",
+            onPress: () => {
+              const updated = (sessionCache ?? []).filter(
+                (a) => a.status !== "CANCELLED",
+              );
+              sessionCache = updated;
+              setAllAppointments(updated);
+              resolve(true);
+            },
+          },
+        ],
+      );
+    });
+  }, []);
+
   const markAppointmentAsPaid = useCallback(
     async (id: string): Promise<boolean> => {
       try {
@@ -100,10 +157,10 @@ export const useAppointments = () => {
         await fetchAll();
         return true;
       } catch (error) {
-        console.error("Erreur lors du marquage du paiement :", error);
+        console.error(i18next.t('common.error'), error);
         Alert.alert(
-          "Erreur",
-          "Impossible de marquer le paiement comme effectué.",
+          i18next.t('common.error'),
+          i18next.t('errors.somethingWrong'),
         );
         return false;
       }
@@ -132,6 +189,8 @@ export const useAppointments = () => {
     fetchAll,
     isCancelling,
     cancelAppointment,
-    markAppointmentAsPaid, // ✅ Exposée
+    deleteAppointment,
+    clearCancelledAppointments,
+    markAppointmentAsPaid,
   };
 };

@@ -1,3 +1,4 @@
+import i18next from "@/i18n";
 import { colors, fontFamily } from "@/themes";
 
 // Utiliser des fonctions qui retournent des options inline
@@ -25,7 +26,7 @@ export const AUTH_SCREEN_OPTIONS_FADE = {
 export const getAuthScreenOptionsWithHeader = (title: string) => ({
   headerShown: true,
   headerTitle: title,
-  headerBackTitle: "Retour",
+  headerBackTitle: i18next.t('common.back'),
   headerStyle: {
     backgroundColor: colors.white,
   },

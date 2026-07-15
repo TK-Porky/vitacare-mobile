@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { UpdateCheckResult } from '../../types/update';
 import { updateService } from '../../services/update.service';
 
@@ -22,6 +23,7 @@ interface Props {
  * - Optional update   → dismissible bottom banner
  */
 export function UpdatePrompt({ result, onDismiss }: Props) {
+  const { t } = useTranslation();
   if (!result.hasUpdate || !result.latestVersion) return null;
 
   const { latestVersion, isMandatory } = result;
@@ -36,11 +38,11 @@ export function UpdatePrompt({ result, onDismiss }: Props) {
         <View style={styles.overlay}>
           <View style={styles.modal}>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>Mise à jour requise</Text>
+              <Text style={styles.badgeText}>{t('update.required')}</Text>
             </View>
             <Text style={styles.title}>VitaCare {latestVersion.version}</Text>
             <Text style={styles.body}>
-              Cette mise à jour est obligatoire pour continuer à utiliser l'application.
+              {t('update.requiredBody')}
             </Text>
             {latestVersion.releaseNotes ? (
               <Text style={styles.notes} numberOfLines={4}>
@@ -48,7 +50,7 @@ export function UpdatePrompt({ result, onDismiss }: Props) {
               </Text>
             ) : null}
             <TouchableOpacity style={styles.primaryBtn} onPress={handleUpdate}>
-              <Text style={styles.primaryBtnText}>Mettre à jour</Text>
+              <Text style={styles.primaryBtnText}>{t('update.installNow')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -60,14 +62,14 @@ export function UpdatePrompt({ result, onDismiss }: Props) {
   return (
     <View style={styles.banner}>
       <View style={styles.bannerContent}>
-        <Text style={styles.bannerTitle}>Mise à jour disponible</Text>
+        <Text style={styles.bannerTitle}>{t('update.available')}</Text>
         <Text style={styles.bannerBody}>
-          VitaCare {latestVersion.version} est disponible.
+          {t('update.body', { version: latestVersion.version })}
         </Text>
       </View>
       <View style={styles.bannerActions}>
         <TouchableOpacity style={styles.bannerBtn} onPress={handleUpdate}>
-          <Text style={styles.bannerBtnText}>Installer</Text>
+          <Text style={styles.bannerBtnText}>{t('common.install')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.bannerDismiss} onPress={onDismiss}>
           <Text style={styles.bannerDismissText}>✕</Text>

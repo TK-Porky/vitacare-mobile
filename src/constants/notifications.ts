@@ -1,3 +1,4 @@
+import i18next from "@/i18n";
 import { NotificationCategory } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -8,36 +9,36 @@ export const CATEGORY_META: Record<
   appointment_reminder: {
     icon: "calendar-outline",
     color: "#0D9488",
-    label: "Rendez-vous",
+    label: i18next.t('notifications.categoryLabels.appointment_reminder'),
   },
   appointment_confirmed: {
     icon: "checkmark-circle-outline",
     color: "#16A34A",
-    label: "Confirmé",
+    label: i18next.t('notifications.categoryLabels.appointment_confirmed'),
   },
   appointment_cancelled: {
     icon: "close-circle-outline",
     color: "#DC2626",
-    label: "Annulé",
+    label: i18next.t('notifications.categoryLabels.appointment_cancelled'),
   },
   treatment_reminder: {
     icon: "medical-outline",
     color: "#7C3AED",
-    label: "Traitement",
+    label: i18next.t('notifications.categoryLabels.treatment_reminder'),
   },
   treatment_refill: {
     icon: "refresh-outline",
     color: "#EA580C",
-    label: "Renouvellement",
+    label: i18next.t('notifications.categoryLabels.treatment_refill'),
   },
   health_tip: {
     icon: "bulb-outline",
     color: "#CA8A04",
-    label: "Conseil santé",
+    label: i18next.t('notifications.categoryLabels.health_tip'),
   },
   system: {
     icon: "information-circle-outline",
     color: "#6B7280",
-    label: "Système",
+    label: i18next.t('notifications.categoryLabels.system'),
   },
 };

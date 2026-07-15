@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { parseAppointmentDate } from "@/utils";
 
@@ -14,28 +15,16 @@ type Props = {
 
 const STATUS_CONFIG: Record<
   string,
-  { label: string; bg: string; color: string }
+  { labelKey: string; bg: string; color: string }
 > = {
-  confirmed: {
-    label: "Confirmé",
-    bg: colors.successLight,
-    color: colors.success,
-  },
-  paid: { label: "Payé", bg: colors.successLight, color: colors.success },
-  pending: {
-    label: "En attente",
-    bg: colors.warningLight,
-    color: colors.warning,
-  },
-  cancelled: { label: "Annulé", bg: colors.errorLight, color: colors.error },
-  completed: { label: "Terminé", bg: colors.infoLight, color: colors.info },
-  in_progress: { label: "En cours", bg: colors.infoLight, color: colors.info },
-  no_show: { label: "Absent", bg: colors.errorLight, color: colors.error },
-  rescheduled: {
-    label: "Reporté",
-    bg: colors.warningLight,
-    color: colors.warning,
-  },
+  confirmed: { labelKey: "CONFIRMED", bg: colors.successLight, color: colors.success },
+  paid: { labelKey: "PAID", bg: colors.successLight, color: colors.success },
+  pending: { labelKey: "PENDING", bg: colors.warningLight, color: colors.warning },
+  cancelled: { labelKey: "CANCELLED", bg: colors.errorLight, color: colors.error },
+  completed: { labelKey: "COMPLETED", bg: colors.infoLight, color: colors.info },
+  in_progress: { labelKey: "IN_PROGRESS", bg: colors.infoLight, color: colors.info },
+  no_show: { labelKey: "NO_SHOW", bg: colors.errorLight, color: colors.error },
+  rescheduled: { labelKey: "RESCHEDULED", bg: colors.warningLight, color: colors.warning },
 };
 
 export const AppointmentItem = React.memo(function AppointmentItem({
@@ -46,6 +35,7 @@ export const AppointmentItem = React.memo(function AppointmentItem({
   avatarUrl,
   onPress,
 }: Props) {
+  const { t } = useTranslation();
   const config = STATUS_CONFIG[status.toLowerCase()] ?? STATUS_CONFIG.pending;
   const { day, month, year } = parseAppointmentDate(date);
 
@@ -77,7 +67,7 @@ export const AppointmentItem = React.memo(function AppointmentItem({
         <Text style={styles.time}>{time}</Text>
         <View style={[styles.badge, { backgroundColor: config.bg }]}>
           <Text style={[styles.badgeText, { color: config.color }]}>
-            {config.label}
+            {t(`appointments.status.${config.labelKey}`)}
           </Text>
         </View>
       </View>

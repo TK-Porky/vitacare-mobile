@@ -11,70 +11,47 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, fontFamily, fontSize } from '../../../src/themes';
 import { TopBar } from '../../../src/components';
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
-const FAQS: { question: string; answer: string }[] = [
-  {
-    question: "Comment réserver un rendez-vous ?",
-    answer: "Accédez à l'onglet Explorer, sélectionnez un professionnel de santé, puis appuyez sur Réserver. Suivez les 4 étapes : date, heure, motif et confirmation.",
-  },
-  {
-    question: "Comment annuler un rendez-vous ?",
-    answer: "Dans l'onglet Rendez-vous, ouvrez le détail du rendez-vous souhaité et appuyez sur Annuler. Une confirmation vous sera demandée.",
-  },
-  {
-    question: "Comment modifier ma photo de profil ?",
-    answer: "Accédez à Mes Informations depuis l'onglet Profil. Appuyez sur votre photo actuelle ou le bouton caméra pour sélectionner une nouvelle image depuis votre galerie.",
-  },
-  {
-    question: "Comment télécharger mon ticket de rendez-vous ?",
-    answer: "Depuis le détail d'un rendez-vous, appuyez sur l'icône de téléchargement dans la barre d'actions. Un PDF du ticket sera généré et partageable.",
-  },
-  {
-    question: "Ma localisation n'est pas détectée, que faire ?",
-    answer: "Vérifiez que l'accès à la localisation est autorisé dans les réglages de votre téléphone pour VitaCare. Vous pouvez aussi saisir votre adresse manuellement dans Ma localisation.",
-  },
-  {
-    question: "Mes données sont-elles sécurisées ?",
-    answer: "Oui. Vos données médicales et personnelles sont chiffrées et stockées de manière sécurisée conformément aux réglementations en vigueur au Cameroun. Consultez nos Termes et Conditions pour en savoir plus.",
-  },
-  {
-    question: "Comment changer la langue de l'application ?",
-    answer: "Dans le Profil, section Accessibilité, appuyez sur Changer la langue et sélectionnez votre langue préférée (Français ou Anglais).",
-  },
+const FAQS: { questionKey: string; answerKey: string }[] = [
+  { questionKey: 'profile.helpScreen.faq1Q', answerKey: 'profile.helpScreen.faq1A' },
+  { questionKey: 'profile.helpScreen.faq2Q', answerKey: 'profile.helpScreen.faq2A' },
+  { questionKey: 'profile.helpScreen.faq3Q', answerKey: 'profile.helpScreen.faq3A' },
+  { questionKey: 'profile.helpScreen.faq4Q', answerKey: 'profile.helpScreen.faq4A' },
+  { questionKey: 'profile.helpScreen.faq5Q', answerKey: 'profile.helpScreen.faq5A' },
+  { questionKey: 'profile.helpScreen.faq6Q', answerKey: 'profile.helpScreen.faq6A' },
+  { questionKey: 'profile.helpScreen.faq7Q', answerKey: 'profile.helpScreen.faq7A' },
 ];
 
 const CONTACT_CHANNELS = [
   {
     id: 'email',
     icon: 'mail-outline' as const,
-    label: 'Envoyer un e-mail',
-    value: 'support@vitacare.cm',
-    onPress: () => Linking.openURL('mailto:support@vitacare.cm'),
+    labelKey: 'profile.helpScreen.sendEmail',
+    value: 'btkextensions@gmail.com',
+    onPress: () => Linking.openURL('mailto:btkextensions@gmail.com'),
   },
   {
     id: 'whatsapp',
     icon: 'logo-whatsapp' as const,
-    label: 'WhatsApp',
-    value: '+237 600 000 000',
-    onPress: () => Linking.openURL('https://wa.me/237600000000'),
+    labelKey: 'WhatsApp',
+    value: '+237 681 518 489',
+    onPress: () => Linking.openURL('https://wa.me/237681518489'),
   },
   {
     id: 'phone',
     icon: 'call-outline' as const,
-    label: 'Appeler le support',
-    value: '+237 600 000 000',
-    onPress: () => Linking.openURL('tel:+237600000000'),
+    labelKey: 'profile.helpScreen.callSupport',
+    value: '+237 681 518 489',
+    onPress: () => Linking.openURL('tel:+237681518489'),
   },
 ];
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function FAQItem({ question, answer }: { question: string; answer: string }) {
+function FAQItem({ questionKey, answerKey }: { questionKey: string; answerKey: string }) {
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <TouchableOpacity
@@ -83,7 +60,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
       activeOpacity={0.75}
     >
       <View style={styles.faqHeader}>
-        <Text style={styles.faqQuestion}>{question}</Text>
+        <Text style={styles.faqQuestion}>{t(questionKey)}</Text>
         <Ionicons
           name={open ? 'chevron-up' : 'chevron-down'}
           size={18}
@@ -91,7 +68,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
         />
       </View>
       {open && (
-        <Text style={styles.faqAnswer}>{answer}</Text>
+        <Text style={styles.faqAnswer}>{t(answerKey)}</Text>
       )}
     </TouchableOpacity>
   );
@@ -99,17 +76,24 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 function ContactChannel({
   icon,
-  label,
+  labelKey,
   value,
   onPress,
-}: (typeof CONTACT_CHANNELS)[0]) {
+}: {
+  icon: (typeof CONTACT_CHANNELS)[0]['icon'];
+  labelKey: string;
+  value: string;
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+
   return (
     <TouchableOpacity style={styles.channelCard} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.channelIcon}>
         <Ionicons name={icon} size={22} color={colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.channelLabel}>{label}</Text>
+        <Text style={styles.channelLabel}>{t(labelKey)}</Text>
         <Text style={styles.channelValue}>{value}</Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.inkMuted} />
@@ -117,49 +101,43 @@ function ContactChannel({
   );
 }
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
-
 export default function HelpScreen() {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <StatusBar barStyle="dark-content" />
-      <TopBar title="Aide" />
+      <TopBar title={t('profile.helpScreen.title')} />
 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero */}
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
             <Ionicons name="help-buoy-outline" size={32} color={colors.primary} />
           </View>
-          <Text style={styles.heroTitle}>Comment pouvons-nous vous aider ?</Text>
+          <Text style={styles.heroTitle}>{t('profile.helpScreen.heroTitle')}</Text>
           <Text style={styles.heroSubtitle}>
-            Trouvez une réponse dans la FAQ ou contactez notre équipe.
+            {t('profile.helpScreen.heroSubtitle')}
           </Text>
         </View>
 
-        {/* FAQ */}
-        <Text style={styles.sectionTitle}>Questions fréquentes</Text>
+        <Text style={styles.sectionTitle}>{t('profile.helpScreen.faq')}</Text>
         {FAQS.map((faq) => (
-          <FAQItem key={faq.question} {...faq} />
+          <FAQItem key={faq.questionKey} questionKey={faq.questionKey} answerKey={faq.answerKey} />
         ))}
 
-        {/* Contact */}
-        <Text style={[styles.sectionTitle, { marginTop: 28 }]}>Nous contacter</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 28 }]}>{t('profile.helpScreen.contact')}</Text>
         {CONTACT_CHANNELS.map((ch) => (
-          <ContactChannel key={ch.id} {...ch} />
+          <ContactChannel key={ch.id} icon={ch.icon} labelKey={ch.labelKey} value={ch.value} onPress={ch.onPress} />
         ))}
 
-        {/* Version */}
-        <Text style={styles.version}>VitaCare — Version 1.0.0</Text>
+        <Text style={styles.version}>{t('profile.helpScreen.version')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.white },
@@ -170,7 +148,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  // Hero
   hero: {
     alignItems: 'center',
     paddingVertical: 24,
@@ -209,7 +186,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // FAQ
   faqCard: {
     backgroundColor: colors.surface,
     borderRadius: 14,
@@ -238,7 +214,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
-  // Contact
   channelCard: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -32,12 +32,12 @@ export const FilterRangeSlider = ({
     <View style={[styles.container, style]}>
       <View style={styles.bubbleRow}>
         <View style={styles.bubble}>
-          <Text style={styles.bubbleText}>{value}km</Text>
+          <Text style={styles.bubbleText}>{value} km</Text>
         </View>
       </View>
 
       <View style={styles.trackRow}>
-        <Ionicons name="person-outline" size={16} color={colors.inkMuted} />
+        <Ionicons name="person-outline" size={18} color={colors.inkMuted} />
         <Slider
           style={styles.slider}
           value={value}
@@ -49,7 +49,7 @@ export const FilterRangeSlider = ({
           maximumTrackTintColor={colors.inkFaint}
           thumbTintColor={colors.primaryDark}
         />
-        <Ionicons name="location-outline" size={16} color={colors.inkMuted} />
+        <Ionicons name="location-outline" size={18} color={colors.inkMuted} />
       </View>
     </View>
   );
@@ -57,31 +57,29 @@ export const FilterRangeSlider = ({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 4,
+    gap: 6,
   },
   bubbleRow: {
     alignItems: 'center',
-    paddingHorizontal: 8,
   },
   bubble: {
     backgroundColor: colors.primaryDark,
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
   },
   bubbleText: {
     fontFamily: fontFamily.semiBold,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     color: colors.white,
   },
   trackRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   slider: {
     flex: 1,
-    height: 40,
+    height: 48,
   },
 });

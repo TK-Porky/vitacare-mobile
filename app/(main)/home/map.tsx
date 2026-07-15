@@ -5,7 +5,6 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
-  InteractionManager,
   NativeSyntheticEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -64,6 +63,8 @@ import {
   FilterBottomSheet,
   FilterBottomSheetRef,
   FilterState,
+  ResultsDrawer,
+  ResultsDrawerRef,
 } from "../../../src/components/modals";
 import { SearchBar } from "../../../src/components";
 import { MapMarker } from "../../../src/components";
@@ -114,6 +115,7 @@ export default function MapScreen() {
   const cameraRef = useRef<CameraRef>(null);
   const legacyMapRef = useRef<LegacyMapView>(null);
   const filterSheetRef = useRef<FilterBottomSheetRef>(null);
+  const resultsDrawerRef = useRef<ResultsDrawerRef>(null);
 
   const [search, setSearch] = useState("");
   const [region, setRegion] = useState(INITIAL_REGION);
@@ -131,13 +133,21 @@ export default function MapScreen() {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
   useEffect(() => {
-    InteractionManager.runAfterInteractions(() => {
-      fetchClinics();
-    });
+    const handle = typeof requestIdleCallback === "function"
+      ? requestIdleCallback(() => { fetchClinics(); })
+      : setTimeout(() => { fetchClinics(); }, 0);
+
+    return () => {
+      if (typeof requestIdleCallback === "function") {
+        cancelIdleCallback(handle as number);
+      } else {
+        clearTimeout(handle as any);
+      }
+    };
   }, []);
 
   useEffect(() => {
-    InteractionManager.runAfterInteractions(async () => {
+    const setupLocation = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
@@ -169,7 +179,19 @@ export default function MapScreen() {
       } finally {
         setIsLoadingLocation(false);
       }
-    });
+    };
+
+    const handle = typeof requestIdleCallback === "function"
+      ? requestIdleCallback(() => { setupLocation(); })
+      : setTimeout(() => { setupLocation(); }, 0);
+
+    return () => {
+      if (typeof requestIdleCallback === "function") {
+        cancelIdleCallback(handle as number);
+      } else {
+        clearTimeout(handle as any);
+      }
+    };
   }, []);
 
   const providers = useMemo(() => {
@@ -294,15 +316,19 @@ export default function MapScreen() {
 
   const handleApplyFilters = async (next: FilterState) => {
     setFilters(next);
-    searchClinics({
+    await searchClinics({
       query: search,
-      filters: { specialty: next.services },
+      filters: {
+        specialty: next.services,
+        ...(next.languages.length > 0 ? { languages: next.languages } : {}),
+      },
       coordinates: {
         latitude: region.latitude,
         longitude: region.longitude,
         radius: next.perimeterKm,
       },
     });
+    setTimeout(() => resultsDrawerRef.current?.open(), 300);
   };
 
   const handleReserve = () => {
@@ -484,6 +510,13 @@ export default function MapScreen() {
         ref={filterSheetRef}
         initialFilters={filters}
         onApply={handleApplyFilters}
+      />
+
+      {/* ── Results Drawer ── */}
+      <ResultsDrawer
+        ref={resultsDrawerRef}
+        providers={providers}
+        onProviderPress={handleMarkerPress}
       />
     </View>
   );

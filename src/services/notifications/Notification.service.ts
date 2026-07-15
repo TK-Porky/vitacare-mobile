@@ -1,7 +1,15 @@
+import i18next from "@/i18n";
 import * as ExpoNotifications from "expo-notifications";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import messaging from "@react-native-firebase/messaging";
+import { 
+  getMessaging, 
+  getToken, 
+  deleteToken, 
+  requestPermission, 
+  AuthorizationStatus, 
+  setBackgroundMessageHandler 
+} from "@react-native-firebase/messaging";
 import { router } from "expo-router";
 import { Platform, Alert } from "react-native";
 import {
@@ -116,7 +124,7 @@ export class NotificationService {
       await ExpoNotifications.setNotificationChannelAsync(
         "vitacare-reminders",
         {
-          name: "Rappels",
+          name: i18next.t('notifications.channelReminders'),
           importance: ExpoNotifications.AndroidImportance.HIGH,
           vibrationPattern: [0, 250, 250, 250],
           lightColor: "#0D9488",
@@ -135,13 +143,14 @@ export class NotificationService {
 
   async getFCMToken(): Promise<string | null> {
     try {
-      const authStatus = await messaging().requestPermission();
+      const messaging = getMessaging();
+      const authStatus = await requestPermission(messaging);
       const enabled =
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+        authStatus === AuthorizationStatus.AUTHORIZED ||
+        authStatus === AuthorizationStatus.PROVISIONAL;
 
       if (!enabled) {
-        if (__DEV__) console.log("Permission de notification refusée");
+        if (__DEV__) console.log(i18next.t('notifications.permissionDenied'));
         return null;
       }
 
@@ -151,7 +160,7 @@ export class NotificationService {
         return tokenStorage;
       }
 
-      const fcmToken = await messaging().getToken();
+      const fcmToken = await getToken(messaging);
       if (__DEV__) console.log("FCM Token obtenu", fcmToken);
       return fcmToken;
     } catch (error) {
@@ -162,7 +171,8 @@ export class NotificationService {
 
   async deleteFCMToken(): Promise<void> {
     try {
-      await messaging().deleteToken();
+      const messaging = getMessaging();
+      await deleteToken(messaging);
       await AsyncStorage.removeItem(STORAGE_KEYS.FCM_TOKEN);
       if (__DEV__) console.log("✅ Token FCM supprimé");
     } catch (error) {
@@ -213,7 +223,7 @@ export class NotificationService {
         await ExpoNotifications.setNotificationCategoryAsync("reminder", [
           {
             identifier: "take",
-            buttonTitle: "✅ Pris",
+            buttonTitle: i18next.t('notifications.takeButton'),
             options: {
               isDestructive: false,
               isAuthenticationRequired: false,
@@ -221,7 +231,7 @@ export class NotificationService {
           },
           {
             identifier: "snooze",
-            buttonTitle: "⏰ Snooze 15min",
+            buttonTitle: i18next.t('notifications.snoozeButton'),
             options: {
               isDestructive: false,
               isAuthenticationRequired: false,
@@ -229,7 +239,7 @@ export class NotificationService {
           },
           {
             identifier: "skip",
-            buttonTitle: "❌ Ignorer",
+            buttonTitle: i18next.t('notifications.skipButton'),
             options: {
               isDestructive: true,
               isAuthenticationRequired: false,
@@ -264,7 +274,7 @@ export class NotificationService {
     if (reminderId) {
       const reminderData: ReminderNotificationData = {
         reminderId,
-        medicationName: medicationName || "Médicament",
+        medicationName: medicationName || i18next.t('medication'),
         dosage: dosage || "",
         scheduledTime: scheduledTime || new Date().toISOString(),
         action: (actionIdentifier as "take" | "snooze" | "skip") || undefined,
@@ -305,13 +315,13 @@ export class NotificationService {
       });
 
       Alert.alert(
-        "✅ Prise confirmée",
-        `${data.medicationName} a été marqué comme pris.`,
-        [{ text: "OK" }],
+        i18next.t('notifications.takenTitle'),
+        i18next.t('notifications.takenBody', { medicationName: data.medicationName }),
+        [{ text: i18next.t('common.ok') }],
       );
     } catch (error) {
       console.error("❌ Erreur:", error);
-      Alert.alert("Erreur", "Impossible de marquer le rappel comme pris.");
+      Alert.alert(i18next.t('common.error'), i18next.t('notifications.markTakenError'));
     } finally {
       await this.cancelNotification(data.reminderId);
     }
@@ -337,12 +347,14 @@ export class NotificationService {
         reminderTime: newTime,
       });
 
-      Alert.alert("⏰ Rappel reporté", `Vous serez notifié dans 15 minutes.`, [
-        { text: "OK" },
-      ]);
+      Alert.alert(
+        i18next.t('notifications.snoozedTitle'),
+        i18next.t('notifications.snoozedBody', { minutes: 15 }),
+        [{ text: i18next.t('common.ok') }],
+      );
     } catch (error) {
       console.error("❌ Erreur de snooze:", error);
-      Alert.alert("Erreur", "Impossible de reporter le rappel.");
+      Alert.alert(i18next.t('common.error'), i18next.t('notifications.snoozeError'));
     } finally {
       await this.cancelNotification(data.reminderId);
     }
@@ -357,13 +369,13 @@ export class NotificationService {
       await apiClient.patch<ApiResponse>(`/reminders/${data.reminderId}/skip`);
 
       Alert.alert(
-        "❌ Rappel ignoré",
-        `Le rappel pour ${data.medicationName} a été ignoré.`,
-        [{ text: "OK" }],
+        i18next.t('notifications.skippedTitle'),
+        i18next.t('notifications.skippedBody', { medicationName: data.medicationName }),
+        [{ text: i18next.t('common.ok') }],
       );
     } catch (error) {
       console.error("❌ Erreur:", error);
-      Alert.alert("Erreur", "Impossible d'ignorer le rappel.");
+      Alert.alert(i18next.t('common.error'), i18next.t('notifications.skipError'));
     } finally {
       await this.cancelNotification(data.reminderId);
     }
@@ -383,7 +395,7 @@ export class NotificationService {
       pathname: "/(modals)/reminder-validation",
       params: {
         reminderId: data.reminderId,
-        medicationName: data.medicationName || "Médicament",
+        medicationName: data.medicationName || i18next.t('medication'),
         dosage: data.dosage || "",
         scheduledTime: data.scheduledTime || new Date().toISOString(),
         fromNotification: "true",
@@ -415,9 +427,9 @@ export class NotificationService {
     }
 
     return this.scheduleLocalNotification({
-      title: "💊 Rappel de traitement",
-      subtitle: "À prendre maintenant",
-      body: `N'oubliez pas de prendre votre traitement : ${treatmentName}.`,
+      title: i18next.t('notifications.treatmentReminderTitle'),
+      subtitle: i18next.t('notifications.treatmentReminderSubtitle'),
+      body: i18next.t('notifications.treatmentReminderBody', { treatmentName }),
       scheduledFor: reminderTime,
       type: "treatment_reminder",
       metadata: { treatmentId, treatmentName },
@@ -451,8 +463,8 @@ export class NotificationService {
     }
 
     return this.scheduleLocalNotification({
-      title: "📅 Rappel de rendez-vous",
-      body: `Votre rendez-vous avec ${doctorName} est dans ${lead} min.`,
+      title: i18next.t('notifications.appointmentReminderTitle'),
+      body: i18next.t('notifications.appointmentReminderBody', { doctorName, lead }),
       scheduledFor: triggerDate,
       type: "appointment_reminder",
       metadata: { appointmentId, doctorName },

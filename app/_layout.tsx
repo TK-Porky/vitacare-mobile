@@ -1,11 +1,12 @@
 import "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
-import messaging from "@react-native-firebase/messaging";
+import { getMessaging, setBackgroundMessageHandler } from "@react-native-firebase/messaging";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import "@/i18n";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router, useSegments } from "expo-router";
-import { View, ActivityIndicator, LogBox, InteractionManager } from "react-native";
+import { View, ActivityIndicator, LogBox } from "react-native";
 import * as Device from "expo-device";
 import { useEffect, useRef, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
@@ -114,9 +115,12 @@ export default function RootLayout() {
   });
   const [fontsTimedOut, setFontsTimedOut] = useState(false);
 
+  const accessToken = useAuthStore((s) => s.accessToken);
+
   // ─── Refs ──────────────────────────────────────────────────────────────
 
   const notificationListener = useRef<Notifications.Subscription>(null);
+  const pendingFCM = useRef<{ token: string; deviceInfo: DeviceInfo } | null>(null);
 
   // ─── Effets ─────────────────────────────────────────────────────────────
 
@@ -139,25 +143,48 @@ export default function RootLayout() {
   useEffect(() => {
     if (!ready) return;
 
-    InteractionManager.runAfterInteractions(() => {
-      const setupNotifications = async () => {
-        try {
-          await notificationService.register();
-          const fcmToken = await notificationService.getFCMToken();
-          if (fcmToken) {
-            const deviceInfo = await getDeviceInfo();
+    const setupNotifications = async () => {
+      try {
+        await notificationService.register();
+        const fcmToken = await notificationService.getFCMToken();
+        if (fcmToken) {
+          const deviceInfo = await getDeviceInfo();
+          if (accessToken) {
             await notificationService.registerDevice(fcmToken, deviceInfo);
+          } else {
+            pendingFCM.current = { token: fcmToken, deviceInfo };
           }
-          messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-            console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
-          });
-        } catch (error) {
-          console.error("❌ Erreur d'initialisation des notifications:", error);
         }
-      };
-      setupNotifications();
-    });
+        setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
+          console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
+        });
+      } catch (error) {
+        console.error("❌ Erreur d'initialisation des notifications:", error);
+      }
+    };
+
+    const handle = typeof requestIdleCallback === "function"
+      ? requestIdleCallback(() => { setupNotifications(); })
+      : setTimeout(() => { setupNotifications(); }, 0);
+
+    return () => {
+      if (typeof requestIdleCallback === "function") {
+        cancelIdleCallback(handle as number);
+      } else {
+        clearTimeout(handle as any);
+      }
+    };
   }, [ready]);
+
+  // Register pending FCM token once accessToken becomes available
+  useEffect(() => {
+    if (!accessToken) return;
+    const pending = pendingFCM.current;
+    if (pending) {
+      pendingFCM.current = null;
+      notificationService.registerDevice(pending.token, pending.deviceInfo);
+    }
+  }, [accessToken]);
 
   // Listeners de notifications
   useEffect(() => {

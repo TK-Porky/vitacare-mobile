@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { Lock, Eye, EyeOff } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { BaseInput, BaseInputProps } from '../generics/BaseInput';
 import { colors } from '../../themes';
 
@@ -11,6 +12,7 @@ type Props = Omit<BaseInputProps, 'leftSlot' | 'rightSlot' | 'secureTextEntry'>;
  * La logique show/hide est encapsulée ici — le parent n'a pas à la gérer.
  */
 export function PasswordInput(props: Props) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const Icon = visible ? EyeOff : Eye;
 
@@ -19,7 +21,7 @@ export function PasswordInput(props: Props) {
       secureTextEntry={!visible}
       autoCapitalize="none"
       autoCorrect={false}
-      placeholder="Mot de passe"
+      placeholder={t('common.password')}
       leftSlot={<Lock size={16} color={colors.inkLight} style={{ opacity: 1.0 }} />}
       rightSlot={
         <TouchableOpacity onPress={() => setVisible((v) => !v)} activeOpacity={0.7}>

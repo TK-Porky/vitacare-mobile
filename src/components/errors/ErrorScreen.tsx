@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { PrimaryButton } from "@/components/buttons/PrimaryButton";
 import {
@@ -44,37 +45,34 @@ const ERROR_CONFIG: Record<
   ErrorType,
   {
     icon: keyof typeof Ionicons.glyphMap;
-    defaultTitle: string;
-    defaultMessage: string;
+    titleKey: string;
+    messageKey: string;
   }
 > = {
   network: {
     icon: "wifi-outline",
-    defaultTitle: "Problème de connexion",
-    defaultMessage: "Veuillez vérifier votre connexion internet et réessayer.",
+    titleKey: "errorScreen.connectionTitle",
+    messageKey: "errorScreen.connectionMessage",
   },
   server: {
     icon: "server-outline",
-    defaultTitle: "Erreur serveur",
-    defaultMessage:
-      "Une erreur est survenue sur nos serveurs. Nous travaillons à résoudre le problème.",
+    titleKey: "errorScreen.serverTitle",
+    messageKey: "errorScreen.serverMessage",
   },
   payment: {
     icon: "card-outline",
-    defaultTitle: "Paiement échoué",
-    defaultMessage:
-      "Votre paiement n'a pas pu être traité. Vérifiez vos informations bancaires.",
+    titleKey: "errorScreen.paymentTitle",
+    messageKey: "errorScreen.paymentMessage",
   },
   notFound: {
     icon: "search-outline",
-    defaultTitle: "Page non trouvée",
-    defaultMessage:
-      "La page que vous recherchez n'existe pas ou a été déplacée.",
+    titleKey: "errorScreen.pageNotFoundTitle",
+    messageKey: "errorScreen.pageNotFoundMessage",
   },
   generic: {
     icon: "alert-circle-outline",
-    defaultTitle: "Une erreur est survenue",
-    defaultMessage: "Veuillez réessayer ou contacter le support.",
+    titleKey: "errorScreen.unknownTitle",
+    messageKey: "errorScreen.unknownMessage",
   },
 };
 
@@ -89,15 +87,17 @@ export function ErrorScreen({
   onRetry,
   onGoBack,
   onContactSupport,
-  retryLabel = "Réessayer",
+  retryLabel,
   showSupport = true,
   supportSheetRef,
 }: Props & {
   supportSheetRef?: React.RefObject<SupportContactBottomSheetRef>;
 }) {
+  const { t } = useTranslation();
   const config = ERROR_CONFIG[type];
-  const finalTitle = title || config.defaultTitle;
-  const finalMessage = message || config.defaultMessage;
+  const finalTitle = title || t(config.titleKey);
+  const finalMessage = message || t(config.messageKey);
+  const resolvedRetryLabel = retryLabel ?? t('common.retry');
 
   const handleRetry = () => {
     if (Platform.OS === "ios") {
@@ -139,7 +139,7 @@ export function ErrorScreen({
         </View>
 
         {/* Error Code (optional) */}
-        {errorCode && <Text style={styles.errorCode}>Erreur {errorCode}</Text>}
+        {errorCode && <Text style={styles.errorCode}>{t('errorScreen.errorCode')} {errorCode}</Text>}
 
         {/* Title */}
         <Text style={styles.title}>{finalTitle}</Text>
@@ -151,7 +151,7 @@ export function ErrorScreen({
         <View style={styles.actions}>
           {onRetry && (
             <PrimaryButton
-              label={retryLabel}
+              label={resolvedRetryLabel}
               fullWidth
               onPress={handleRetry}
               size="lg"
@@ -178,7 +178,7 @@ export function ErrorScreen({
                   size={20}
                   color={colors.inkLight}
                 />
-                <Text style={styles.secondaryButtonText}>Retour</Text>
+                <Text style={styles.secondaryButtonText}>{t('common.back')}</Text>
               </TouchableOpacity>
             )}
 
@@ -194,7 +194,7 @@ export function ErrorScreen({
                   color={colors.inkLight}
                 />
                 <Text style={styles.secondaryButtonText}>
-                  Contacter le support
+                  {t('errorScreen.contactSupport')}
                 </Text>
               </TouchableOpacity>
             )}

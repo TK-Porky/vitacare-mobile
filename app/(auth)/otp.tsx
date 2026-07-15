@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { OTPInput, TopBar, HelperText, PrimaryButton } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useAuth } from "@/hooks";
@@ -25,6 +26,7 @@ const RESEND_DELAY = 60;
 // Main
 // ================================================================================== //
 export default function OTPScreen() {
+  const { t } = useTranslation();
   // ================================================================================== //
   // States
   // ================================================================================== //
@@ -94,7 +96,7 @@ export default function OTPScreen() {
     setLocalError("");
     clearStoreError();
 
-    Alert.alert("Code renvoyé", "Un nouveau code a été envoyé au " + phone);
+    Alert.alert(t("auth.otp.title"), t("auth.otp.subtitle", { phone }));
   };
 
   // ================================================================================== //
@@ -111,10 +113,9 @@ export default function OTPScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Code de confirmation</Text>
+        <Text style={styles.title}>{t("auth.otp.title")}</Text>
         <Text style={styles.subtitle}>
-          Entrez le code envoyé par SMS au{" "}
-          <Text style={styles.phone}>{phone}</Text>
+          {t("auth.otp.subtitle", { phone })}
         </Text>
 
         <View style={styles.otpWrapper}>
@@ -143,14 +144,14 @@ export default function OTPScreen() {
               <Text
                 style={[styles.resend, countdown > 0 && styles.resendDisabled]}
               >
-                {countdown > 0 ? `Renvoyer (${countdown}s)` : "Renvoyer"}
+                {countdown > 0 ? t("auth.otp.resendCooldown", { seconds: countdown }) : t("auth.otp.resend")}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <PrimaryButton
-          label="Confirmer"
+          label={t("auth.otp.verifyButton")}
           fullWidth
           isLoading={isVerifyingOtp}
           isDisabled={code.length !== OTP_LENGTH}

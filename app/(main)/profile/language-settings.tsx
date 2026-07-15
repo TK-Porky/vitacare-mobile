@@ -10,41 +10,44 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CheckCircle2 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+import i18next from '@/i18n';
 import { colors, fontFamily, fontSize } from '../../../src/themes';
 import { TopBar, HelperText } from '../../../src/components';
 import { useProfile } from '../../../src/hooks';
 
 type Language = {
   id: string;
-  label: string;
   nativeLabel: string;
   flag: string;
 };
 
 const LANGUAGES: Language[] = [
-  { id: 'fr', label: 'Français', nativeLabel: 'Français', flag: '🇫🇷' },
-  { id: 'en', label: 'Anglais',  nativeLabel: 'English', flag: '🇬🇧' },
+  { id: 'fr', nativeLabel: 'Français', flag: '🇫🇷' },
+  { id: 'en', nativeLabel: 'English', flag: '🇬🇧' },
 ];
 
 export default function LanguageSettingsScreen() {
+  const { t } = useTranslation();
   const { updatePreferences, isUpdatingPreferences, error } = useProfile();
   const [selectedLang, setSelectedLang] = useState('fr');
 
   const handleSelect = async (langId: string) => {
     setSelectedLang(langId);
+    i18next.changeLanguage(langId);
     await updatePreferences({ language: langId });
   };
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
-      <TopBar title="Langue" />
+      <TopBar title={t('profile.languageScreen.title')} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Choisissez votre langue</Text>
+          <Text style={styles.title}>{t('profile.languageScreen.subtitle')}</Text>
           <Text style={styles.subtitle}>
-            Sélectionnez la langue préférée pour l'interface de l'application.
+            {t('profile.chooseLanguage')}
           </Text>
         </View>
 
@@ -64,7 +67,7 @@ export default function LanguageSettingsScreen() {
                 </View>
                 
                 <View style={styles.langInfo}>
-                  <Text style={styles.langLabel}>{lang.label}</Text>
+                  <Text style={styles.langLabel}>{t(`profile.languageScreen.${lang.id === 'fr' ? 'french' : 'english'}`)}</Text>
                   <Text style={styles.nativeLabel}>{lang.nativeLabel}</Text>
                 </View>
 

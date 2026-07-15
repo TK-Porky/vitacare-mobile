@@ -1,8 +1,9 @@
 // app/(main)/(tabs)/appointments.tsx
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { StyleSheet, StatusBar, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { colors } from "@/themes";
 import { Appointment } from "@/types";
 import {
@@ -22,6 +23,7 @@ import {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function AppointmentScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const appointmentRef = useRef<AppointmentDetailBottomSheetRef>(null);
 
@@ -39,16 +41,34 @@ export default function AppointmentScreen() {
     refresh,
     isCancelling,
     cancelAppointment,
+    deleteAppointment,
+    clearCancelledAppointments,
     markAppointmentAsPaid,
   } = useAppointments();
 
   const paymentManager = useRef<PaymentSheetManagerRef>(null);
+
+  const params = useLocalSearchParams<{ payAppointmentId?: string }>();
 
   const handleCardPress = useCallback((item: Appointment) => {
     setSelectedItem(toSheetData(item));
     setSelectedAppointmentId(String(item.id || 0));
     appointmentRef.current?.open();
   }, []);
+
+  const [hasHandledPayParam, setHasHandledPayParam] = useState(false);
+
+  useEffect(() => {
+    if (!params.payAppointmentId || hasHandledPayParam || appointments.length === 0) return;
+
+    const target = appointments.find(
+      (a) => String(a.id) === params.payAppointmentId,
+    );
+    if (!target) return;
+
+    setHasHandledPayParam(true);
+    handleCardPress(target);
+  }, [params.payAppointmentId, hasHandledPayParam, appointments]);
 
   const handleCancel = useCallback(async () => {
     if (!selectedAppointmentId) return;
@@ -60,6 +80,17 @@ export default function AppointmentScreen() {
       setSelectedAppointmentId(undefined);
     }
   }, [selectedAppointmentId, cancelAppointment]);
+
+  const handleDelete = useCallback(async () => {
+    if (!selectedAppointmentId) return;
+    await deleteAppointment(selectedAppointmentId);
+    setSelectedItem(undefined);
+    setSelectedAppointmentId(undefined);
+  }, [selectedAppointmentId, deleteAppointment]);
+
+  const handleClearCancelled = useCallback(async () => {
+    await clearCancelledAppointments();
+  }, [clearCancelledAppointments]);
 
   const handleReservation = useCallback(() => {
     router.push("/booking" as never);
@@ -80,18 +111,24 @@ export default function AppointmentScreen() {
     if (!selectedAppointmentId) return;
     try {
       await markAppointmentAsPaid(selectedAppointmentId);
-      Alert.alert("Succès", "Paiement effectué avec succès !");
+      Alert.alert(t('common.success'), t('booking.success'));
       refresh();
       appointmentRef.current?.close();
       setSelectedItem(undefined);
       setSelectedAppointmentId(undefined);
     } catch (error) {
       Alert.alert(
-        "Erreur",
-        "Impossible de marquer le paiement comme effectué.",
+        t('common.error'),
+        t('errors.somethingWrong'),
       );
     }
   }, [selectedAppointmentId, markAppointmentAsPaid, refresh]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
 
   // ── Rendu d'erreur ──
   if (error && !isLoading) {
@@ -102,7 +139,7 @@ export default function AppointmentScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.primary} />
 
-      <AppHeader title="Rendez-vous" />
+      <AppHeader title={t('appointments.title')} />
 
       <TabsSection activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -113,6 +150,8 @@ export default function AppointmentScreen() {
         activeTab={activeTab}
         onRefresh={refresh}
         onCardPress={handleCardPress}
+        cancelledCount={appointments.filter((a) => a.status === "CANCELLED").length}
+        onClearCancelled={handleClearCancelled}
       />
 
       {/* ── BottomSheet de détail avec paiement ── */}
@@ -123,6 +162,7 @@ export default function AppointmentScreen() {
         onReschedule={handleReservation}
         onBookAgain={handleReservation}
         onCancel={handleCancel}
+        onDelete={handleDelete}
         onShowOnMap={handleShowOnMap}
         onPay={handlePay}
         isCancelling={isCancelling}

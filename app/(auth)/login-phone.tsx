@@ -16,6 +16,7 @@ import { PhoneInput, HelperText, PrimaryButton } from "@/components";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { isValidCMPhone } from "@/utils";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useAuth } from "@/hooks";
 import { useAuthStore } from "@/store";
@@ -24,6 +25,7 @@ import { useAuthStore } from "@/store";
 // Main
 // ================================================================================== //
 export default function LoginPhoneScreen() {
+  const { t } = useTranslation();
   // ================================================================================== //
   // States
   // ================================================================================== //
@@ -51,7 +53,7 @@ export default function LoginPhoneScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (!isValidCMPhone(phone)) {
-      setLocalError("Numéro de téléphone invalide.");
+      setLocalError(t("auth.loginPhone.invalidPhone"));
       if (Platform.OS === "ios") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
@@ -65,7 +67,7 @@ export default function LoginPhoneScreen() {
     }
 
     loginPhone({ phone });
-  }, [phone, clearStoreError, loginPhone]);
+  }, [phone, clearStoreError, loginPhone, t]);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -105,8 +107,8 @@ export default function LoginPhoneScreen() {
       >
         {/* ── Header ── */}
         <AuthHeader
-          title="Connexion par Téléphone"
-          subtitle="Entrez votre numéro pour recevoir le code de confirmation"
+          title={t("auth.loginPhone.title")}
+          subtitle={t("auth.loginPhone.subtitle")}
           showBack
           onBack={handleBack}
         />
@@ -114,35 +116,35 @@ export default function LoginPhoneScreen() {
         {/* ── Form ── */}
         <View style={styles.form}>
           <View style={styles.phoneWrapper}>
-            <PhoneInput
-              value={phone}
-              onChangeText={(text) => {
-                setPhone(text);
-                if (localError) setLocalError("");
-                if (storeError) clearStoreError();
-              }}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              error={!!errorMessage}
-              placeholder="6 XX XX XX XX"
-              autoFocus
-            />
-          </View>
+              <PhoneInput
+                value={phone}
+                onChangeText={(text) => {
+                  setPhone(text);
+                  if (localError) setLocalError("");
+                  if (storeError) clearStoreError();
+                }}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                error={!!errorMessage}
+                placeholder={t("auth.loginPhone.phonePlaceholder")}
+                autoFocus
+              />
+            </View>
 
-          {errorMessage ? (
-            <HelperText message={errorMessage as string} type="error" />
-          ) : (
-            <HelperText
-              message="Un code de confirmation vous sera envoyé par SMS"
-              type="info"
-            />
-          )}
+            {errorMessage ? (
+              <HelperText message={errorMessage as string} type="error" />
+            ) : (
+              <HelperText
+                message={t("auth.loginPhone.infoMessage")}
+                type="info"
+              />
+            )}
         </View>
 
         {/* ── Actions ── */}
         <View style={styles.actions}>
           <AuthButton
-            label="Recevoir le code par SMS"
+            label={t("auth.loginPhone.sendCode")}
             onPress={handleSubmit}
             variant="primary"
             fullWidth
@@ -157,23 +159,27 @@ export default function LoginPhoneScreen() {
         {/* ── Footer ── */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Vous n'avez pas de compte ?{" "}
+            {t("auth.loginPhone.noAccount")}{" "}
             <Text style={styles.legalLink} onPress={handleSignUp}>
-              S'inscrire
+              {t("auth.loginPhone.signUp")}
             </Text>
           </Text>
 
-          {/* Légal */}
           <Text style={styles.legal}>
-            En continuant, vous acceptez nos{" "}
-            <Text style={styles.legalLink} onPress={handleTerms}>
-              Conditions d'utilisation
-            </Text>{" "}
-            et notre{" "}
-            <Text style={styles.legalLink} onPress={handlePrivacy}>
-              Politique de confidentialité
-            </Text>
-            .
+            {(() => {
+              const legalText = t("auth.loginPhone.legalNotice", { terms: "||TERMS||", privacy: "||PRIVACY||" });
+              const [before, afterTerms] = legalText.split("||TERMS||");
+              const [middle, afterPrivacy] = afterTerms.split("||PRIVACY||");
+              return (
+                <>
+                  <Text>{before}</Text>
+                  <Text style={styles.legalLink} onPress={handleTerms}>{t("auth.loginPhone.terms")}</Text>
+                  <Text>{middle}</Text>
+                  <Text style={styles.legalLink} onPress={handlePrivacy}>{t("auth.loginPhone.privacy")}</Text>
+                  <Text>{afterPrivacy}</Text>
+                </>
+              );
+            })()}
           </Text>
         </View>
       </ScrollView>

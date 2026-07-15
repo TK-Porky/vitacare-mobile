@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Pill } from "lucide-react-native";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { Reminder } from "@/constants/reminders";
@@ -31,6 +32,8 @@ export const ReminderCard = React.memo(({
   isSnoozing,
   isDeleting,
 }: ReminderCardProps) => {
+  const { t } = useTranslation();
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PENDING":
@@ -49,29 +52,29 @@ export const ReminderCard = React.memo(({
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "En attente";
+        return t("reminders.filters.PENDING");
       case "TAKEN":
-        return "✓ Pris";
+        return t("reminders.filters.TAKEN");
       case "MISSED":
-        return "✗ Manqué";
+        return t("reminders.filters.MISSED");
       case "SNOOZED":
-        return "⏰ Reporté";
+        return t("reminders.filters.SNOOZED");
       default:
         return status;
     }
   };
 
   const isActionable = item.status === "PENDING" || item.status === "SNOOZED";
-  const medicationName = item.medicationName || item.name || "Médicament";
+  const medicationName = item.medicationName || item.name || t("medications.available");
   const dosage = item.medicationDosage || item.dosage || "";
-  const time = item.scheduledHour || item.time || "Heure non définie";
+  const time = item.scheduledHour || item.time || t("reminders.addForm.time");
 
   return (
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.7}
       onPress={() => onView?.(String(item.id))}
-      accessibilityLabel={`Rappel pour ${medicationName}`}
+      accessibilityLabel={`${t("reminders.title")} ${medicationName}`}
       accessibilityRole="button"
     >
       <View style={styles.cardIcon}>
@@ -98,7 +101,7 @@ export const ReminderCard = React.memo(({
         </Text>
         {item.snoozedUntil && (
           <Text style={styles.snoozedText}>
-            Reporté jusqu'à: {new Date(item.snoozedUntil).toLocaleTimeString()}
+            {`${t("reminders.snoozed")}: ${new Date(item.snoozedUntil).toLocaleTimeString()}`}
           </Text>
         )}
       </View>
@@ -109,20 +112,20 @@ export const ReminderCard = React.memo(({
             style={[styles.actionButton, styles.takenButton]}
             onPress={() => onMarkAsTaken?.(String(item.id))}
             disabled={isMarkingAsTaken}
-            accessibilityLabel="Marquer comme pris"
+            accessibilityLabel={t("reminders.markAsTaken")}
             accessibilityRole="button"
           >
             {isMarkingAsTaken ? (
               <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <Text style={styles.actionButtonText}>Prendre</Text>
+              <Text style={styles.actionButtonText}>{t("reminders.taken")}</Text>
             )}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.snoozeButton]}
             onPress={() => onSnooze?.(String(item.id), 15)}
             disabled={isSnoozing}
-            accessibilityLabel="Reporter le rappel"
+            accessibilityLabel={t("reminders.snooze")}
             accessibilityRole="button"
           >
             {isSnoozing ? (
@@ -135,7 +138,7 @@ export const ReminderCard = React.memo(({
             style={[styles.actionButton, styles.deleteButton]}
             onPress={() => onDelete?.(String(item.id))}
             disabled={isDeleting}
-            accessibilityLabel="Supprimer le rappel"
+            accessibilityLabel={t("reminders.delete")}
             accessibilityRole="button"
           >
             {isDeleting ? (

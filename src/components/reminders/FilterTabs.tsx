@@ -1,7 +1,8 @@
 import React from "react";
 import { ScrollView, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
-import { FilterStatus, STATUS_LABELS } from "@/constants/reminders";
+import { FilterStatus, getStatusLabels } from "@/constants/reminders";
 
 type FilterTabsProps = {
   value: FilterStatus;
@@ -9,6 +10,8 @@ type FilterTabsProps = {
 };
 
 export const FilterTabs = ({ value, onChange }: FilterTabsProps) => {
+  const { t } = useTranslation();
+  const STATUS_LABELS = getStatusLabels(t);
   const statuses: FilterStatus[] = [
     "ALL",
     "PENDING",
@@ -29,7 +32,7 @@ export const FilterTabs = ({ value, onChange }: FilterTabsProps) => {
           key={status}
           style={[styles.filterTab, value === status && styles.filterTabActive]}
           onPress={() => onChange(status)}
-          accessibilityLabel={`Filtrer par ${STATUS_LABELS[status]}`}
+          accessibilityLabel={`${t("accessibility.search")} ${STATUS_LABELS[status]}`}
           accessibilityRole="button"
         >
           <Text

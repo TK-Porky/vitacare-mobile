@@ -1,5 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { AppBottomSheet, AppBottomSheetRef } from '../generics/AppBottomSheet';
 import { PhoneInput } from '../inputs/PhoneInput';
@@ -91,6 +92,7 @@ function CardField({
 
 export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
   ({ appointmentId, amount, onSuccess }, ref) => {
+    const { t } = useTranslation();
     const sheetRef = useRef<AppBottomSheetRef>(null);
     const [cardNumber,   setCardNumber]   = useState('');
     const [expiry,       setExpiry]       = useState('');
@@ -134,7 +136,7 @@ export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
           setModal({
             visible: true,
             type: 'error',
-            message: result.failureReason || 'Carte refusée. Vérifiez les informations et réessayez.',
+            message: result.failureReason || t('errors.somethingWrong'),
           });
         }
       } catch (err: any) {
@@ -142,7 +144,7 @@ export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
         setModal({
           visible: true,
           type: 'error',
-          message: err?.message || 'Erreur de paiement. Veuillez réessayer.',
+          message: err?.message || t('errors.somethingWrong'),
         });
       }
     };
@@ -179,19 +181,19 @@ export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
             <View style={styles.cardIconRing}>
               <Ionicons name="card-outline" size={32} color={colors.ink} />
             </View>
-            <Text style={styles.title}>Paiement par carte</Text>
-            <Text style={styles.subtitle}>Carte bancaire sécurisée</Text>
+            <Text style={styles.title}>{t('booking.payNow')}</Text>
+            <Text style={styles.subtitle}>{t('booking.payNow')}</Text>
           </View>
 
           {/* ── Amount pill ── */}
           <View style={styles.amountPill}>
-            <Text style={styles.amountLabel}>Montant à payer</Text>
+            <Text style={styles.amountLabel}>{t('booking.payment')}</Text>
             <Text style={styles.amountValue}>{fmt(amount)}</Text>
           </View>
 
           {/* ── Card number ── */}
           <CardField
-            label="Numéro de carte"
+            label={t('booking.payment')}
             value={cardNumber}
             onChangeText={handleCardNumberChange}
             placeholder="XXXX XXXX XXXX XXXX"
@@ -202,7 +204,7 @@ export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
           {/* ── Expiry + CVV row ── */}
           <View style={styles.row}>
             <CardField
-              label="Expiration"
+              label={t('common.info')}
               value={expiry}
               onChangeText={handleExpiryChange}
               placeholder="MM/AA"
@@ -224,7 +226,7 @@ export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
 
           {/* ── Cardholder name ── */}
           <CardField
-            label="Nom sur la carte"
+            label={t('common.name')}
             value={cardHolder}
             onChangeText={setCardHolder}
             placeholder="PRÉNOM NOM"
@@ -232,7 +234,7 @@ export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
 
           {/* ── Phone (required by backend) ── */}
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Téléphone de contact</Text>
+            <Text style={styles.fieldLabel}>{t('common.phone')}</Text>
             <PhoneInput
               value={phone}
               onChangeText={setPhone}
@@ -244,14 +246,14 @@ export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
           <View style={styles.securityBadge}>
             <Ionicons name="lock-closed-outline" size={14} color={colors.inkMuted} />
             <Text style={styles.securityText}>
-              Paiement sécurisé SSL 256-bit. Vos données ne sont jamais stockées.
+              {t('booking.payNow')}
             </Text>
           </View>
 
           {/* ── Pay button ── */}
           <View style={styles.buttonWrap}>
             <PrimaryButton
-              label={processing ? 'Traitement en cours…' : `Payer ${fmt(amount)}`}
+              label={processing ? t('common.loading') : `${t('booking.payNow')} ${fmt(amount)}`}
               fullWidth
               isLoading={processing}
               isDisabled={!isValid || processing}

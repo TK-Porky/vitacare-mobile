@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
 
@@ -22,6 +23,7 @@ export const SearchHeader = ({
   onClear,
   onBack,
 }: SearchHeaderProps) => {
+  const { t } = useTranslation();
   const inputRef = useRef<TextInput>(null);
 
   return (
@@ -35,7 +37,7 @@ export const SearchHeader = ({
           style={styles.input}
           value={query}
           onChangeText={onQueryChange}
-          placeholder="Rechercher un médicament..."
+          placeholder={t("medications.searchPlaceholder")}
           placeholderTextColor={colors.inkMuted}
           autoFocus
           returnKeyType="search"

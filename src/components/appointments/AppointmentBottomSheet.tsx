@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { AppBottomSheet, AppBottomSheetRef } from "@/components/generics";
 import { PrimaryButton } from "@/components/buttons/PrimaryButton";
@@ -31,6 +32,7 @@ type Props = {
   isCancelling?: boolean;
   onReschedule?: () => void;
   onCancel?: () => void;
+  onDelete?: () => void;
   onBookAgain?: () => void;
   onDownload?: () => void;
   onShowOnMap?: () => void;
@@ -43,46 +45,52 @@ type Props = {
 
 const STATUS_CONFIG: Record<
   AppointmentStatus,
-  { label: string; bg: string; color: string }
+  { labelKey: string; bg: string; color: string }
 > = {
-  CONFIRMED: { label: "Confirmé", bg: "#E8FFF0", color: "#1A7F3C" },
-  PENDING: { label: "En attente", bg: "#FFF8ED", color: "#B45309" },
-  PAID: { label: "Payé", bg: "#E8FFF0", color: "#1A7F3C" },
-  CANCELLED: { label: "Annulé", bg: "#FFF0F0", color: "#B91C1C" },
-  NO_SHOW: { label: "Non présenté", bg: "#FFF0F0", color: "#B91C1C" },
-  IN_PROGRESS: { label: "En cours", bg: "#E8F0FE", color: "#1A56DB" },
-  RESCHEDULED: { label: "Reporté", bg: "#FFF0F0", color: "#B91C1C" },
-  COMPLETED: { label: "Terminé", bg: "#E8FFF0", color: "#1A7F3C" },
+  CONFIRMED: { labelKey: "CONFIRMED", bg: "#E8FFF0", color: "#1A7F3C" },
+  PENDING: { labelKey: "PENDING", bg: "#FFF8ED", color: "#B45309" },
+  PAID: { labelKey: "PAID", bg: "#E8FFF0", color: "#1A7F3C" },
+  CANCELLED: { labelKey: "CANCELLED", bg: "#FFF0F0", color: "#B91C1C" },
+  NO_SHOW: { labelKey: "NO_SHOW", bg: "#FFF0F0", color: "#B91C1C" },
+  IN_PROGRESS: { labelKey: "IN_PROGRESS", bg: "#E8F0FE", color: "#1A56DB" },
+  RESCHEDULED: { labelKey: "RESCHEDULED", bg: "#FFF0F0", color: "#B91C1C" },
+  COMPLETED: { labelKey: "COMPLETED", bg: "#E8FFF0", color: "#1A7F3C" },
   PAYMENT_PENDING: {
-    label: "En attente de paiement",
+    labelKey: "PAYMENT_PENDING",
     bg: "#FEF3C7",
     color: "#D97706",
   },
 };
 
-const DEFAULT_STATUS = {
-  label: "Inconnu",
-  bg: colors.surface,
-  color: colors.inkLight,
-};
+const DEFAULT_STATUS_KEY = "PENDING";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// ✅ Correction: Conserver le signe pour les nombres négatifs
 const formatPrice = (n: number): string => {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
   return sign + abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 };
 
+const formatPaymentMethod = (method: string): string => {
+  const map: Record<string, string> = {
+    "mobile_money": "Mobile Money",
+    "orange_money": "Orange Money",
+    "card": "Carte bancaire",
+    "Espèces": "Espèces",
+    "especes": "Espèces",
+  };
+  return map[method] || method;
+};
+
 // ✅ Valeurs par défaut
 const DEFAULT_APPOINTMENT: Partial<Appointment> = {
-  title: "Rendez-vous",
-  reason: "Motif non spécifié",
-  doctorName: "Dr. Inconnu",
-  specialty: "Spécialiste",
-  clinic: "Clinique non spécifiée",
-  address: "Adresse non spécifiée",
+  title: "",
+  reason: "",
+  doctorName: "",
+  specialty: "",
+  clinic: "",
+  address: "",
   time: "",
 };
 
@@ -122,7 +130,7 @@ const PaymentRow = memo(
   }) => (
     <View style={styles.paymentMethod}>
       <Ionicons name={icon} size={22} color={colors.ink} />
-      <Text style={styles.paymentMethodText}>{label || "Non spécifié"}</Text>
+      <Text style={styles.paymentMethodText}>{label || ""}</Text>
     </View>
   ),
 );
@@ -141,6 +149,7 @@ export const AppointmentDetailBottomSheet = forwardRef<
       isCancelling = false,
       onReschedule,
       onCancel,
+      onDelete,
       onBookAgain,
       onDownload,
       onShowOnMap,
@@ -150,6 +159,7 @@ export const AppointmentDetailBottomSheet = forwardRef<
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     const sheetRef = useRef<AppBottomSheetRef>(null);
 
     useImperativeHandle(ref, () => ({
@@ -174,13 +184,18 @@ export const AppointmentDetailBottomSheet = forwardRef<
       doctorAvatarUri,
       avatarUri,
       invoiceLines = [],
-      paymentMethod = "Non spécifié",
+      paymentMethod = "",
     } = appointment;
 
     const currencySymbol = currency ?? "XCFA";
     const fmt = (n: number) => `${formatPrice(n)} ${currencySymbol}`;
-    const statusCfg = STATUS_CONFIG[status] ?? DEFAULT_STATUS;
+    const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG[DEFAULT_STATUS_KEY];
     const { day, month, year } = parseAppointmentDate(appointment.date);
+
+    const isOnlinePayment =
+      paymentMethod === "mobile_money" ||
+      paymentMethod === "orange_money" ||
+      paymentMethod === "card";
 
     // ✅ Gestion du format de la date
     const dateString =
@@ -207,16 +222,34 @@ export const AppointmentDetailBottomSheet = forwardRef<
 
     const handleCancel = () => {
       Alert.alert(
-        "Annuler le rendez-vous",
-        "Êtes-vous sûr de vouloir annuler ce rendez-vous ? Cette action est irréversible.",
+        t('appointments.cancel'),
+        t('appointments.cancel'),
         [
-          { text: "Garder le RDV", style: "cancel" },
+          { text: t('common.cancel'), style: "cancel" },
           {
-            text: "Confirmer l'annulation",
+            text: t('common.confirm'),
             style: "destructive",
             onPress: () => {
               sheetRef.current?.close();
               onCancel?.();
+            },
+          },
+        ],
+      );
+    };
+
+    const handleDelete = () => {
+      Alert.alert(
+        t('appointments.deleteTitle'),
+        t('appointments.deleteMessage'),
+        [
+          { text: t('common.cancel'), style: "cancel" },
+          {
+            text: t('common.delete'),
+            style: "destructive",
+            onPress: () => {
+              sheetRef.current?.close();
+              onDelete?.();
             },
           },
         ],
@@ -237,8 +270,8 @@ export const AppointmentDetailBottomSheet = forwardRef<
       try {
         // TODO: Implement PDF Ticket Generation
         Alert.alert(
-          "Bientôt disponible",
-          "La génération de tickets PDF sera disponible prochainement.",
+          t('common.info'),
+          t('common.loading'),
         );
         // Si la feature est implémentée
         if (onDownload) {
@@ -246,7 +279,7 @@ export const AppointmentDetailBottomSheet = forwardRef<
         }
       } catch (error) {
         console.error("Download error:", error);
-        Alert.alert("Erreur", "Impossible de générer le ticket.");
+        Alert.alert(t('common.error'), t('errors.somethingWrong'));
       }
     };
 
@@ -258,7 +291,8 @@ export const AppointmentDetailBottomSheet = forwardRef<
 
     // ✅ Déterminer l'icône de paiement
     const paymentIcon: keyof typeof Ionicons.glyphMap =
-      paymentMethod === "Espèces" ? "cash-outline" : "card-outline";
+      paymentMethod === "Espèces" || paymentMethod === "especes" ? "cash-outline" : "card-outline";
+    const paymentLabel = formatPaymentMethod(paymentMethod);
 
     return (
       <AppBottomSheet
@@ -310,29 +344,29 @@ export const AppointmentDetailBottomSheet = forwardRef<
                 style={[styles.statusDot, { backgroundColor: statusCfg.color }]}
               />
               <Text style={[styles.statusLabel, { color: statusCfg.color }]}>
-                {statusCfg.label}
+                {t(`appointments.status.${statusCfg.labelKey}`)}
               </Text>
             </View>
 
             <View style={styles.totalBlock}>
-              <Text style={styles.totalCaption}>Total estimé</Text>
+              <Text style={styles.totalCaption}>{t('booking.payment')}</Text>
               <Text style={styles.totalValue}>{fmt(total)}</Text>
             </View>
           </View>
         </View>
 
         {/* ── Motif ── */}
-        <SectionTitle>Motif</SectionTitle>
+        <SectionTitle>{t('appointments.reason')}</SectionTitle>
         <Text style={styles.bodyText}>{reason}</Text>
 
         {/* ── Date & Heure ── */}
-        <SectionTitle>Date & Heure</SectionTitle>
+        <SectionTitle>{t('appointments.date') + ' & ' + t('appointments.time')}</SectionTitle>
         <InfoRow icon="calendar-outline">
           <Text style={styles.bodyText}>{dateString}</Text>
         </InfoRow>
 
         {/* ── Lieux ── */}
-        <SectionTitle>Lieux</SectionTitle>
+        <SectionTitle>{t('appointments.clinic')}</SectionTitle>
         <InfoRow icon="location-outline">
           <Text style={styles.bodyText}>
             <Text style={styles.boldInline}>{clinic}</Text>
@@ -351,20 +385,26 @@ export const AppointmentDetailBottomSheet = forwardRef<
 
         {/* ── Carte ── */}
         <GrayButton
-          label="Montrer sur la Carte"
+          label={t('map.directions')}
           icon="map-outline"
           onPress={handleShowOnMap}
           style={styles.mapBtn}
         />
 
-        {/* ── Méthodes de paiements ── */}
-        <SectionTitle>Méthodes de paiements</SectionTitle>
-        <PaymentRow icon={paymentIcon} label={paymentMethod} />
+        {/* ── Voie de paiement ── */}
+        <SectionTitle>{t('booking.channel')}</SectionTitle>
+        <InfoRow icon={isOnlinePayment ? "globe-outline" : "cash-outline"}>
+          <Text style={styles.bodyText}>
+            {isOnlinePayment ? "Paiement en ligne" : "Paiement sur place"}
+          </Text>
+        </InfoRow>
+
+        {/* ── Mode de paiement ── */}
+        <SectionTitle>{t('booking.payment')}</SectionTitle>
+        <PaymentRow icon={paymentIcon} label={paymentLabel} />
 
         {/* ── Facture ── */}
-        <SectionTitle>Facture</SectionTitle>
-
-        {invoiceLines.length > 0 ? (
+        {invoiceLines.length > 0 && (
           <>
             {invoiceLines.map((line, index) => (
               <View key={index} style={styles.invoiceLine}>
@@ -383,19 +423,17 @@ export const AppointmentDetailBottomSheet = forwardRef<
             ))}
 
             <View style={styles.totalLine}>
-              <Text style={styles.totalLineLabel}>Total</Text>
+              <Text style={styles.totalLineLabel}>{t('booking.payment')}</Text>
               <Text style={styles.totalLineAmount}>{fmt(total)}</Text>
             </View>
           </>
-        ) : (
-          <Text style={styles.bodyText}>Aucune facture disponible</Text>
         )}
 
         <View style={styles.actionsRow}>
-          {status === "PAYMENT_PENDING" ? (
+          {status === "PAYMENT_PENDING" || (status === "CONFIRMED" && isOnlinePayment) ? (
             <>
               <PrimaryButton
-                label="Payer maintenant"
+                label={t('booking.payNow')}
                 variant="solid"
                 size="md"
                 fullWidth={false}
@@ -404,35 +442,46 @@ export const AppointmentDetailBottomSheet = forwardRef<
                 isDisabled={isCancelling}
               />
               <GrayButton
-                label="Annuler"
+                label={t('common.cancel')}
                 onPress={handleCancel}
                 style={styles.cancelButton}
                 disabled={isCancelling}
               />
             </>
           ) : actionVariant === "reschedule" ? (
-            <>
-              <PrimaryButton
-                label="Réprogrammer"
-                variant="solid"
-                size="md"
-                fullWidth={true}
-                onPress={handleReschedule}
-                style={styles.rescheduleButton}
-                isDisabled={isCancelling}
-              />
-              {statusCfg.label !== "Annulé" && (
+            statusCfg.labelKey === "CANCELLED" ? (
+              <>
                 <GrayButton
-                  label="Annuler"
-                  onPress={handleCancel}
+                  label={t('common.delete')}
+                  icon="trash-outline"
+                  onPress={handleDelete}
                   style={styles.cancelButton}
-                  disabled={isCancelling}
                 />
-              )}
-            </>
+              </>
+            ) : (
+              <>
+                <PrimaryButton
+                  label={t('appointments.reschedule')}
+                  variant="solid"
+                  size="md"
+                  fullWidth={true}
+                  onPress={handleReschedule}
+                  style={styles.rescheduleButton}
+                  isDisabled={isCancelling}
+                />
+                {statusCfg.labelKey !== "CANCELLED" && (
+                  <GrayButton
+                    label={t('common.cancel')}
+                    onPress={handleCancel}
+                    style={styles.cancelButton}
+                    disabled={isCancelling}
+                  />
+                )}
+              </>
+            )
           ) : (
             <PrimaryButton
-              label="Réserver à nouveau"
+              label={t('booking.title')}
               variant="solid"
               fullWidth={false}
               size="md"

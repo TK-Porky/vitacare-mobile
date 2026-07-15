@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, fontSize, fontFamily } from '../../themes';
 
 interface MonthHeaderProps {
@@ -12,11 +13,12 @@ interface MonthHeaderProps {
 }
 
 export function MonthHeader({ monthLabel, count }: MonthHeaderProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.monthRow}>
       <Text style={styles.monthLabel}>{monthLabel}</Text>
       <View style={styles.monthLine} />
-      <Text style={styles.monthCount}>{count} Rendez-vous</Text>
+      <Text style={styles.monthCount}>{t('appointments.count', { count })}</Text>
     </View>
   );
 }

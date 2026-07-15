@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { MoreHorizontal } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { PrimaryButton } from "@/components/buttons";
 import { ClinicProvider } from "@/types";
@@ -55,8 +56,8 @@ const truncateDescription = (
 const DoctorRow = memo(
   ({
     avatar,
-    name = "Docteur",
-    specialty = "Spécialiste",
+    name,
+    specialty,
     price,
     onMore,
     onProfile,
@@ -68,14 +69,17 @@ const DoctorRow = memo(
     onMore?: () => void;
     onProfile?: () => void;
   }) => {
-    const initial = name?.[0] || "?";
+    const { t } = useTranslation();
+    const resolvedName = name || t('provider.doctorNameDefault');
+    const resolvedSpecialty = specialty || t('provider.specialtyDefault');
+    const initial = resolvedName?.[0] || "?";
 
     return (
       <View style={styles.doctorRow}>
         <TouchableOpacity
           style={styles.avatar}
           onPress={onProfile}
-          accessibilityLabel={`Profil de ${name}`}
+          accessibilityLabel={t('provider.profileOf', { name: resolvedName })}
           accessibilityRole="button"
         >
           {avatar ? (
@@ -91,11 +95,11 @@ const DoctorRow = memo(
 
         <View style={styles.doctorInfo}>
           <Text style={styles.doctorName} onPress={onProfile} numberOfLines={1}>
-            {name}
+            {resolvedName}
           </Text>
           <View style={styles.doctorMeta}>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{specialty}</Text>
+              <Text style={styles.badgeText}>{resolvedSpecialty}</Text>
             </View>
             <Text style={styles.price}> • {price}</Text>
           </View>
@@ -105,7 +109,7 @@ const DoctorRow = memo(
           onPress={onMore}
           activeOpacity={0.7}
           style={styles.moreBtn}
-          accessibilityLabel={`Plus d'options pour ${name}`}
+          accessibilityLabel={t('provider.moreOptionsFor', { name: resolvedName })}
           accessibilityRole="button"
         >
           <MoreHorizontal size={18} color={colors.inkLight} />
@@ -188,11 +192,11 @@ ClinicImage.displayName = "ClinicImage";
  */
 const ClinicInfo = memo(
   ({
-    clinicName = "Nom non spécifié",
-    description = "Aucune description disponible",
-    hours = "Horaires non spécifiés",
-    days = "Jours non spécifiés",
-    location = "Adresse non spécifiée",
+    clinicName,
+    description,
+    hours,
+    days,
+    location,
     onReserve,
   }: {
     clinicName: string;
@@ -202,51 +206,57 @@ const ClinicInfo = memo(
     location: string;
     onReserve?: () => void;
   }) => {
+    const { t } = useTranslation();
     const [expanded, setExpanded] = useState(false);
 
     const handleToggleExpand = useCallback(() => {
       setExpanded((prev) => !prev);
     }, []);
 
-    const { display, showMore } = truncateDescription(description, expanded);
+    const resolvedName = clinicName || t('provider.clinicNameDefault');
+    const resolvedDesc = description || t('provider.descriptionDefault');
+    const resolvedHours = hours || t('provider.hoursDefault');
+    const resolvedDays = days || t('provider.daysDefault');
+    const resolvedLocation = location || t('provider.locationDefault');
+    const { display, showMore } = truncateDescription(resolvedDesc, expanded);
 
     return (
       <View style={styles.infoContainer}>
         <View style={styles.titleRow}>
           <Text style={styles.clinicName} numberOfLines={1}>
-            {clinicName}
+            {resolvedName}
           </Text>
-          <PrimaryButton label="Réserver" size="sm" onPress={onReserve} />
+          <PrimaryButton label={t('appointments.book')} size="sm" onPress={onReserve} />
         </View>
 
         <Text style={styles.description}>
           {display}
           {showMore && (
             <Text style={styles.moreLink} onPress={handleToggleExpand}>
-              {" ...plus"}
+              {t('common.plus')}
             </Text>
           )}
-          {expanded && description.length > MAX_DESCRIPTION_LENGTH && (
+          {expanded && resolvedDesc.length > MAX_DESCRIPTION_LENGTH && (
             <Text style={styles.moreLink} onPress={handleToggleExpand}>
-              {" moins"}
+              {t('common.less')}
             </Text>
           )}
         </Text>
 
         <View style={styles.hoursRow}>
           <Text style={styles.infoText}>
-            <Text style={styles.infoBold}>{hours}</Text>
+            <Text style={styles.infoBold}>{resolvedHours}</Text>
           </Text>
           <Text style={styles.dot}> • </Text>
           <Text style={styles.infoText}>
-            Ouvert de <Text style={styles.infoBold}>{days}</Text>
+            {t('common.openFrom')} <Text style={styles.infoBold}>{resolvedDays}</Text>
           </Text>
         </View>
 
         <View style={styles.locationRow}>
           <Ionicons name="location-outline" size={14} color={colors.inkLight} />
           <Text style={styles.location} numberOfLines={1}>
-            {location}
+            {resolvedLocation}
           </Text>
         </View>
       </View>

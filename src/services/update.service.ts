@@ -13,6 +13,7 @@
  *    Mandatory updates cannot be dismissed.
  */
 
+import i18next from '@/i18n';
 import * as ExpoUpdates from 'expo-updates';
 import * as Application from 'expo-application';
 import { Platform, Linking, Alert } from 'react-native';
@@ -128,12 +129,12 @@ class UpdateService {
     if (!hasUpdate) return;
 
     Alert.alert(
-      'Mise à jour disponible',
-      'Une nouvelle version de VitaCare est prête. Voulez-vous l\'installer maintenant ?',
+      i18next.t('update.available'),
+      i18next.t('update.otaBody'),
       [
-        { text: 'Plus tard', style: 'cancel' },
+        { text: i18next.t('common.later'), style: 'cancel' },
         {
-          text: 'Installer',
+          text: i18next.t('update.install'),
           onPress: () => this.applyOTAUpdate(),
         },
       ],

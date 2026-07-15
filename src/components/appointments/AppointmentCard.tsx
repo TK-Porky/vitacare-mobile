@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { Appointment } from "@/types/appointment";
@@ -31,62 +32,62 @@ const STATUS_CONFIG: Record<
     icon: keyof typeof Ionicons.glyphMap;
     color: string;
     bg: string;
-    label: string;
+    labelKey: string;
   }
 > = {
   CONFIRMED: {
     icon: "checkmark",
     color: colors.success,
     bg: colors.successLight,
-    label: "Confirmé",
+    labelKey: "CONFIRMED",
   },
   PAID: {
     icon: "checkmark",
     color: colors.info,
     bg: colors.infoLight,
-    label: "Payé",
+    labelKey: "PAID",
   },
   PENDING: {
     icon: "time",
     color: colors.warning,
     bg: colors.warningLight,
-    label: "En attente",
+    labelKey: "PENDING",
   },
   CANCELLED: {
     icon: "close",
     color: colors.error,
     bg: colors.errorLight,
-    label: "Annulé",
+    labelKey: "CANCELLED",
   },
   RESCHEDULED: {
     icon: "refresh",
     color: colors.blue,
     bg: colors.blueLight,
-    label: "Reporté",
+    labelKey: "RESCHEDULED",
   },
   NO_SHOW: {
     icon: "person",
     color: colors.purple,
     bg: colors.purpleLight,
-    label: "Non présenté",
+    labelKey: "NO_SHOW",
   },
   COMPLETED: {
     icon: "checkmark",
     color: colors.success,
     bg: colors.successLight,
-    label: "Terminé",
+    labelKey: "COMPLETED",
   },
   IN_PROGRESS: {
     icon: "checkmark",
     color: colors.warning,
     bg: colors.warningLight,
-    label: "En cours",
+    labelKey: "IN_PROGRESS",
   },
   PAYMENT_PENDING: {
     icon: "time",
     color: colors.warning,
     bg: colors.warningLight,
-    label: "Paiement en attente",
+    labelKey: "PAYMENT_PENDING",
   },
 };
 
@@ -117,13 +118,13 @@ function Initials({
   );
 }
 
-function SectionHeader({ month, count }: { month: string; count: number }) {
+function SectionHeader({ month, count, t: translate }: { month: string; count: number; t: (key: string, opts?: any) => string }) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionMonth}>{month}</Text>
       <View style={styles.sectionLine} />
       <Text style={styles.sectionCount}>
-        {count} rendez-vous{count > 1 ? "" : ""}
+        {translate('appointments.count', { count })}
       </Text>
     </View>
   );
@@ -143,6 +144,7 @@ export const AppointmentCard = React.memo(function AppointmentCard({
   onRebook,
   onReview,
 }: AppointmentCardProps) {
+  const { t } = useTranslation();
   const cfg = STATUS_CONFIG[item.status];
   const leftBg = LEFT_BG[item.status];
   const past = isPast(item.status);
@@ -184,7 +186,7 @@ export const AppointmentCard = React.memo(function AppointmentCard({
           {/* Action selon statut */}
           <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
             <Text style={[styles.statusLabel, { color: cfg.color }]}>
-              {cfg.label}
+              {t(`appointments.status.${cfg.labelKey}`)}
             </Text>
           </View>
         </View>

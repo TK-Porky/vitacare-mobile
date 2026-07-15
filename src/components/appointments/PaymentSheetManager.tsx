@@ -1,5 +1,6 @@
 import { useRef, forwardRef, useImperativeHandle } from "react";
 import { Alert } from "react-native";
+import i18next from "@/i18n";
 import {
   MomoPaymentSheet,
   OrangePaymentSheet,
@@ -38,7 +39,7 @@ export const PaymentSheetManager = forwardRef<
           cardSheetRef.current?.open();
           break;
         default:
-          Alert.alert("Erreur", "Moyen de paiement non reconnu");
+          Alert.alert(i18next.t('common.error'), i18next.t('errors.somethingWrong'));
       }
     },
   }));

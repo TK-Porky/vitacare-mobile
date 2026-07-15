@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { PasswordInput, HelperText } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 
@@ -20,33 +21,34 @@ export const RegisterPasswordFields = ({
   passwordError,
   confirmPasswordError,
 }: RegisterPasswordFieldsProps) => {
+  const { t } = useTranslation();
+
   return (
     <>
       <View style={styles.fieldWrapper}>
         <Text style={styles.label}>
-          Mot de passe <Text style={styles.required}>*</Text>
+          {t("common.password")} <Text style={styles.required}>*</Text>
         </Text>
         <PasswordInput
           value={password}
           onChangeText={onPasswordChange}
-          placeholder="Minimum 8 caractères"
+          placeholder={t("auth.forgotPassword.newPasswordPlaceholder")}
           error={!!passwordError}
         />
         {passwordError && <HelperText message={passwordError} type="error" />}
         <Text style={styles.hint}>
-          • Minimum 8 caractères
-          {"\n"}• Sans espaces
+          {"• " + t("validation.passwordMin") + "\n• " + t("validation.passwordSpace")}
         </Text>
       </View>
 
       <View style={styles.fieldWrapper}>
         <Text style={styles.label}>
-          Confirmer le mot de passe <Text style={styles.required}>*</Text>
+          {t("auth.forgotPassword.confirmPasswordLabel")} <Text style={styles.required}>*</Text>
         </Text>
         <PasswordInput
           value={confirmPassword}
           onChangeText={onConfirmPasswordChange}
-          placeholder="Confirmez votre mot de passe"
+          placeholder={t("auth.forgotPassword.confirmPasswordPlaceholder")}
           error={!!confirmPasswordError}
         />
         {confirmPasswordError && (

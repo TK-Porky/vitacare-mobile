@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { RegisterMode } from "@/utils/register-validation";
@@ -12,12 +13,13 @@ export const RegisterModeToggle = ({
   mode,
   onModeChange,
 }: RegisterModeToggleProps) => {
+  const { t } = useTranslation();
   const modes: RegisterMode[] = ["phone", "email"];
 
   return (
     <View style={styles.fieldWrapper}>
       <Text style={styles.label}>
-        Mode d'inscription <Text style={styles.required}>*</Text>
+        {t("auth.register.emailMode")} / {t("auth.register.phoneMode")} <Text style={styles.required}>*</Text>
       </Text>
       <View style={styles.toggle}>
         {modes.map((m) => (
@@ -26,7 +28,7 @@ export const RegisterModeToggle = ({
             style={[styles.toggleBtn, mode === m && styles.toggleBtnActive]}
             onPress={() => onModeChange(m)}
             activeOpacity={0.7}
-            accessibilityLabel={`S'inscrire par ${m === "phone" ? "téléphone" : "email"}`}
+            accessibilityLabel={m === "phone" ? t("auth.register.phoneMode") : t("auth.register.emailMode")}
             accessibilityRole="button"
             accessibilityState={{ selected: mode === m }}
           >
@@ -41,7 +43,7 @@ export const RegisterModeToggle = ({
                 mode === m && styles.toggleLabelActive,
               ]}
             >
-              {m === "phone" ? "Téléphone" : "Email"}
+              {m === "phone" ? t("auth.register.phoneMode") : t("auth.register.emailMode")}
             </Text>
           </TouchableOpacity>
         ))}

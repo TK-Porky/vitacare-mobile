@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { StepHeader, SelectOption, PrimaryButton } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useProfile } from "@/hooks";
@@ -17,16 +18,17 @@ import { useProfile } from "@/hooks";
 // Types
 // ================================================================================== //
 const OPTIONS = [
-  "Un médecin en urgence",
-  "Un suivi de traitements réguliers",
-  "Des informations sur un médicaments",
-  "Rien en particulier",
+  "onboarding.searchOptions.emergency",
+  "onboarding.searchOptions.treatmentFollowUp",
+  "onboarding.searchOptions.medicationInfo",
+  "onboarding.searchOptions.nothingSpecific",
 ];
 
 // ================================================================================== //
 // Main
 // ================================================================================== //
 export default function OnboardingSearchScreen() {
+  const { t } = useTranslation();
   const { updatePreferences, isUpdatingPreferences } = useProfile();
   // ================================================================================== //
   // States
@@ -39,7 +41,7 @@ export default function OnboardingSearchScreen() {
    */
   const handleContinue = async () => {
     if (!selected) {
-      router.push("/(auth)/onboarding-language");
+      router.push("/(auth)/onboarding/language");
       return;
     }
 
@@ -49,10 +51,10 @@ export default function OnboardingSearchScreen() {
         // We use a generic way to store this or map to a specific field if backend supports it
       } as any);
 
-      router.push("/(auth)/onboarding-language");
+      router.push("/(auth)/onboarding/language");
     } catch (e) {
       // Fallback to next screen even if save fails for better UX, or show error
-      router.push("/(auth)/onboarding-language");
+      router.push("/(auth)/onboarding/language");
     }
   };
 
@@ -64,20 +66,20 @@ export default function OnboardingSearchScreen() {
       <StepHeader
         current={2}
         total={3}
-        onSkip={() => router.push("/(auth)/onboarding-language")}
+        onSkip={() => router.push("/(auth)/onboarding/language")}
       />
 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Que recherchez-vous ?</Text>
+        <Text style={styles.title}>{t("onboarding.search.title")}</Text>
 
         <View style={styles.options}>
           {OPTIONS.map((option) => (
             <SelectOption
               key={option}
-              label={option}
+              label={t(option)}
               selected={selected === option}
               onPress={() => setSelected(option)}
             />
@@ -92,11 +94,11 @@ export default function OnboardingSearchScreen() {
           activeOpacity={0.7}
         >
           <ChevronLeft size={16} color={colors.ink} />
-          <Text style={styles.backText}>Retour</Text>
+          <Text style={styles.backText}>{t("common.back")}</Text>
         </TouchableOpacity>
 
         <PrimaryButton
-          label="Continuer"
+          label={t("common.continue")}
           isLoading={isUpdatingPreferences}
           onPress={handleContinue}
           style={styles.continueButton}

@@ -1,28 +1,32 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Bell, Plus } from "lucide-react-native";
 import { PrimaryButton } from "@/components/buttons";
 import { colors, fontFamily, fontSize } from "@/themes";
 
 type EmptyStateProps = { onAdd: () => void };
 
-export const EmptyState = ({ onAdd }: EmptyStateProps) => (
-  <View style={styles.empty}>
-    <View style={styles.emptyIcon}>
-      <Bell size={40} color={colors.inkLight} />
+export const EmptyState = ({ onAdd }: EmptyStateProps) => {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.empty}>
+      <View style={styles.emptyIcon}>
+        <Bell size={40} color={colors.inkLight} />
+      </View>
+      <Text style={styles.emptyText}>{t("reminders.noReminders")}</Text>
+      <Text style={styles.emptySubtext}>
+        {t("reminders.add")}
+      </Text>
+      <PrimaryButton
+        label={t("reminders.add")}
+        onPress={onAdd}
+        style={{ marginTop: 16 }}
+        icon={<Plus size={18} color={colors.white} />}
+      />
     </View>
-    <Text style={styles.emptyText}>Aucun rappel actif</Text>
-    <Text style={styles.emptySubtext}>
-      Ajoutez vos médicaments pour ne plus jamais oublier une prise.
-    </Text>
-    <PrimaryButton
-      label="Ajouter un rappel"
-      onPress={onAdd}
-      style={{ marginTop: 16 }}
-      icon={<Plus size={18} color={colors.white} />}
-    />
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   empty: {

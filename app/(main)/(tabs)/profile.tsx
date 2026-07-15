@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "@/themes";
 import { useAuthStore } from "@/store";
 import { useProfile } from "@/hooks";
@@ -19,18 +20,21 @@ import { profileService } from "@/services/profile.service";
 import { ProfileHeader } from "@/components/display/ProfileHeader";
 import { MenuSection } from "@/components/display/MenuSection";
 import { MenuItem } from "@/components/display/MenuItem";
-import { MENU_SECTIONS, DANGER_SECTION } from "@/constants/profile.menu";
+import { getMenuSections, getDangerSection } from "@/constants/profile.menu";
 import { PROFILE_ROUTES } from "@/constants/routes";
 
 // ================================================================================== //
 // Main
 // ================================================================================== //
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { isLoading: profileLoading, refetch } = useProfile();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const MENU_SECTIONS = getMenuSections(t);
+  const DANGER_SECTION = getDangerSection(t);
 
   // ================================================================================== //
   // Handlers
@@ -46,29 +50,29 @@ export default function ProfileScreen() {
   );
 
   const handleDisconnection = useCallback(() => {
-    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
-      { text: "Annuler", style: "cancel" },
+    Alert.alert(t("profile.logoutTitle"), t("profile.logoutConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Se déconnecter",
+        text: t("profile.logout"),
         style: "destructive",
         onPress: async () => {
           setIsLoggingOut(true);
           try {
             await logout();
-          } catch (err) {
-            Alert.alert("Erreur", "Impossible de se déconnecter.");
+          } catch {
+            Alert.alert(t("common.error"), t("errors.generic"));
           } finally {
             setIsLoggingOut(false);
           }
         },
       },
     ]);
-  }, [logout]);
+  }, [logout, t]);
 
   const confirmDeleteAccount = useCallback(
     async (password?: string) => {
       if (!password) {
-        Alert.alert("Erreur", "Mot de passe requis.");
+        Alert.alert(t("common.error"), t("validation.passwordRequired"));
         return;
       }
       try {
@@ -78,30 +82,30 @@ export default function ProfileScreen() {
         });
         await logout();
       } catch (err: any) {
-        Alert.alert("Erreur", err.message || "Échec de la suppression.");
+        Alert.alert(t("common.error"), err.message || t("errors.generic"));
       }
     },
-    [logout],
+    [logout, t],
   );
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(
-      "Suppression de compte",
-      "⚠️ Attention : Cette action est définitive et toutes vos données seront supprimées.",
+      t("profile.deleteAccount"),
+      "⚠️ " + t("profile.deleteAccount"),
       [
-        { text: "Annuler", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Supprimer",
+          text: t("common.delete"),
           style: "destructive",
           onPress: () => {
             if (Platform.OS === "ios") {
               Alert.prompt(
-                "Confirmer la suppression",
-                "Veuillez saisir votre mot de passe pour confirmer :",
+                t("profile.deleteAccount"),
+                t("validation.passwordRequired"),
                 [
-                  { text: "Annuler", style: "cancel" },
+                  { text: t("common.cancel"), style: "cancel" },
                   {
-                    text: "Confirmer",
+                    text: t("common.confirm"),
                     style: "destructive",
                     onPress: (password: string | undefined) =>
                       confirmDeleteAccount(password),
@@ -110,14 +114,13 @@ export default function ProfileScreen() {
                 "secure-text",
               );
             } else {
-              // Android: rediriger vers une page de confirmation
               router.push(PROFILE_ROUTES.CONFIRM_DELETE as any);
             }
           },
         },
       ],
     );
-  }, [confirmDeleteAccount, router]);
+  }, [confirmDeleteAccount, router, t]);
 
   const handleDangerItemPress = useCallback(
     (item: { id: string }) => {
@@ -139,7 +142,7 @@ export default function ProfileScreen() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Chargement du profil...</Text>
+          <Text style={styles.loadingText}>{t("reminders.loadingProfile")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -164,12 +167,11 @@ export default function ProfileScreen() {
           />
         }
       >
-        {/* ── Page title ── */}
-        <Text style={styles.pageTitle}>Votre Profil</Text>
+        <Text style={styles.pageTitle}>{t("profile.title")}</Text>
 
         {/* ── Profile header ── */}
         <ProfileHeader
-          fullName={user?.fullName || "Utilisateur"}
+          fullName={user?.fullName || t("home.greeting")}
           phoneNumber={user?.phoneNumber}
           email={user?.email}
           avatarUrl={user?.avatarUrl}
@@ -213,7 +215,7 @@ export default function ProfileScreen() {
         {isLoggingOut && (
           <View style={styles.overlay}>
             <ActivityIndicator size="large" color={colors.white} />
-            <Text style={styles.overlayText}>Déconnexion en cours...</Text>
+            <Text style={styles.overlayText}>{t("profile.logoutTitle")}...</Text>
           </View>
         )}
 

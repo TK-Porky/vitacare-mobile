@@ -18,6 +18,7 @@ import LegacyMapView, {
   Circle,
 } from "react-native-maps";
 import * as Location from "expo-location";
+import { useTranslation } from "react-i18next";
 import { colors, fontFamily, fontSize } from "../../../src/themes";
 import { TopBar, PrimaryButton, SearchInput } from "../../../src/components";
 import { useProfile } from "../../../src/hooks";
@@ -69,10 +70,11 @@ const ZOOM_LEVELS = {
 const isUsingMapLibre = mapLibreLoaded && Platform.OS !== "ios";
 
 export default function LocationScreen() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const { updateProfile, isUpdatingProfile } = useProfile();
 
-  const [address, setAddress] = useState("Recherche de votre position...");
+  const [address, setAddress] = useState(t("profile.locationScreen.addressDefault"));
   const [coordinates, setCoordinates] = useState({
     latitude: INITIAL_REGION.latitude,
     longitude: INITIAL_REGION.longitude,
@@ -131,21 +133,21 @@ export default function LocationScreen() {
             item.region,
             item.country,
           ].filter(Boolean);
-          setAddress(parts.join(", ") || "Position détectée");
+          setAddress(parts.join(", ") || t("profile.locationScreen.addressFound"));
           setCoordinates(coords);
           setError(null);
         } else {
-          setAddress("Adresse non trouvée");
+          setAddress(t("profile.locationScreen.addressNotFound"));
           setCoordinates(coords);
         }
       } catch {
-        setAddress("Adresse non disponible");
-        setError("Impossible d'obtenir l'adresse.");
+        setAddress(t("profile.locationScreen.addressUnavailable"));
+        setError(t("profile.locationScreen.addressError"));
       } finally {
         setIsGeocoding(false);
       }
     },
-    [],
+    [t],
   );
 
   const animateToCoords = useCallback(
@@ -181,7 +183,7 @@ export default function LocationScreen() {
   const getCurrentLocation = useCallback(async () => {
     if (isLocating) return;
     setIsLocating(true);
-    setAddress("Localisation...");
+    setAddress(t("profile.locationScreen.locating"));
     setError(null);
 
     try {
@@ -194,22 +196,22 @@ export default function LocationScreen() {
       };
 
       setLocationAccuracy(currentLoc.coords.accuracy || 0);
-      setUserMarker({ coordinate: coords, title: "Ma position" });
+      setUserMarker({ coordinate: coords, title: t("profile.locationScreen.myPosition") });
       setLocationSet(true);
       animateToCoords(coords, ZOOM_LEVELS.user);
       await reverseGeocode(coords);
     } catch (err) {
       const msg =
         err instanceof Error && err.message.includes("timeout")
-          ? "La recherche a expiré. Vérifiez votre GPS."
-          : "Impossible d'obtenir votre position.";
-      setAddress("Position non disponible");
+          ? t("profile.locationScreen.gpsTimeout")
+          : t("profile.locationScreen.gpsError");
+      setAddress(t("profile.locationScreen.addressUnavailable"));
       setError(msg);
-      Alert.alert("Erreur", msg);
+      Alert.alert(t("common.error"), msg);
     } finally {
       setIsLocating(false);
     }
-  }, [isLocating, animateToCoords, reverseGeocode]);
+  }, [isLocating, animateToCoords, reverseGeocode, t]);
 
   const requestPermissionAndLocate = useCallback(async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -219,15 +221,15 @@ export default function LocationScreen() {
     } else {
       setHasPermission(false);
       Alert.alert(
-        "Permission refusée",
-        "Activez la localisation dans les réglages.",
+        t("profile.locationScreen.noPermission"),
+        t("profile.locationScreen.noPermissionMessage"),
         [
-          { text: "Annuler", style: "cancel" },
-          { text: "Réglages", onPress: () => Linking.openSettings() },
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("profile.locationScreen.openSettings"), onPress: () => Linking.openSettings() },
         ],
       );
     }
-  }, [getCurrentLocation]);
+  }, [getCurrentLocation, t]);
 
   const handleMapPress = useCallback(
     async (coords: { latitude: number; longitude: number }) => {
@@ -260,14 +262,14 @@ export default function LocationScreen() {
         setSearchQuery("");
         searchInputRef.current?.blur();
       } else {
-        Alert.alert("Introuvable", `Aucun résultat pour "${query}".`);
+        Alert.alert(t("profile.locationScreen.searchNotFound"), t("profile.locationScreen.searchNoResults", { query }));
       }
     } catch {
-      Alert.alert("Erreur", "Impossible de géolocaliser cette adresse.");
+      Alert.alert(t("common.error"), t("profile.locationScreen.searchError"));
     } finally {
       setIsGeocoding(false);
     }
-  }, [searchQuery, reverseGeocode, animateToCoords]);
+  }, [searchQuery, reverseGeocode, animateToCoords, t]);
 
   const handleCenterOnUser = useCallback(async () => {
     if (!hasPermission) {
@@ -290,8 +292,8 @@ export default function LocationScreen() {
   const handleSave = useCallback(async () => {
     if (!locationSet) {
       Alert.alert(
-        "Position non définie",
-        "Sélectionnez une position sur la carte.",
+        t("profile.locationScreen.positionNotSet"),
+        t("profile.locationScreen.positionNotSetMessage"),
       );
       return;
     }
@@ -303,11 +305,11 @@ export default function LocationScreen() {
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
       });
-      Alert.alert("Succès", "Localisation mise à jour.");
+      Alert.alert(t("common.success"), t("profile.locationScreen.saveSuccess"));
     } catch {
-      Alert.alert("Erreur", "Impossible de sauvegarder.");
+      Alert.alert(t("common.error"), t("profile.locationScreen.saveError"));
     }
-  }, [address, coordinates, user, updateProfile]);
+  }, [address, coordinates, user, updateProfile, t]);
 
   const onMapReady = useCallback(() => {
     setIsMapReady(true);
@@ -334,7 +336,7 @@ export default function LocationScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
-      <TopBar title="Ma localisation" />
+      <TopBar title={t("profile.locationScreen.title")} />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -347,7 +349,7 @@ export default function LocationScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
-            placeholder="Rechercher une adresse..."
+            placeholder={t("profile.locationScreen.searchPlaceholder")}
             returnKeyType="search"
             autoCapitalize="none"
             isLoading={isGeocoding}
@@ -482,7 +484,7 @@ export default function LocationScreen() {
             {!isMapReady && (
               <View style={styles.loaderOverlay}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.loaderText}>Chargement de la carte...</Text>
+                <Text style={styles.loaderText}>{t("profile.locationScreen.loadingMap")}</Text>
               </View>
             )}
 
@@ -504,7 +506,7 @@ export default function LocationScreen() {
                 onPress={requestPermissionAndLocate}
               >
                 <Text style={styles.permissionWarningText}>
-                  Autoriser la localisation
+                  {t("profile.locationScreen.enableLocation")}
                 </Text>
               </TouchableOpacity>
             )}
@@ -521,7 +523,7 @@ export default function LocationScreen() {
                 style={[styles.locationText, error && styles.locationTextError]}
                 numberOfLines={2}
               >
-                {isGeocoding ? "Recherche d'adresse..." : address}
+                {isGeocoding ? t("profile.locationScreen.geocoding") : address}
               </Text>
               {error && <Text style={styles.locationError}>{error}</Text>}
             </View>
@@ -535,7 +537,7 @@ export default function LocationScreen() {
 
         <View style={styles.footer}>
           <PrimaryButton
-            label="Enregistrer la localisation"
+            label={t("profile.locationScreen.saveButton")}
             fullWidth
             isLoading={isUpdatingProfile}
             onPress={handleSave}
@@ -543,10 +545,10 @@ export default function LocationScreen() {
           />
           <Text style={styles.footerHint}>
             {!hasPermission
-              ? "Activez la localisation pour enregistrer votre position"
+              ? t("profile.locationScreen.hintNoPermission")
               : !locationSet
-                ? "Localisez-vous ou appuyez sur la carte"
-                : "Appuyez sur la carte pour ajuster la position"}
+                ? t("profile.locationScreen.hintNoLocationSet")
+                : t("profile.locationScreen.hintLocationSet")}
           </Text>
         </View>
       </KeyboardAvoidingView>

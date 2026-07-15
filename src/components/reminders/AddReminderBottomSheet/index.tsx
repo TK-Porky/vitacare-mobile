@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { AppBottomSheet, AppBottomSheetRef } from "@/components/generics";
@@ -35,6 +36,7 @@ export const AddReminderBottomSheet = forwardRef<
   AddReminderBottomSheetRef,
   Props
 >(({ onAdd, onClose, isSubmitting = false }, ref) => {
+  const { t } = useTranslation();
   const sheetRef = useRef<AppBottomSheetRef>(null);
   const [data, setData] = useState<ReminderData>(createDefaultReminder);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -85,27 +87,27 @@ export const AddReminderBottomSheet = forwardRef<
       <>
         <View style={styles.field}>
           <FieldInput
-            label="Nom du médicament"
+            label={t("reminders.addForm.drugName")}
             value={data.drugName}
             onChangeText={(t) => patch({ drugName: t })}
-            placeholder="Ex: Amoxicilline"
+            placeholder={t("reminders.addForm.drugNamePlaceholder")}
             required
           />
         </View>
 
         <View style={[styles.field, { zIndex: 300 }]}>
           <InlineDropdown
-            label="Forme"
+            label={t("reminders.addForm.form")}
             value={data.form}
             options={FORMS}
             onSelect={(v) => patch({ form: v })}
-            accessibilityLabel="Sélectionner la forme du médicament"
+            accessibilityLabel={t("reminders.addForm.form")}
           />
         </View>
 
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>
-            Dosage<Text style={styles.required}> *</Text>
+            {t("reminders.addForm.dosage")}<Text style={styles.required}> *</Text>
           </Text>
           <View style={styles.dosageRow}>
             <FieldInput
@@ -127,7 +129,7 @@ export const AddReminderBottomSheet = forwardRef<
 
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>
-            Fréquence (nombre de fois par unité)
+            {t("reminders.addForm.frequency")}
             <Text style={styles.required}> *</Text>
           </Text>
           <View style={styles.freqRow}>
@@ -150,17 +152,17 @@ export const AddReminderBottomSheet = forwardRef<
 
         <View style={styles.field}>
           <FieldInput
-            label="Interval des prises (en jours)"
+            label={t("reminders.addForm.time")}
             value={data.intervalDays}
             onChangeText={(t) => patch({ intervalDays: t })}
-            placeholder="0 (par défaut)"
+            placeholder="0"
             keyboardType="numeric"
           />
         </View>
 
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>
-            Heure<Text style={styles.required}> *</Text>
+            {t("reminders.addForm.time")}<Text style={styles.required}> *</Text>
           </Text>
           <TouchableOpacity
             style={[styles.timeBtn, showTimePicker && styles.timeBtnActive]}
@@ -171,7 +173,7 @@ export const AddReminderBottomSheet = forwardRef<
               setShowTimePicker((v) => !v);
             }}
             activeOpacity={0.7}
-            accessibilityLabel="Sélectionner l'heure"
+            accessibilityLabel={t("reminders.addForm.time")}
             accessibilityRole="button"
             accessibilityState={{ expanded: showTimePicker }}
           >
@@ -193,10 +195,10 @@ export const AddReminderBottomSheet = forwardRef<
 
         <View style={styles.field}>
           <FieldInput
-            label="Notes (optionnel)"
+            label={t("reminders.addForm.notes")}
             value={data.notes || ""}
             onChangeText={(t) => patch({ notes: t })}
-            placeholder="Ajoutez des notes supplémentaires..."
+            placeholder={t("reminders.addForm.notes")}
             multiline
             numberOfLines={3}
           />
@@ -214,11 +216,11 @@ export const AddReminderBottomSheet = forwardRef<
       containerStyle={styles.sheet}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Nouveau rappel</Text>
+        <Text style={styles.title}>{t("reminders.add")}</Text>
         <TouchableOpacity
           onPress={() => sheetRef.current?.close()}
           style={styles.closeBtn}
-          accessibilityLabel="Fermer"
+          accessibilityLabel={t("common.close")}
           accessibilityRole="button"
         >
           <Ionicons name="close" size={24} color={colors.inkLight} />
@@ -229,7 +231,7 @@ export const AddReminderBottomSheet = forwardRef<
         {renderFormFields()}
 
         <PrimaryButton
-          label={isSubmitting ? "Ajout en cours..." : "Ajouter le rappel"}
+          label={isSubmitting ? t("reminders.add") + "..." : t("reminders.add")}
           variant="solid"
           size="md"
           onPress={handleAdd}

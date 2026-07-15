@@ -2,7 +2,7 @@
   "expo": {
     "name": "VitaCare",
     "slug": "vitacare",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "scheme": "vitacare",
     "platforms": [
       "ios",
@@ -15,7 +15,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "VitaCare utilise votre position pour trouver des établissements de santé à proximité."
-      }
+      },
+      "bundleIdentifier": "com.searl.vitacare"
     },
     "android": {
       "adaptiveIcon": {
@@ -66,7 +67,8 @@
       "expo-sharing",
       "@react-native-google-signin/google-signin",
       "expo-web-browser",
-      "@react-native-firebase/messaging"
+      "@react-native-firebase/messaging",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {},

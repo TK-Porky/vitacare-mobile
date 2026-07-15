@@ -19,6 +19,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
+import i18next from "@/i18n";
 import { AppBottomSheet, AppBottomSheetRef } from "@/components/generics";
 import { PrimaryButton } from "@/components/buttons";
 import { colors, fontFamily, fontSize } from "@/themes";
@@ -71,16 +73,16 @@ type Props = {
 // ================================================================================== //
 
 const DEFAULT_PROVIDER: Provider = {
-  clinicName: "Nom non spécifié",
+  clinicName: i18next.t('provider.clinicNameDefault'),
   avatarUri: "",
-  specialty: "Spécialiste",
-  experience: "+0 Ans",
-  language: "FR",
-  doctorName: "Dr. Inconnu",
-  description: "Aucune description disponible",
-  hoursRange: "Horaires non spécifiés",
-  hoursdays: "Jours non spécifiés",
-  location: "Adresse non spécifiée",
+  specialty: i18next.t('provider.specialtyDefault'),
+  experience: i18next.t('provider.experienceDefault', { years: 0 }),
+  language: i18next.t('provider.languageDefault'),
+  doctorName: i18next.t('provider.doctorNameDefault'),
+  description: i18next.t('provider.descriptionDefault'),
+  hoursRange: i18next.t('provider.hoursDefault'),
+  hoursdays: i18next.t('provider.daysDefault'),
+  location: i18next.t('provider.locationDefault'),
   coverUri: undefined,
   phone: "+237 6XX XX XX XX",
   email: "contact@clinique.com",
@@ -95,6 +97,7 @@ const DEFAULT_PROVIDER: Provider = {
  * Status badge component
  */
 const StatusBadge = memo(({ status }: { status: ReservationStatus }) => {
+  const { t } = useTranslation();
   if (status === "none") return null;
 
   const isConfirmed = status === "confirmed";
@@ -111,7 +114,7 @@ const StatusBadge = memo(({ status }: { status: ReservationStatus }) => {
           isConfirmed ? styles.badgeTextConfirmed : styles.badgeTextPending,
         ]}
       >
-        {isConfirmed ? "Confirmé" : "En attente de validation"}
+        {isConfirmed ? t('provider.confirmed') : t('provider.pendingValidation')}
       </Text>
     </View>
   );
@@ -201,6 +204,7 @@ export const ProfessionalProviderBottomSheet = forwardRef<
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     const sheetRef = useRef<AppBottomSheetRef>(null);
     const shareSheetRef = useRef<ShareContactBottomSheetRef>(null);
 
@@ -228,7 +232,7 @@ export const ProfessionalProviderBottomSheet = forwardRef<
 
     const handleCancelReservation = useCallback(() => {
       if (reservationStatus === "none") {
-        Alert.alert("Info", "Aucune réservation à annuler");
+        Alert.alert(t('common.info'), t('provider.noReservation'));
         return;
       }
       onCancelReservation?.();
@@ -247,24 +251,24 @@ export const ProfessionalProviderBottomSheet = forwardRef<
     const getButtonConfig = useCallback(() => {
       if (reservationStatus === "pending") {
         return {
-          label: "En attente...",
+          label: t('provider.pending'),
           variant: undefined,
           disabled: true,
         };
       }
       if (reservationStatus === "confirmed") {
         return {
-          label: "Annuler la réservation",
+          label: t('provider.cancelReservation'),
           variant: "outline" as const,
           disabled: false,
         };
       }
       return {
-        label: "Faire une réservation",
+        label: t('provider.makeReservation'),
         variant: "solid" as const,
         disabled: false,
       };
-    }, [reservationStatus]);
+    }, [reservationStatus, t]);
 
     // ================================================================================== //
     // Render
@@ -282,7 +286,7 @@ export const ProfessionalProviderBottomSheet = forwardRef<
         >
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Chargement du profil...</Text>
+            <Text style={styles.loadingText}>{t('provider.loading')}</Text>
           </View>
         </AppBottomSheet>
       );
@@ -309,11 +313,11 @@ export const ProfessionalProviderBottomSheet = forwardRef<
             <View style={styles.header}>
               <Avatar uri={provider.avatarUri} name={provider.doctorName} />
               <View style={styles.statsRow}>
-                <StatColumn value={provider.specialty} label="Spécialité" />
+                <StatColumn value={provider.specialty} label={t('provider.specialty')} />
                 <View style={styles.statDivider} />
-                <StatColumn value={provider.experience} label="Expérience" />
+                <StatColumn value={provider.experience} label={t('provider.experience')} />
                 <View style={styles.statDivider} />
-                <StatColumn value={provider.language} label="Langue" />
+                <StatColumn value={provider.language} label={t('provider.language')} />
               </View>
             </View>
 
@@ -335,7 +339,7 @@ export const ProfessionalProviderBottomSheet = forwardRef<
                 style={styles.shareBtn}
                 onPress={handleShare}
                 activeOpacity={0.7}
-                accessibilityLabel="Partager le contact"
+                accessibilityLabel={t('provider.shareAccessibility')}
                 accessibilityRole="button"
               >
                 <Ionicons
@@ -349,20 +353,20 @@ export const ProfessionalProviderBottomSheet = forwardRef<
             {/* ── Hours ── */}
             {(provider.hoursRange || provider.hoursdays) && (
               <>
-                <Text style={styles.sectionTitle}>Heures de services</Text>
+                <Text style={styles.sectionTitle}>{t('provider.hoursTitle')}</Text>
                 <InfoRow
                   icon="time-outline"
-                  text={provider.hoursRange || "Non spécifié"}
+                  text={provider.hoursRange || t('provider.notSpecified')}
                 />
                 <InfoRow
                   icon="calendar-outline"
-                  text={provider.hoursdays || "Non spécifié"}
+                  text={provider.hoursdays || t('provider.notSpecified')}
                 />
               </>
             )}
 
             {/* ── Location ── */}
-            <Text style={styles.sectionTitle}>Lieu de service</Text>
+            <Text style={styles.sectionTitle}>{t('provider.locationTitle')}</Text>
             <InfoRow icon="location-outline" text={provider.location} />
 
             {/* ── Cover Image ── */}
@@ -380,7 +384,7 @@ export const ProfessionalProviderBottomSheet = forwardRef<
                   color={colors.inkLight}
                 />
                 <Text style={styles.coverPlaceholderText}>
-                  Aucune image disponible
+                  {t('provider.noImage')}
                 </Text>
               </View>
             )}
@@ -390,11 +394,11 @@ export const ProfessionalProviderBottomSheet = forwardRef<
               style={styles.mapBtn}
               onPress={handleShowOnMap}
               activeOpacity={0.7}
-              accessibilityLabel="Montrer sur la carte"
+              accessibilityLabel={t('provider.showOnMapAccessibility')}
               accessibilityRole="button"
             >
               <Ionicons name="map-outline" size={18} color={colors.ink} />
-              <Text style={styles.mapBtnText}>Montrer sur la Carte</Text>
+              <Text style={styles.mapBtnText}>{t('provider.showOnMap')}</Text>
             </TouchableOpacity>
           </View>
         </AppBottomSheet>

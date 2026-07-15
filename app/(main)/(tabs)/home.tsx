@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Flame, Pill, TrendingUp } from "lucide-react-native";
 import {
   AppHeader,
@@ -30,7 +31,6 @@ import {
 // Types
 // ================================================================================== //
 type BoardProps = {
-  onMap: () => void;
   notificationBell?: React.ReactNode;
 };
 
@@ -38,12 +38,12 @@ type BoardProps = {
 // Main
 // ================================================================================== //
 export default function DashboardScreen({
-  onMap,
   notificationBell,
 }: BoardProps) {
   // ================================================================================== //
   // Hooks
   // ================================================================================== //
+  const { t } = useTranslation();
   const data = useDashboardStore((s) => s.data);
   const isLoading = useDashboardStore((s) => s.isLoading);
   const error = useDashboardStore((s) => s.error);
@@ -82,8 +82,8 @@ export default function DashboardScreen({
 
   const handleMap = useCallback(() => {
     fetchClinics();
-    onMap?.();
-  }, [fetchClinics, onMap]);
+    router.push("/(main)/home/map" as never);
+  }, [fetchClinics, router]);
 
   const handleNotifications = () => {
     router.push("/(modals)/notifications" as any);
@@ -107,9 +107,9 @@ export default function DashboardScreen({
   ) => {
     if (currentStatus !== "pending") return;
 
-    Alert.alert("Suivi de prise", "Avez-vous pris ce médicament ?", [
+    Alert.alert(t('home.medicationTracking'), t('home.didYouTake'), [
       {
-        text: "Non, manqué",
+        text: t('home.noMissed'),
         style: "destructive",
         onPress: () =>
           updateMedicationStatus({
@@ -118,7 +118,7 @@ export default function DashboardScreen({
           }),
       },
       {
-        text: "Oui, pris",
+        text: t('home.yesTaken'),
         onPress: () =>
           updateMedicationStatus({
             medicationId,
@@ -127,7 +127,7 @@ export default function DashboardScreen({
           }),
       },
       {
-        text: "Plus tard",
+        text: t('common.later'),
         style: "cancel",
       },
     ]);
@@ -209,12 +209,12 @@ export default function DashboardScreen({
         <ErrorScreen
           visible={true}
           type="server"
-          title="Chargement impossible"
+          title={t('home.cantLoad')}
           message={error!}
           errorCode="ERR-500"
           onRetry={handleErrorRetry}
           onContactSupport={handleContactSupport}
-          retryLabel="Réessayer"
+          retryLabel={t('common.retry')}
           showSupport={true}
         />
       )}
@@ -234,13 +234,13 @@ export default function DashboardScreen({
         {/* Greeting */}
         <View style={styles.greeting}>
           <Text style={styles.greetingText}>
-            Bienvenue{" "}
+            {t('home.welcome')}{" "}
             <Text style={styles.greetingName}>
               {user?.fullName || data?.currentUser || "..."}
             </Text>{" "}
             !
           </Text>
-          <Text style={styles.greetingDate}>Aujourd'hui, {todayStr}</Text>
+          <Text style={styles.greetingDate}>{t('home.today')}, {todayStr}</Text>
         </View>
 
         {showLoading ? (
@@ -262,28 +262,28 @@ export default function DashboardScreen({
               <StatCard
                 icon={<Flame size={20} color={colors.inkLight} />}
                 value={data.streak}
-                label={"Jours\nConsécutifs"}
+                label={t('home.streak')}
               />
               <StatCard
                 icon={<Pill size={20} color={colors.inkLight} />}
                 value={data.activeMedications}
-                label={"Médicaments\nactifs"}
+                label={t('home.activeMedications')}
               />
               <StatCard
                 icon={<TrendingUp size={20} color={colors.inkLight} />}
                 value={`${data.monthlyProgress}%`}
-                label="Ce mois-ci"
+                label={t('home.thisMonth')}
               />
             </View>
 
             {/* Prises du jour */}
             <View style={styles.section}>
               <SectionHeader
-                title="Prises du jour"
+                title={t('home.todayPills')}
                 onSeeAll={handleSeeAllMedications}
               />
               {data.medications.length === 0 ? (
-                <Text style={styles.emptyText}>Aucune prise programmée</Text>
+                <Text style={styles.emptyText}>{t('home.noPillsScheduled')}</Text>
               ) : (
                 <>
                   {data.medications.map((medication, index) => (
@@ -303,11 +303,11 @@ export default function DashboardScreen({
             {/* Rendez-vous */}
             <View style={styles.section}>
               <SectionHeader
-                title="Vos Rendez-vous"
+                title={t('home.todayAppointments')}
                 onSeeAll={handleSeeAllAppointments}
               />
               {data.appointments.length === 0 ? (
-                <Text style={styles.emptyText}>Aucun rendez-vous prévu</Text>
+                <Text style={styles.emptyText}>{t('home.noAppointmentScheduled')}</Text>
               ) : (
                 <>
                   {data.appointments.slice(0, 3).map((appointment, index) => (

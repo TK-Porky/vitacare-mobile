@@ -11,6 +11,7 @@ import {
   GoogleAuthProvider,
   signInWithCredential,
 } from "firebase/auth";
+import i18next from "@/i18n";
 import { apiClient } from "../lib/api.client";
 import { LoginEmailInput, RegisterInput } from "../schemas/auth.schema";
 import { API_ENDPOINTS } from "../types/api-endpoints";
@@ -34,9 +35,12 @@ export interface UserProfile {
   phoneNumber?: string;
   avatarUrl?: string;
   dateOfBirth?: string;
+  gender?: string;
   bloodGroup?: string;
   medicalHistory?: string;
   address?: string;
+  emergencyName?: string;
+  emergencyPhone?: string;
 }
 
 export interface BackendAuthResponse {
@@ -74,36 +78,36 @@ const mapAuthError = (error: any): string => {
 
   switch (code) {
     case "auth/email-already-in-use":
-      return "Cette adresse email est déjà utilisée.";
+      return i18next.t("errors.generic");
     case "auth/invalid-email":
-      return "Adresse email invalide.";
+      return i18next.t("validation.emailInvalid");
     case "auth/operation-not-allowed":
-      return "Opération non autorisée.";
+      return i18next.t("errors.unauthorized");
     case "auth/weak-password":
-      return "Le mot de passe est trop faible.";
+      return i18next.t("validation.passwordMin");
     case "auth/user-disabled":
-      return "Ce compte a été désactivé.";
+      return i18next.t("errors.unauthorized");
     case "auth/user-not-found":
-      return "Aucun utilisateur trouvé avec cet email.";
+      return i18next.t("errors.notFound");
     case "auth/wrong-password":
-      return "Mot de passe incorrect.";
+      return i18next.t("errors.generic");
     case "auth/invalid-verification-code":
-      return "Code de vérification invalide.";
+      return i18next.t("auth.otp.invalidCode");
     case "auth/invalid-verification-id":
-      return "ID de vérification invalide.";
+      return i18next.t("errors.generic");
     case "auth/too-many-requests":
-      return "Trop de tentatives. Veuillez réessayer plus tard.";
+      return i18next.t("errors.tryAgain");
     case "auth/network-request-failed":
-      return "Erreur réseau. Vérifiez votre connexion.";
+      return i18next.t("errors.network");
     case "auth/popup-closed-by-user":
-      return "La fenêtre de connexion a été fermée.";
+      return i18next.t("errors.generic");
     case "auth/cancelled-popup-request":
-      return "La demande de connexion a été annulée.";
+      return i18next.t("errors.generic");
     case "auth/popup-blocked":
-      return "La fenêtre de connexion a été bloquée.";
+      return i18next.t("errors.generic");
     default:
       return (
-        error?.message ?? "Une erreur est survenue lors de l'authentification."
+        error?.message ?? i18next.t("errors.generic")
       );
   }
 };
@@ -115,7 +119,7 @@ const handleBackendAuthResponse = async (
   response: any,
 ): Promise<AuthResult> => {
   if (!response.success || !response.data) {
-    throw new Error(response.error ?? "Erreur serveur");
+    throw new Error(response.error ?? i18next.t("errors.somethingWrong"));
   }
 
   const payload = response.data as BackendAuthResponse;
@@ -159,7 +163,7 @@ export const authService = {
    */
   async verifyOtp(code: string, fullName?: string): Promise<AuthResult> {
     if (!_confirmationResult) {
-      throw new Error("Aucune demande OTP en cours. Veuillez réessayer.");
+      throw new Error(i18next.t("errors.generic"));
     }
 
     try {
@@ -288,7 +292,7 @@ export const authService = {
         email,
       });
       if (!res.success) {
-        throw new Error(res.error ?? "Erreur serveur");
+        throw new Error(res.error ?? i18next.t("errors.somethingWrong"));
       }
     } catch (error) {
       throw new Error(mapAuthError(error));
@@ -306,7 +310,7 @@ export const authService = {
       otp,
     });
     if (!res.success) {
-      throw new Error(res.error ?? "Code invalide ou expiré");
+      throw new Error(res.error ?? i18next.t("auth.otp.invalidCode"));
     }
   },
 
@@ -321,7 +325,7 @@ export const authService = {
       password,
     });
     if (!res.success) {
-      throw new Error(res.error ?? "Erreur lors de la réinitialisation");
+      throw new Error(res.error ?? i18next.t("errors.generic"));
     }
   },
 

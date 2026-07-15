@@ -1,3 +1,4 @@
+import i18next from "@/i18n";
 import { apiClient } from "@/lib/api.client";
 import { API_ENDPOINTS } from "@/types/api-endpoints";
 import {
@@ -121,7 +122,7 @@ export const reminderService = {
       );
       await notificationService.scheduleTreatmentReminder({
         treatmentId: String(reminder.id),
-        treatmentName: data.medicationName || "Médicament",
+        treatmentName: data.medicationName || i18next.t('medication'),
         reminderTime: scheduledDate,
       });
     } else {
@@ -153,7 +154,7 @@ export const reminderService = {
       if (scheduledDate > new Date()) {
         await notificationService.scheduleTreatmentReminder({
           treatmentId: String(reminder.id),
-          treatmentName: data.name || "Médicament",
+          treatmentName: data.name || i18next.t('medication'),
           reminderTime: scheduledDate,
         });
       }
@@ -189,7 +190,7 @@ export const reminderService = {
       await notificationService.scheduleTreatmentReminder({
         treatmentId: String(reminder.id),
         treatmentName:
-          data.medicationName || reminder.medicationName || "Médicament",
+          data.medicationName || reminder.medicationName || i18next.t('medication'),
         reminderTime: scheduledDate,
       });
     }
@@ -247,7 +248,7 @@ export const reminderService = {
       }
       await notificationService.scheduleTreatmentReminder({
         treatmentId: String(reminder.id),
-        treatmentName: reminder.medicationName || "Médicament",
+        treatmentName: reminder.medicationName || i18next.t('medication'),
         reminderTime: scheduledDate,
       });
     }
@@ -368,7 +369,7 @@ export const reminderService = {
         }
         await notificationService.scheduleTreatmentReminder({
           treatmentId: String(reminder.id),
-          treatmentName: originalData.medicationName || "Médicament",
+          treatmentName: originalData.medicationName || i18next.t('medication'),
           reminderTime: scheduledDate,
         });
       }
