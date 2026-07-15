@@ -1,5 +1,6 @@
 // app/(main)/(tabs)/appointments.tsx
 import React, { useRef, useState, useCallback, useEffect } from "react";
+import { useFocusEffect } from "expo-router";
 import { StyleSheet, StatusBar, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -43,6 +44,13 @@ export default function AppointmentScreen() {
     cancelAppointment,
     markAppointmentAsPaid,
   } = useAppointments();
+
+  // Rafraîchir automatiquement les rendez-vous quand l'écran devient visible
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   const paymentManager = useRef<PaymentSheetManagerRef>(null);
 

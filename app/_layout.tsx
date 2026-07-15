@@ -6,7 +6,8 @@ import "@/i18n";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router, useSegments } from "expo-router";
-import { View, ActivityIndicator, LogBox } from "react-native";
+import { View, ActivityIndicator, LogBox, AppState } from "react-native";
+import FlashMessage, { showMessage } from "react-native-flash-message";
 import * as Device from "expo-device";
 import { useEffect, useRef, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
@@ -19,6 +20,7 @@ import {
 } from "@expo-google-fonts/dm-sans";
 import { queryClient } from "@/lib/query.client";
 import { useAuthStore } from "@/store";
+import { useAppointmentStore } from "@/store/appointment.store";
 import { notificationService, inAppNotificationService } from "@/services/notifications";
 import { useNotificationBootstrapper } from "@/hooks/useNotificationBootstrapper";
 
@@ -139,6 +141,20 @@ export default function RootLayout() {
     }
   }, [ready]);
 
+  // Rafraîchissement automatique quand l'app revient au premier plan
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        console.log("🔄 App au premier plan, rafraîchissement des rendez-vous...");
+        useAppointmentStore.getState().fetchAppointments();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   // Initialisation des notifications (différée après first paint)
   useEffect(() => {
     if (!ready) return;
@@ -196,6 +212,15 @@ export default function RootLayout() {
 
         const { title, body, data } = notification.request.content;
 
+        // Affichage d'une bannière visuelle
+        showMessage({
+          message: title || "Nouvelle notification",
+          description: body || "",
+          type: "info",
+          icon: "info",
+          duration: 3000,
+        });
+
         inAppNotificationService.addToInbox({
           id: notification.request.identifier,
           title: title || "",
@@ -221,6 +246,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <RootNavigator />
         </QueryClientProvider>
+        <FlashMessage position="top" />
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );

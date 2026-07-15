@@ -63,6 +63,7 @@
     "react-hook-form": "^7.71.2",
     "react-i18next": "^17.0.9",
     "react-native": "0.85.3",
+    "react-native-flash-message": "^0.4.2",
     "react-native-gesture-handler": "~2.31.1",
     "react-native-iconify": "^2.0.3",
     "react-native-maps": "1.27.2",
