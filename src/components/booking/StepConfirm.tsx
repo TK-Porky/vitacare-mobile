@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ScrollView,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
@@ -171,7 +172,11 @@ export const StepConfirm = ({
   const total = consultationFee; // Pas de calcul complexe ici, le paiement se fera plus tard
 
   return (
-    <>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={{ paddingBottom: 24 }}
+      showsVerticalScrollIndicator={false}
+    >
       {/* ── Page title ──────────────────────────────────────────────────── */}
       <Text style={styles.pageTitle}>{t('booking.confirm')}</Text>
 
@@ -333,7 +338,7 @@ export const StepConfirm = ({
       </View>
 
       <View style={{ height: 32 }} />
-    </>
+    </ScrollView>
   );
 };
 
