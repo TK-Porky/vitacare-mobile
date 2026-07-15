@@ -1,6 +1,6 @@
 import "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
-import messaging from "@react-native-firebase/messaging";
+import { getMessaging, setBackgroundMessageHandler } from "@react-native-firebase/messaging";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "@/i18n";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -115,9 +115,12 @@ export default function RootLayout() {
   });
   const [fontsTimedOut, setFontsTimedOut] = useState(false);
 
+  const accessToken = useAuthStore((s) => s.accessToken);
+
   // ─── Refs ──────────────────────────────────────────────────────────────
 
   const notificationListener = useRef<Notifications.Subscription>(null);
+  const pendingFCM = useRef<{ token: string; deviceInfo: DeviceInfo } | null>(null);
 
   // ─── Effets ─────────────────────────────────────────────────────────────
 
@@ -146,9 +149,13 @@ export default function RootLayout() {
         const fcmToken = await notificationService.getFCMToken();
         if (fcmToken) {
           const deviceInfo = await getDeviceInfo();
-          await notificationService.registerDevice(fcmToken, deviceInfo);
+          if (accessToken) {
+            await notificationService.registerDevice(fcmToken, deviceInfo);
+          } else {
+            pendingFCM.current = { token: fcmToken, deviceInfo };
+          }
         }
-        messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+        setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
           console.log("📲 Notification reçue en arrière-plan:", remoteMessage);
         });
       } catch (error) {
@@ -168,6 +175,16 @@ export default function RootLayout() {
       }
     };
   }, [ready]);
+
+  // Register pending FCM token once accessToken becomes available
+  useEffect(() => {
+    if (!accessToken) return;
+    const pending = pendingFCM.current;
+    if (pending) {
+      pendingFCM.current = null;
+      notificationService.registerDevice(pending.token, pending.deviceInfo);
+    }
+  }, [accessToken]);
 
   // Listeners de notifications
   useEffect(() => {
