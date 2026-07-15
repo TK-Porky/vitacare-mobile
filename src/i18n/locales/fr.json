@@ -185,8 +185,10 @@
   "booking": {
     "cancel": "Annuler",
     "confirm": "Confirmer le rendez-vous",
+    "channel": "Voie de paiement",
     "error": "Erreur lors de la réservation",
     "loading": "Chargement...",
+    "noSlots": "Aucun créneau disponible pour cette date",
     "payLater": "Payer à la consultation",
     "payNow": "Payer maintenant",
     "payment": "Mode de paiement",

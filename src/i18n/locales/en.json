@@ -185,8 +185,10 @@
   "booking": {
     "cancel": "Cancel",
     "confirm": "Confirm appointment",
+    "channel": "Payment channel",
     "error": "Error booking appointment",
     "loading": "Loading...",
+    "noSlots": "No slots available for this date",
     "payLater": "Pay at consultation",
     "payNow": "Pay now",
     "payment": "Payment method",

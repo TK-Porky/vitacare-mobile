@@ -66,11 +66,21 @@ const DEFAULT_STATUS_KEY = "PENDING";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// ✅ Correction: Conserver le signe pour les nombres négatifs
 const formatPrice = (n: number): string => {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
   return sign + abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+
+const formatPaymentMethod = (method: string): string => {
+  const map: Record<string, string> = {
+    "mobile_money": "Mobile Money",
+    "orange_money": "Orange Money",
+    "card": "Carte bancaire",
+    "Espèces": "Espèces",
+    "especes": "Espèces",
+  };
+  return map[method] || method;
 };
 
 // ✅ Valeurs par défaut
@@ -281,7 +291,8 @@ export const AppointmentDetailBottomSheet = forwardRef<
 
     // ✅ Déterminer l'icône de paiement
     const paymentIcon: keyof typeof Ionicons.glyphMap =
-      paymentMethod === "Espèces" ? "cash-outline" : "card-outline";
+      paymentMethod === "Espèces" || paymentMethod === "especes" ? "cash-outline" : "card-outline";
+    const paymentLabel = formatPaymentMethod(paymentMethod);
 
     return (
       <AppBottomSheet
@@ -380,14 +391,20 @@ export const AppointmentDetailBottomSheet = forwardRef<
           style={styles.mapBtn}
         />
 
-        {/* ── Méthodes de paiements ── */}
+        {/* ── Voie de paiement ── */}
+        <SectionTitle>{t('booking.channel')}</SectionTitle>
+        <InfoRow icon={isOnlinePayment ? "globe-outline" : "cash-outline"}>
+          <Text style={styles.bodyText}>
+            {isOnlinePayment ? "Paiement en ligne" : "Paiement sur place"}
+          </Text>
+        </InfoRow>
+
+        {/* ── Mode de paiement ── */}
         <SectionTitle>{t('booking.payment')}</SectionTitle>
-        <PaymentRow icon={paymentIcon} label={paymentMethod} />
+        <PaymentRow icon={paymentIcon} label={paymentLabel} />
 
         {/* ── Facture ── */}
-        <SectionTitle>{t('booking.payment')}</SectionTitle>
-
-        {invoiceLines.length > 0 ? (
+        {invoiceLines.length > 0 && (
           <>
             {invoiceLines.map((line, index) => (
               <View key={index} style={styles.invoiceLine}>
@@ -410,8 +427,6 @@ export const AppointmentDetailBottomSheet = forwardRef<
               <Text style={styles.totalLineAmount}>{fmt(total)}</Text>
             </View>
           </>
-        ) : (
-          <Text style={styles.bodyText}>{t('common.noResults')}</Text>
         )}
 
         <View style={styles.actionsRow}>
