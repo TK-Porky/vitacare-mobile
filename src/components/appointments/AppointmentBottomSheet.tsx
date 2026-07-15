@@ -180,6 +180,11 @@ export const AppointmentDetailBottomSheet = forwardRef<
     const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG[DEFAULT_STATUS_KEY];
     const { day, month, year } = parseAppointmentDate(appointment.date);
 
+    const isOnlinePayment =
+      paymentMethod === "mobile_money" ||
+      paymentMethod === "orange_money" ||
+      paymentMethod === "card";
+
     // ✅ Gestion du format de la date
     const dateString =
       day && month && year
@@ -390,7 +395,7 @@ export const AppointmentDetailBottomSheet = forwardRef<
         )}
 
         <View style={styles.actionsRow}>
-          {status === "PAYMENT_PENDING" ? (
+          {status === "PAYMENT_PENDING" || (status === "CONFIRMED" && isOnlinePayment) ? (
             <>
               <PrimaryButton
                 label={t('booking.payNow')}

@@ -1,8 +1,8 @@
 // app/(main)/(tabs)/appointments.tsx
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { StyleSheet, StatusBar, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { colors } from "@/themes";
 import { Appointment } from "@/types";
@@ -46,11 +46,27 @@ export default function AppointmentScreen() {
 
   const paymentManager = useRef<PaymentSheetManagerRef>(null);
 
+  const params = useLocalSearchParams<{ payAppointmentId?: string }>();
+
   const handleCardPress = useCallback((item: Appointment) => {
     setSelectedItem(toSheetData(item));
     setSelectedAppointmentId(String(item.id || 0));
     appointmentRef.current?.open();
   }, []);
+
+  const [hasHandledPayParam, setHasHandledPayParam] = useState(false);
+
+  useEffect(() => {
+    if (!params.payAppointmentId || hasHandledPayParam || appointments.length === 0) return;
+
+    const target = appointments.find(
+      (a) => String(a.id) === params.payAppointmentId,
+    );
+    if (!target) return;
+
+    setHasHandledPayParam(true);
+    handleCardPress(target);
+  }, [params.payAppointmentId, hasHandledPayParam, appointments]);
 
   const handleCancel = useCallback(async () => {
     if (!selectedAppointmentId) return;

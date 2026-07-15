@@ -25,10 +25,21 @@ export function useNotificationBootstrapper() {
 
         switch (data.category) {
           case "appointment_reminder":
-          case "appointment_confirmed":
           case "appointment_cancelled":
             router.push("/(tabs)/appointments");
             break;
+          case "appointment_confirmed": {
+            const appointmentId = data.appointmentId as string | undefined;
+            if (appointmentId) {
+              router.push({
+                pathname: "/(tabs)/appointments",
+                params: { payAppointmentId: appointmentId },
+              } as never);
+            } else {
+              router.push("/(tabs)/appointments");
+            }
+            break;
+          }
           case "treatment_reminder":
           case "treatment_refill":
             router.push("/(main)/(tabs)/medications");
