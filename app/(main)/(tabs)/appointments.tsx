@@ -41,6 +41,8 @@ export default function AppointmentScreen() {
     refresh,
     isCancelling,
     cancelAppointment,
+    deleteAppointment,
+    clearCancelledAppointments,
     markAppointmentAsPaid,
   } = useAppointments();
 
@@ -78,6 +80,17 @@ export default function AppointmentScreen() {
       setSelectedAppointmentId(undefined);
     }
   }, [selectedAppointmentId, cancelAppointment]);
+
+  const handleDelete = useCallback(async () => {
+    if (!selectedAppointmentId) return;
+    await deleteAppointment(selectedAppointmentId);
+    setSelectedItem(undefined);
+    setSelectedAppointmentId(undefined);
+  }, [selectedAppointmentId, deleteAppointment]);
+
+  const handleClearCancelled = useCallback(async () => {
+    await clearCancelledAppointments();
+  }, [clearCancelledAppointments]);
 
   const handleReservation = useCallback(() => {
     router.push("/booking" as never);
@@ -137,6 +150,8 @@ export default function AppointmentScreen() {
         activeTab={activeTab}
         onRefresh={refresh}
         onCardPress={handleCardPress}
+        cancelledCount={appointments.filter((a) => a.status === "CANCELLED").length}
+        onClearCancelled={handleClearCancelled}
       />
 
       {/* ── BottomSheet de détail avec paiement ── */}
@@ -147,6 +162,7 @@ export default function AppointmentScreen() {
         onReschedule={handleReservation}
         onBookAgain={handleReservation}
         onCancel={handleCancel}
+        onDelete={handleDelete}
         onShowOnMap={handleShowOnMap}
         onPay={handlePay}
         isCancelling={isCancelling}

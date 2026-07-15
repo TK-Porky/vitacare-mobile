@@ -32,6 +32,7 @@ type Props = {
   isCancelling?: boolean;
   onReschedule?: () => void;
   onCancel?: () => void;
+  onDelete?: () => void;
   onBookAgain?: () => void;
   onDownload?: () => void;
   onShowOnMap?: () => void;
@@ -138,6 +139,7 @@ export const AppointmentDetailBottomSheet = forwardRef<
       isCancelling = false,
       onReschedule,
       onCancel,
+      onDelete,
       onBookAgain,
       onDownload,
       onShowOnMap,
@@ -220,6 +222,24 @@ export const AppointmentDetailBottomSheet = forwardRef<
             onPress: () => {
               sheetRef.current?.close();
               onCancel?.();
+            },
+          },
+        ],
+      );
+    };
+
+    const handleDelete = () => {
+      Alert.alert(
+        t('appointments.deleteTitle'),
+        t('appointments.deleteMessage'),
+        [
+          { text: t('common.cancel'), style: "cancel" },
+          {
+            text: t('common.delete'),
+            style: "destructive",
+            onPress: () => {
+              sheetRef.current?.close();
+              onDelete?.();
             },
           },
         ],
@@ -414,25 +434,36 @@ export const AppointmentDetailBottomSheet = forwardRef<
               />
             </>
           ) : actionVariant === "reschedule" ? (
-            <>
-              <PrimaryButton
-                label={t('appointments.reschedule')}
-                variant="solid"
-                size="md"
-                fullWidth={true}
-                onPress={handleReschedule}
-                style={styles.rescheduleButton}
-                isDisabled={isCancelling}
-              />
-              {statusCfg.labelKey !== "CANCELLED" && (
+            statusCfg.labelKey === "CANCELLED" ? (
+              <>
                 <GrayButton
-                  label={t('common.cancel')}
-                  onPress={handleCancel}
+                  label={t('common.delete')}
+                  icon="trash-outline"
+                  onPress={handleDelete}
                   style={styles.cancelButton}
-                  disabled={isCancelling}
                 />
-              )}
-            </>
+              </>
+            ) : (
+              <>
+                <PrimaryButton
+                  label={t('appointments.reschedule')}
+                  variant="solid"
+                  size="md"
+                  fullWidth={true}
+                  onPress={handleReschedule}
+                  style={styles.rescheduleButton}
+                  isDisabled={isCancelling}
+                />
+                {statusCfg.labelKey !== "CANCELLED" && (
+                  <GrayButton
+                    label={t('common.cancel')}
+                    onPress={handleCancel}
+                    style={styles.cancelButton}
+                    disabled={isCancelling}
+                  />
+                )}
+              </>
+            )
           ) : (
             <PrimaryButton
               label={t('booking.title')}

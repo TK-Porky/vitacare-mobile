@@ -56,6 +56,7 @@ export interface ClinicSearchRequest {
   query: string;
   filters?: {
     specialty?: string[];
+    languages?: string[];
     location?: string[];
     priceRange?: [number, number];
     rating?: number;

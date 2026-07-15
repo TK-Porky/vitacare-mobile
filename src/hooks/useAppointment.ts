@@ -94,6 +94,62 @@ export const useAppointments = () => {
     [fetchAll],
   );
 
+  const deleteAppointment = useCallback(async (id: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      Alert.alert(
+        i18next.t('appointments.deleteTitle'),
+        i18next.t('appointments.deleteMessage'),
+        [
+          { text: i18next.t('common.cancel'), style: "cancel", onPress: () => resolve(false) },
+          {
+            text: i18next.t('common.delete'),
+            style: "destructive",
+            onPress: () => {
+              const updated = (sessionCache ?? []).filter(
+                (a) => String(a.id) !== id,
+              );
+              sessionCache = updated;
+              setAllAppointments(updated);
+              resolve(true);
+            },
+          },
+        ],
+      );
+    });
+  }, []);
+
+  const clearCancelledAppointments = useCallback(async (): Promise<boolean> => {
+    const cancelled = (sessionCache ?? []).filter(
+      (a) => a.status === "CANCELLED",
+    );
+    if (cancelled.length === 0) {
+      Alert.alert(i18next.t('common.info'), i18next.t('appointments.noCancelled'));
+      return false;
+    }
+
+    return new Promise((resolve) => {
+      Alert.alert(
+        i18next.t('appointments.clearCancelledTitle'),
+        i18next.t('appointments.clearCancelledMessage', { count: cancelled.length }),
+        [
+          { text: i18next.t('common.cancel'), style: "cancel", onPress: () => resolve(false) },
+          {
+            text: i18next.t('common.delete'),
+            style: "destructive",
+            onPress: () => {
+              const updated = (sessionCache ?? []).filter(
+                (a) => a.status !== "CANCELLED",
+              );
+              sessionCache = updated;
+              setAllAppointments(updated);
+              resolve(true);
+            },
+          },
+        ],
+      );
+    });
+  }, []);
+
   const markAppointmentAsPaid = useCallback(
     async (id: string): Promise<boolean> => {
       try {
@@ -133,6 +189,8 @@ export const useAppointments = () => {
     fetchAll,
     isCancelling,
     cancelAppointment,
-    markAppointmentAsPaid, // ✅ Exposée
+    deleteAppointment,
+    clearCancelledAppointments,
+    markAppointmentAsPaid,
   };
 };

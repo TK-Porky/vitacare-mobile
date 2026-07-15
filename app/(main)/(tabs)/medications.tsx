@@ -211,7 +211,6 @@ export default function MedecineScreen() {
         searchValue={searchQuery}
         onSearchChange={handleSearch}
         onSearch={handleSearchSubmit}
-        onFilter={() => {}}
         onReminders={handleReminders}
         onSearchFocus={() => router.push("/(main)/medications/search" as never)}
       />
