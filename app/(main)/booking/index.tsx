@@ -121,6 +121,7 @@ export default function BookingScreen() {
     undefined,
   );
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [occupiedDates, setOccupiedDates] = useState<Set<string>>(new Set());
 
   const patchBooking = useCallback((patch: Partial<BookingData>) => {
     setBooking((prev) => {
@@ -167,6 +168,24 @@ export default function BookingScreen() {
           .filter((s: any) => s.startTime?.startsWith(dateStr) && !s.isBooked)
           .map((s: any) => s.startTime.split("T")[1].slice(0, 5));
         setAvailableSlots(times);
+
+        // Update occupied dates from this week's data
+        const dateSlots = new Map<string, any[]>();
+        for (const slot of raw) {
+          if (!slot.startTime) continue;
+          const dateKey = slot.startTime.split("T")[0];
+          if (!dateSlots.has(dateKey)) dateSlots.set(dateKey, []);
+          dateSlots.get(dateKey)!.push(slot);
+        }
+        setOccupiedDates((prev) => {
+          const next = new Set(prev);
+          dateSlots.forEach((slots, dateKey) => {
+            if (slots.length > 0 && slots.every((s: any) => s.isBooked)) {
+              next.add(dateKey);
+            }
+          });
+          return next;
+        });
       })
       .catch(() => {
         if (!cancelled) setAvailableSlots(undefined);
@@ -179,6 +198,62 @@ export default function BookingScreen() {
       cancelled = true;
     };
   }, [booking.date, provider.id]);
+
+  // Pre-fetch occupied dates for upcoming 4 weeks on mount
+  useEffect(() => {
+    const pid = provider.id;
+    if (!pid) return;
+
+    let cancelled = false;
+
+    const weekStarts: string[] = [];
+    const today = new Date();
+    for (let i = 0; i < 4; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i * 7);
+      const mon = new Date(d);
+      mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+      const wy = mon.getFullYear();
+      const wm = String(mon.getMonth() + 1).padStart(2, "0");
+      const wd = String(mon.getDate()).padStart(2, "0");
+      weekStarts.push(`${wy}-${wm}-${wd}`);
+    }
+
+    Promise.all(
+      weekStarts.map((ws) =>
+        apiClient
+          .get<any>(API_ENDPOINTS.CLINICS.AVAILABLE_SLOTS(pid), { weekStart: ws })
+          .then((res) => res.data ?? [])
+          .catch(() => []),
+      ),
+    ).then((results) => {
+      if (cancelled) return;
+
+      const occupied = new Set<string>();
+      const dateSlots = new Map<string, any[]>();
+
+      for (const slots of results) {
+        for (const slot of slots) {
+          if (!slot.startTime) continue;
+          const dateKey = slot.startTime.split("T")[0];
+          if (!dateSlots.has(dateKey)) dateSlots.set(dateKey, []);
+          dateSlots.get(dateKey)!.push(slot);
+        }
+      }
+
+      dateSlots.forEach((slots, dateKey) => {
+        if (slots.length > 0 && slots.every((s: any) => s.isBooked)) {
+          occupied.add(dateKey);
+        }
+      });
+
+      setOccupiedDates(occupied);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [provider.id]);
 
   const canContinue = (): boolean => {
     if (step === 1) return booking.date !== null;
@@ -329,6 +404,7 @@ export default function BookingScreen() {
           <StepDate
             selected={booking.date}
             onSelect={(d) => patchBooking({ date: d })}
+            occupiedDates={occupiedDates}
           />
         )}
         {step === 2 && (
