@@ -5,6 +5,7 @@ import i18next from "@/i18n";
 import { Appointment } from "@/types";
 import { appointmentService } from "@/services";
 import { toAppointment } from "@/utils";
+import { useAppointmentStore } from "@/store/appointment.store";
 
 // Session cache – survives component remounts within the same app session
 let sessionCache: Appointment[] | null = null;
@@ -167,6 +168,15 @@ export const useAppointments = () => {
     },
     [fetchAll],
   );
+
+  // Force refresh when a push notification signals new data
+  const refreshSignal = useAppointmentStore((s) => s.refreshSignal);
+
+  useEffect(() => {
+    if (refreshSignal > 0) {
+      refresh();
+    }
+  }, [refreshSignal, refresh]);
 
   useEffect(() => {
     let mounted = true;

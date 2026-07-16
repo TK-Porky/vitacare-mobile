@@ -18,9 +18,10 @@ interface AppointmentState {
   isLoading: boolean;
   error: string | null;
   lastFetch: number | null;
+  refreshSignal: number;
 
   // Actions
-  fetchAppointments: (query?: AppointmentsListQuery) => Promise<void>;
+  fetchAppointments: (query?: AppointmentsListQuery, force?: boolean) => Promise<void>;
   fetchUpcoming: () => Promise<void>;
   fetchToday: () => Promise<void>;
   fetchById: (id: string) => Promise<void>;
@@ -29,6 +30,7 @@ interface AppointmentState {
   reschedule: (id: string, data: RescheduleAppointmentRequest) => Promise<void>;
   clearError: () => void;
   setSelected: (appointment: AppointmentResponse | null) => void;
+  incrementRefreshSignal: () => void;
 }
 
 export const useAppointmentStore = create<AppointmentState>((set, get) => ({
@@ -39,11 +41,12 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
   isLoading: false,
   error: null,
   lastFetch: null,
+  refreshSignal: 0,
 
-  fetchAppointments: async (query) => {
+  fetchAppointments: async (query, force = false) => {
     const state = get();
     if (state.appointments.length > 0 && state.isLoading) return;
-    if (state.appointments.length > 0 && state.lastFetch && Date.now() - state.lastFetch < CACHE_TTL) return;
+    if (!force && state.appointments.length > 0 && state.lastFetch && Date.now() - state.lastFetch < CACHE_TTL) return;
     if (!state.appointments.length) set({ isLoading: true, error: null });
     try {
       const appointments = await appointmentService.getAppointments(query);
@@ -141,4 +144,5 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
 
   clearError: () => set({ error: null }),
   setSelected: (selectedAppointment) => set({ selectedAppointment }),
+  incrementRefreshSignal: () => set((state) => ({ refreshSignal: state.refreshSignal + 1 })),
 }));

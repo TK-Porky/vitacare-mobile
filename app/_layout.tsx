@@ -1,12 +1,12 @@
 import "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
-import { getMessaging, setBackgroundMessageHandler } from "@react-native-firebase/messaging";
+import { getMessaging, onMessage, setBackgroundMessageHandler } from "@react-native-firebase/messaging";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "@/i18n";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router, useSegments } from "expo-router";
-import { View, ActivityIndicator, LogBox, AppState } from "react-native";
+import { View, ActivityIndicator, LogBox, AppState, Platform } from "react-native";
 import FlashMessage, { showMessage } from "react-native-flash-message";
 import * as Device from "expo-device";
 import { useEffect, useRef, useState } from "react";
@@ -121,7 +121,6 @@ export default function RootLayout() {
 
   // ─── Refs ──────────────────────────────────────────────────────────────
 
-  const notificationListener = useRef<Notifications.Subscription>(null);
   const pendingFCM = useRef<{ token: string; deviceInfo: DeviceInfo } | null>(null);
 
   // ─── Effets ─────────────────────────────────────────────────────────────
@@ -202,39 +201,90 @@ export default function RootLayout() {
     }
   }, [accessToken]);
 
-  // Listeners de notifications
+  // Listeners de notifications (FCM + Expo)
   useEffect(() => {
     if (!ready) return;
 
-    notificationListener.current =
-      Notifications.addNotificationReceivedListener((notification) => {
-        console.log("📥 Notification reçue en foreground:", notification);
+    const handledIds = new Set<string>();
 
-        const { title, body, data } = notification.request.content;
+    const expoSub = Notifications.addNotificationReceivedListener((notification) => {
+      const { data } = notification.request.content;
+      // Skip if already handled by FCM foreground handler (system notification posted)
+      if (data?._fcmHandled) return;
 
-        // Affichage d'une bannière visuelle
-        showMessage({
-          message: title || "Nouvelle notification",
-          description: body || "",
-          type: "info",
-          icon: "info",
-          duration: 3000,
-        });
+      const id = notification.request.identifier;
+      if (handledIds.has(id)) return;
+      handledIds.add(id);
 
-        inAppNotificationService.addToInbox({
-          id: notification.request.identifier,
-          title: title || "",
-          content: body || "",
-          type: (data?.type as string) || "system",
-          read: false,
-          createdAt: new Date().toISOString(),
-        });
+      console.log("📥 Notification expo reçue en foreground:", notification);
+
+      const { title, body } = notification.request.content;
+
+      showMessage({
+        message: title || "Nouvelle notification",
+        description: body || "",
+        type: "info",
+        icon: "info",
+        duration: 5000,
       });
 
-    return () => {
-      if (notificationListener.current) {
-        notificationListener.current.remove();
+      inAppNotificationService.addToInbox({
+        id,
+        title: title || "",
+        content: body || "",
+        type: (data?.type as string) || "system",
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      if (String(data?.type).startsWith("RDV_")) {
+        useAppointmentStore.getState().incrementRefreshSignal();
       }
+    });
+
+    const fcmUnsub = onMessage(getMessaging(), (remoteMessage) => {
+      const id = remoteMessage.messageId || `fcm-${Date.now()}`;
+      if (handledIds.has(id)) return;
+      handledIds.add(id);
+
+      console.log("📥 Notification FCM reçue en foreground:", remoteMessage);
+
+      const { notification, data } = remoteMessage;
+      const title = ((notification?.title as string) || data?.title || "Nouvelle notification") as string;
+      const body = ((notification?.body as string) || data?.body || "") as string;
+
+      // Poster une notification système (heads-up) comme en arrière-plan
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          data: { ...data, _fcmHandled: true },
+          sound: true,
+          ...(Platform.OS === "android" && {
+            channelId: "vitacare-default",
+            vibration: true,
+          }),
+        },
+        trigger: null,
+      });
+
+      inAppNotificationService.addToInbox({
+        id,
+        title,
+        content: body,
+        type: (data?.type as string) || "system",
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      if (String(data?.type).startsWith("RDV_")) {
+        useAppointmentStore.getState().incrementRefreshSignal();
+      }
+    });
+
+    return () => {
+      expoSub.remove();
+      fcmUnsub();
     };
   }, [ready]);
 
