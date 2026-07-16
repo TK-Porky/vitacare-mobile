@@ -94,6 +94,7 @@ export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
   ({ appointmentId, amount, onSuccess }, ref) => {
     const { t } = useTranslation();
     const sheetRef = useRef<AppBottomSheetRef>(null);
+    const isSubmittingRef = useRef(false);
     const [cardNumber,   setCardNumber]   = useState('');
     const [expiry,       setExpiry]       = useState('');
     const [cvv,          setCvv]          = useState('');
@@ -121,6 +122,8 @@ export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
     };
 
     const handlePay = async () => {
+      if (isSubmittingRef.current) return;
+      isSubmittingRef.current = true;
       setProcessing(true);
       try {
         const result = await paymentService.initiatePayment({
@@ -146,6 +149,8 @@ export const CardPaymentSheet = forwardRef<PaymentSheetRef, Props>(
           type: 'error',
           message: err?.message || t('errors.somethingWrong'),
         });
+      } finally {
+        isSubmittingRef.current = false;
       }
     };
 

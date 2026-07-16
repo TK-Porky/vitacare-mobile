@@ -45,6 +45,7 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
   ({ appointmentId, amount, onSuccess }, ref) => {
     const { t } = useTranslation();
     const sheetRef = useRef<AppBottomSheetRef>(null);
+    const isSubmittingRef = useRef(false);
     const [phone, setPhone] = useState("");
     const [processing, setProcessing] = useState(false);
     const [modal, setModal] = useState<ModalState>({ visible: false });
@@ -55,6 +56,8 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
     }));
 
     const handlePay = async () => {
+      if (isSubmittingRef.current) return;
+      isSubmittingRef.current = true;
       setProcessing(true);
       try {
         const result = await paymentService.initiatePayment({
@@ -84,6 +87,8 @@ export const OrangePaymentSheet = forwardRef<PaymentSheetRef, Props>(
           type: "error",
           message: err?.message || t('errors.somethingWrong'),
         });
+      } finally {
+        isSubmittingRef.current = false;
       }
     };
 

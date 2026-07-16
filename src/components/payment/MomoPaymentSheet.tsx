@@ -3,7 +3,6 @@ import React, {
   useImperativeHandle,
   useRef,
   useState,
-  useCallback,
 } from "react";
 import { View, Text, StyleSheet, Image, Platform } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -42,9 +41,7 @@ const fmt = (n: number) =>
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, " ")} XCFA`;
 
-const formatPhone = useCallback((phone: string) => {
-  return phone.replace(/\s/g, "");
-}, []);
+const formatPhone = (phone: string) => phone.replace(/\s/g, "");
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -52,6 +49,7 @@ export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
   ({ appointmentId, amount, onSuccess }, ref) => {
     const { t } = useTranslation();
     const sheetRef = useRef<AppBottomSheetRef>(null);
+    const isSubmittingRef = useRef(false);
     const [phone, setPhone] = useState("");
     const [processing, setProcessing] = useState(false);
     const [modal, setModal] = useState<ModalState>({ visible: false });
@@ -62,6 +60,8 @@ export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
     }));
 
     const handlePay = async () => {
+      if (isSubmittingRef.current) return;
+      isSubmittingRef.current = true;
       setProcessing(true);
       try {
         const result = await paymentService.initiatePayment({
@@ -91,6 +91,8 @@ export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
           type: "error",
           message: err?.message || t('errors.somethingWrong'),
         });
+      } finally {
+        isSubmittingRef.current = false;
       }
     };
 
