@@ -133,6 +133,12 @@ export const appointmentService = {
       throw new Error(res.error ?? "Failed to cancel appointment");
   },
 
+  async deleteAppointment(id: number | string): Promise<void> {
+    const res = await apiClient.delete(API_ENDPOINTS.APPOINTMENTS.DELETE(id));
+    if (!res.success)
+      throw new Error(res.error ?? "Failed to delete appointment");
+  },
+
   async rescheduleAppointment(
     id: number | string,
     data: RescheduleAppointmentRequest,

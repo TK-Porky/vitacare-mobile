@@ -81,6 +81,7 @@ export const API_ENDPOINTS = {
     CREATE: "/appointments",
     DETAIL: (id: string | number) => `/appointments/${id}`,
     CANCEL: (id: string | number) => `/appointments/${id}`,
+    DELETE: (id: string | number) => `/appointments/${id}/delete`,
     MARK_PAID: (id: number | string) => `/appointments/${id}/pay`,
     RESCHEDULE: (id: string | number) => `/appointments/${id}/reschedule`,
   },
