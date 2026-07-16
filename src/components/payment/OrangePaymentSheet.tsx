@@ -1,6 +1,5 @@
 import React, {
   forwardRef,
-  useCallback,
   useImperativeHandle,
   useRef,
   useState,
@@ -38,9 +37,7 @@ const fmt = (n: number) =>
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, " ")} XCFA`;
 
-const formatPhone = useCallback((phone: string) => {
-  return phone.replace(/\s/g, "");
-}, []);
+const formatPhone = (phone: string) => phone.replace(/\s/g, "");
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

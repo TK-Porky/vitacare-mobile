@@ -833,7 +833,7 @@
     "edit": "Modifier le rappel",
     "error": "Une erreur est survenue",
     "filters": {
-      "ALL": "Tous",
+      "ALL": "Rendez-vous",
       "MISSED": "Manqué",
       "PENDING": "En attente",
       "SNOOZED": "Reporté",
@@ -894,7 +894,7 @@
       "pending": "En attente",
       "taken": "Pris"
     },
-    "taken": "Pris",
+    "taken": "Prises",
     "ticketGenerationError": "Impossible de générer le ticket.",
     "title": "Mes Rappels",
     "validationTitle": "Validation du rappel",
