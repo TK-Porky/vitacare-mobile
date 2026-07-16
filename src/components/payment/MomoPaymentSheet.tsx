@@ -31,7 +31,7 @@ type Props = {
 
 type ModalState =
   | { visible: false }
-  | { visible: true; type: "success" }
+  | { visible: true; type: "success"; message?: string }
   | { visible: true; type: "error"; message: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -53,6 +53,7 @@ export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
     const [phone, setPhone] = useState("");
     const [processing, setProcessing] = useState(false);
     const [modal, setModal] = useState<ModalState>({ visible: false });
+    const [shouldCompleteOnClose, setShouldCompleteOnClose] = useState(false);
 
     useImperativeHandle(ref, () => ({
       open: () => sheetRef.current?.open(),
@@ -71,20 +72,30 @@ export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
           phoneNumber: formatPhone(phone),
         });
         setProcessing(false);
-        if (
-          result.paymentStatus === "SUCCESS" ||
-          result.paymentStatus === "PROCESSING"
-        ) {
+        const normalizedStatus = String(result.paymentStatus || "").toUpperCase();
+        if (normalizedStatus === "SUCCESS") {
+          setShouldCompleteOnClose(true);
           setModal({ visible: true, type: "success" });
+        } else if (normalizedStatus === "PROCESSING" || normalizedStatus === "PENDING") {
+          setShouldCompleteOnClose(false);
+          setModal({
+            visible: true,
+            type: "success",
+            message:
+              "Paiement initié avec succès. Pour finaliser le paiement, composez *126# puis validez la transaction.",
+          });
         } else {
+          setShouldCompleteOnClose(false);
+          const failureMessage = String(result.failureReason || "").trim();
           setModal({
             visible: true,
             type: "error",
             message:
-              result.failureReason || t('errors.somethingWrong'),
+              failureMessage || "Le paiement a échoué. Veuillez réessayer ou contacter l’assistance si le débit a été refusé.",
           });
         }
       } catch (err: any) {
+        setShouldCompleteOnClose(false);
         setProcessing(false);
         setModal({
           visible: true,
@@ -100,10 +111,13 @@ export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
       if (modal.visible && modal.type === "success") {
         setModal({ visible: false });
         sheetRef.current?.close();
-        onSuccess();
+        if (shouldCompleteOnClose) {
+          onSuccess();
+        }
       } else {
         setModal({ visible: false });
       }
+      setShouldCompleteOnClose(false);
     };
 
     const handleSecondary = () => {
@@ -121,6 +135,7 @@ export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
           onClose={() => {
             setPhone("");
             setModal({ visible: false });
+            setShouldCompleteOnClose(false);
           }}
         >
           {/* ── Header ── */}
@@ -177,6 +192,9 @@ export const MomoPaymentSheet = forwardRef<PaymentSheetRef, Props>(
           amount={amount}
           errorMessage={
             modal.visible && modal.type === "error" ? modal.message : undefined
+          }
+          successMessage={
+            modal.visible && modal.type === "success" ? modal.message : undefined
           }
           onPrimary={handlePrimary}
           onSecondary={handleSecondary}

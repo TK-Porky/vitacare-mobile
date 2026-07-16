@@ -21,6 +21,7 @@ type Props = {
   type: PaymentResultType;
   amount?: number;
   errorMessage?: string;
+  successMessage?: string;
   /** "Voir ma réservation" on success, "Réessayer" on error */
   onPrimary: () => void;
   /** "Annuler" — error only, closes sheet entirely */
@@ -41,6 +42,7 @@ export function PaymentResultModal({
   type,
   amount,
   errorMessage,
+  successMessage,
   onPrimary,
   onSecondary,
 }: Props) {
@@ -78,7 +80,7 @@ export function PaymentResultModal({
           {/* Body */}
           <Text style={styles.body}>
             {isSuccess
-              ? `${amount ? fmt(amount) + " " + t('common.success') : ""}\n${t('booking.success')}`
+              ? (successMessage ?? `${amount ? fmt(amount) + " " + t('common.success') : ""}\n${t('booking.success')}`)
               : (errorMessage ??
                 t('errors.somethingWrong'))}
           </Text>
