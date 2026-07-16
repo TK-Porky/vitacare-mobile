@@ -46,7 +46,7 @@ export const StepTime = ({ slots, selected, onSelect }: Props) => {
         <StepLabel number={2} label={t('booking.selectTime')} />
         <View style={styles.empty}>
           <Ionicons name="time-outline" size={40} color={colors.inkFaint} />
-          <Text style={styles.emptyText}>{t('common.noResults')}</Text>
+          <Text style={styles.emptyText}>{t('booking.noSlots')}</Text>
         </View>
       </View>
     );

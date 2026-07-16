@@ -35,9 +35,9 @@ export const useMedicationStore = create<MedicationState>()(
 
       fetchMedications: async (params?) => {
         const state = get();
-        if (state.medications.length > 0 && state.isLoading) return;
-        if (state.medications.length > 0 && state.lastFetch && Date.now() - state.lastFetch < CACHE_TTL) return;
-        if (!state.medications.length) set({ isLoading: true, error: null });
+        if (!params && state.medications.length > 0 && state.isLoading) return;
+        if (!params && state.medications.length > 0 && state.lastFetch && Date.now() - state.lastFetch < CACHE_TTL) return;
+        if (!state.medications.length || params) set({ isLoading: true, error: null });
         try {
           const medications = await medicationService.getStoreMedications(params);
           set({ medications, lastFetch: Date.now(), error: null });

@@ -25,6 +25,9 @@ export function toAppointment(r: AppointmentResponse): Appointment {
   const defaultPayment =
     r.total && r.total > 0 ? i18next.t('appointments.payAtConsultation') : i18next.t('common.free');
 
+  const pm = r.paymentMethod;
+  const isOnlineProvider = pm === "mobile_money" || pm === "orange_money" || pm === "card";
+
   return {
     id: String(r.id),
     title: i18next.t('appointments.visit'),
@@ -39,8 +42,9 @@ export function toAppointment(r: AppointmentResponse): Appointment {
     time: r.time,
     dateTime: r.dateTime,
     status: normalizeStatus(r.status),
-    paymentMethod: defaultPayment,
-    paymentProvider: "",
+    paymentMethod: pm ?? defaultPayment,
+    paymentProvider: isOnlineProvider ? pm : "",
+    paymentStatus: r.paymentStatus ?? undefined,
     total: r.total ?? undefined,
   };
 }

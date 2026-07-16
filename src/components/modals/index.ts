@@ -5,6 +5,10 @@ export {
   type FilterState,
 } from "../search";
 export {
+  ResultsDrawer,
+  type ResultsDrawerRef,
+} from "../search";
+export {
   AddReminderBottomSheet,
   type ReminderData,
   type AddReminderBottomSheetRef,

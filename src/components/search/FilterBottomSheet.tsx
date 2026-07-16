@@ -4,8 +4,14 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { AppBottomSheet, AppBottomSheetRef } from '../generics';
 import { FilterSectionHeader } from './filter/FilterSectionHeader';
 import { FilterChip } from './filter/FilterChip';
@@ -25,16 +31,23 @@ const DEFAULT_FILTERS: FilterState = {
   languages: [],
 };
 
-const SERVICE_IDS = [
-  'Dentition',
-  'Analyse Médicale',
-  'Dermatologie',
-  'Piendontologie',
-  'Pédiatrie',
-  'Génicologie',
+const SERVICE_ITEMS = [
+  { value: 'Dentition', labelKey: 'search.servicesDentition' },
+  { value: 'Analyse Médicale', labelKey: 'search.servicesAnalyseMedicale' },
+  { value: 'Dermatologie', labelKey: 'search.servicesDermatologie' },
+  { value: 'Parodontologie', labelKey: 'search.servicesParodontologie' },
+  { value: 'Pédiatrie', labelKey: 'search.servicesPediatrie' },
+  { value: 'Gynécologie', labelKey: 'search.servicesGynecologie' },
 ] as const;
 
-const LANGUAGE_IDS = ['Français', 'Anglais', 'Pongo', 'Bami', 'Eton', 'Arabe'] as const;
+const LANGUAGE_ITEMS = [
+  { value: 'Français', labelKey: 'search.languagesFrench' },
+  { value: 'Anglais', labelKey: 'search.languagesEnglish' },
+  { value: 'Pongo', labelKey: 'search.languagesPongo' },
+  { value: 'Bami', labelKey: 'search.languagesBami' },
+  { value: 'Eton', labelKey: 'search.languagesEton' },
+  { value: 'Arabe', labelKey: 'search.languagesArabic' },
+] as const;
 
 export type FilterBottomSheetRef = {
   open: () => void;
@@ -47,30 +60,6 @@ type Props = {
   onClose?: () => void;
 };
 
-const getServiceKey = (id: string) => {
-  const map: Record<string, string> = {
-    'Dentition': 'servicesDentition',
-    'Analyse Médicale': 'servicesAnalyseMedicale',
-    'Dermatologie': 'servicesDermatologie',
-    'Piendontologie': 'servicesPiendontologie',
-    'Pédiatrie': 'servicesPediatrie',
-    'Génicologie': 'servicesGenicologie',
-  };
-  return map[id] || id;
-};
-
-const getLanguageKey = (id: string) => {
-  const map: Record<string, string> = {
-    'Français': 'languagesFrench',
-    'Anglais': 'languagesEnglish',
-    'Pongo': 'languagesPongo',
-    'Bami': 'languagesBami',
-    'Eton': 'languagesEton',
-    'Arabe': 'languagesArabic',
-  };
-  return map[id] || id;
-};
-
 export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
   ({ initialFilters = DEFAULT_FILTERS, onApply, onClose }, ref) => {
     const { t } = useTranslation();
@@ -78,8 +67,7 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
 
     const [filters, setFilters] = useState<FilterState>(initialFilters);
     const [servicesOpen, setServicesOpen] = useState(true);
-    const [languagesOpen, setLanguagesOpen] = useState(true);
-    const [priceOpen, setPriceOpen] = useState(true);
+    const [languagesOpen, setLanguagesOpen] = useState(false);
 
     useImperativeHandle(ref, () => ({
       open: () => sheetRef.current?.open(),
@@ -106,8 +94,8 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
       sheetRef.current?.close();
     };
 
-    const handleBack = () => {
-      sheetRef.current?.close();
+    const handleReset = () => {
+      setFilters(DEFAULT_FILTERS);
     };
 
     return (
@@ -117,10 +105,10 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
         footer={
           <View style={styles.footer}>
             <PrimaryButton
-              label={t('search.back')}
+              label="Réinitialiser"
               variant="outline"
               size="md"
-              onPress={handleBack}
+              onPress={handleReset}
               style={styles.footerBtn}
             />
             <PrimaryButton
@@ -136,9 +124,20 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
         scrollable
         containerStyle={styles.sheet}
       >
-        <Text style={styles.sheetTitle}>{t('search.filterTitle')}</Text>
+        {/* ── Header ── */}
+        <View style={styles.header}>
+          <Text style={styles.sheetTitle}>{t('search.filterTitle')}</Text>
+          <TouchableOpacity
+            onPress={() => sheetRef.current?.close()}
+            hitSlop={8}
+            style={styles.closeBtn}
+          >
+            <Ionicons name="close" size={22} color={colors.ink} />
+          </TouchableOpacity>
+        </View>
 
-        <View style={styles.section}>
+        {/* ── Perimeter ── */}
+        <View style={styles.sectionCard}>
           <FilterSectionHeader
             title={t('search.perimeter')}
             subtitle={t('search.perimeterSubtitle', { km: filters.perimeterKm })}
@@ -153,9 +152,8 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
           />
         </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.section}>
+        {/* ── Services ── */}
+        <View style={styles.sectionCard}>
           <FilterSectionHeader
             title={t('search.services')}
             subtitle={t('search.servicesSubtitle')}
@@ -164,58 +162,41 @@ export const FilterBottomSheet = forwardRef<FilterBottomSheetRef, Props>(
           />
           {servicesOpen && (
             <View style={styles.chipsWrap}>
-              {SERVICE_IDS.map((s) => (
+              {SERVICE_ITEMS.map((s) => (
                 <FilterChip
-                  key={s}
-                  label={t(`search.${getServiceKey(s)}`)}
-                  isSelected={filters.services.includes(s)}
-                  onPress={() => toggleItem('services', s)}
+                  key={s.value}
+                  label={t(s.labelKey)}
+                  isSelected={filters.services.includes(s.value)}
+                  onPress={() => toggleItem('services', s.value)}
                 />
               ))}
             </View>
           )}
         </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.section}>
+        {/* ── Languages ── */}
+        <View style={styles.sectionCard}>
           <FilterSectionHeader
-            title={t('search.languages')}
+            title={t('search.languagesTitle')}
             subtitle={t('search.languagesSubtitle')}
             isOpen={languagesOpen}
             onToggle={() => setLanguagesOpen((v) => !v)}
           />
           {languagesOpen && (
             <View style={styles.chipsWrap}>
-              {LANGUAGE_IDS.map((l) => (
+              {LANGUAGE_ITEMS.map((l) => (
                 <FilterChip
-                  key={l}
-                  label={t(`search.${getLanguageKey(l)}`)}
-                  isSelected={filters.languages.includes(l)}
-                  onPress={() => toggleItem('languages', l)}
+                  key={l.value}
+                  label={t(l.labelKey)}
+                  isSelected={filters.languages.includes(l.value)}
+                  onPress={() => toggleItem('languages', l.value)}
                 />
               ))}
             </View>
           )}
         </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.section}>
-          <FilterSectionHeader
-            title={t('search.priceFilter')}
-            subtitle={t('search.priceFilterSubtitle')}
-            isOpen={priceOpen}
-            onToggle={() => setPriceOpen((v) => !v)}
-          />
-          {priceOpen && (
-            <View style={styles.priceNote}>
-              <Text style={styles.priceNoteText}>
-                {t('search.priceComingSoon')}
-              </Text>
-            </View>
-          )}
-        </View>
+        <View style={{ height: 16 }} />
       </AppBottomSheet>
     );
   }
@@ -229,40 +210,44 @@ FilterBottomSheet.displayName = 'FilterBottomSheet';
 
 const styles = StyleSheet.create({
   sheet: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    marginTop: 4,
   },
   sheetTitle: {
     fontFamily: fontFamily.bold,
-    fontSize: fontSize['3xl'],
+    fontSize: fontSize['2xl'],
     color: colors.ink,
-    marginBottom: 8,
-    marginTop: 4,
   },
-  section: {
-    gap: 12,
-    paddingVertical: 16,
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
+  sectionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   chipsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
+    marginTop: 12,
   },
   slider: {
-    marginTop: 4,
-  },
-  priceNote: {
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  priceNoteText: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-    color: colors.inkMuted,
-    fontStyle: 'italic',
+    marginTop: 8,
   },
   footer: {
     flexDirection: 'row',

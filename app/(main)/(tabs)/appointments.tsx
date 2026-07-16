@@ -3,7 +3,7 @@ import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useFocusEffect } from "expo-router";
 import { StyleSheet, StatusBar, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { colors } from "@/themes";
 import { Appointment } from "@/types";
@@ -42,6 +42,8 @@ export default function AppointmentScreen() {
     refresh,
     isCancelling,
     cancelAppointment,
+    deleteAppointment,
+    clearCancelledAppointments,
     markAppointmentAsPaid,
   } = useAppointments();
 
@@ -87,6 +89,17 @@ export default function AppointmentScreen() {
     }
   }, [selectedAppointmentId, cancelAppointment]);
 
+  const handleDelete = useCallback(async () => {
+    if (!selectedAppointmentId) return;
+    await deleteAppointment(selectedAppointmentId);
+    setSelectedItem(undefined);
+    setSelectedAppointmentId(undefined);
+  }, [selectedAppointmentId, deleteAppointment]);
+
+  const handleClearCancelled = useCallback(async () => {
+    await clearCancelledAppointments();
+  }, [clearCancelledAppointments]);
+
   const handleReservation = useCallback(() => {
     router.push("/booking" as never);
   }, [router]);
@@ -119,6 +132,12 @@ export default function AppointmentScreen() {
     }
   }, [selectedAppointmentId, markAppointmentAsPaid, refresh]);
 
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
+
   // ── Rendu d'erreur ──
   if (error && !isLoading) {
     return <AppointmentErrorView error={error} onRetry={refresh} />;
@@ -139,6 +158,8 @@ export default function AppointmentScreen() {
         activeTab={activeTab}
         onRefresh={refresh}
         onCardPress={handleCardPress}
+        cancelledCount={appointments.filter((a) => a.status === "CANCELLED").length}
+        onClearCancelled={handleClearCancelled}
       />
 
       {/* ── BottomSheet de détail avec paiement ── */}
@@ -149,6 +170,7 @@ export default function AppointmentScreen() {
         onReschedule={handleReservation}
         onBookAgain={handleReservation}
         onCancel={handleCancel}
+        onDelete={handleDelete}
         onShowOnMap={handleShowOnMap}
         onPay={handlePay}
         isCancelling={isCancelling}

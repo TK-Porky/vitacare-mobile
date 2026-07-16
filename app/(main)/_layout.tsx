@@ -20,6 +20,18 @@ export default function MainLayout() {
           name="medications/search"
           options={{ animation: "fade" }}
         />
+        <Stack.Screen
+          name="medications/categories"
+          options={{ animation: "slide_from_right" }}
+        />
+        <Stack.Screen
+          name="medications/categories/[category]"
+          options={{ animation: "slide_from_right" }}
+        />
+        <Stack.Screen
+          name="medications/all"
+          options={{ animation: "slide_from_right" }}
+        />
 
         {/* ── Modal screens ── */}
         <Stack.Screen

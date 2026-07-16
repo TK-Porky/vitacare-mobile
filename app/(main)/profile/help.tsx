@@ -30,22 +30,22 @@ const CONTACT_CHANNELS = [
     id: 'email',
     icon: 'mail-outline' as const,
     labelKey: 'profile.helpScreen.sendEmail',
-    value: 'support@vitacare.cm',
-    onPress: () => Linking.openURL('mailto:support@vitacare.cm'),
+    value: 'btkextensions@gmail.com',
+    onPress: () => Linking.openURL('mailto:btkextensions@gmail.com'),
   },
   {
     id: 'whatsapp',
     icon: 'logo-whatsapp' as const,
     labelKey: 'WhatsApp',
-    value: '+237 600 000 000',
-    onPress: () => Linking.openURL('https://wa.me/237600000000'),
+    value: '+237 681 518 489',
+    onPress: () => Linking.openURL('https://wa.me/237681518489'),
   },
   {
     id: 'phone',
     icon: 'call-outline' as const,
     labelKey: 'profile.helpScreen.callSupport',
-    value: '+237 600 000 000',
-    onPress: () => Linking.openURL('tel:+237600000000'),
+    value: '+237 681 518 489',
+    onPress: () => Linking.openURL('tel:+237681518489'),
   },
 ];
 
