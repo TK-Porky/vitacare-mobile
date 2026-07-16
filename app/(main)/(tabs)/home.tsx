@@ -20,7 +20,7 @@ import {
   AppointmentItem,
 } from "@/components";
 import { colors, fontFamily, fontSize } from "@/themes";
-import { useDashboardStore, useAuthStore, useMapStore } from "@/store";
+import { useDashboardStore, useAuthStore, useMapStore, useNotificationStore } from "@/store";
 import {
   ErrorScreen,
   SupportContactBottomSheet,
@@ -50,6 +50,7 @@ export default function DashboardScreen({
   const fetchOverview = useDashboardStore((s) => s.fetchOverview);
   const updateMedicationStatus = useDashboardStore((s) => s.updateMedicationStatus);
   const user = useAuthStore((state) => state.user);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
   const supportSheetRef = useRef<SupportContactBottomSheetRef>(null);
 
   // ================================================================================== //
@@ -203,6 +204,7 @@ export default function DashboardScreen({
         onMap={handleMap}
         notificationBell={notificationBell}
         onNotification={handleNotifications}
+        notificationCount={unreadCount}
       />
 
       {showError && (

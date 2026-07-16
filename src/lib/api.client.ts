@@ -301,13 +301,17 @@ class ApiClient {
 
       this.logResponse(url, response.status, data);
 
+      const backendError = !response.ok
+        ? typeof data?.error === "string"
+          ? data.error
+          : data?.error?.message || data?.message || `HTTP Error ${response.status}`
+        : undefined;
+
       return {
         success: response.ok,
         data: data?.data ?? data,
-        message: data?.message,
-        error: !response.ok
-          ? data?.error || data?.message || `HTTP Error ${response.status}`
-          : undefined,
+        message: data?.message || backendError,
+        error: backendError,
         statusCode: response.status,
       };
     } catch (error) {
