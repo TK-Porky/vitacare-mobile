@@ -27,6 +27,7 @@ interface AppointmentState {
   fetchById: (id: string) => Promise<void>;
   create: (data: CreateAppointmentRequest) => Promise<void>;
   cancel: (id: string, data: CancelAppointmentRequest) => Promise<void>;
+  deleteAppointment: (id: string) => Promise<void>;
   reschedule: (id: string, data: RescheduleAppointmentRequest) => Promise<void>;
   clearError: () => void;
   setSelected: (appointment: AppointmentResponse | null) => void;
@@ -116,6 +117,23 @@ export const useAppointmentStore = create<AppointmentState>((set, get) => ({
     try {
       await appointmentService.cancelAppointment(id);
       await get().fetchAppointments();
+    } catch (e: any) {
+      set({ error: e.message });
+      throw e;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  deleteAppointment: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await appointmentService.deleteAppointment(id);
+      set((state) => ({
+        appointments: state.appointments.filter(a => String(a.id) !== id),
+        upcomingAppointments: state.upcomingAppointments.filter(a => String(a.id) !== id),
+        selectedAppointment: String(state.selectedAppointment?.id) === id ? null : state.selectedAppointment,
+      }));
     } catch (e: any) {
       set({ error: e.message });
       throw e;

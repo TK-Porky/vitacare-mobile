@@ -189,7 +189,7 @@ export default function RemindersScreen({ onStore }: Props) {
 
   const handleViewReminder = useCallback(
     (id: string) => {
-      router.push(`/medications/reminders/${id}`);
+      router.push(`/(main)/reminders/${id}` as never);
     },
     [router],
   );

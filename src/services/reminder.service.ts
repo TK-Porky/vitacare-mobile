@@ -7,7 +7,7 @@ import {
   UpdateReminderRequest,
   RemindersListQuery,
 } from "@/types/api-requests";
-import { ReminderResponse, RemindersListResponse } from "@/types/api-responses";
+import { ReminderResponse, RemindersListResponse, ReminderStatus } from "@/types/api-responses";
 import { notificationService } from "./notifications";
 
 // ── Helper functions ───────────────────────────────────────────────────────
@@ -26,6 +26,49 @@ const buildQueryString = (params?: Record<string, any>): string => {
 
   const queryString = searchParams.toString();
   return queryString ? `?${queryString}` : "";
+};
+
+const normalizeReminder = (item: any): ReminderResponse => {
+  if (!item) return item;
+  return {
+    ...item,
+    status: String(item.status || item.statut || "PENDING").toUpperCase() as ReminderStatus,
+  };
+};
+
+const normalizeListResponse = (data: any): RemindersListResponse => {
+  if (Array.isArray(data)) {
+    return {
+      items: data.map(normalizeReminder),
+      pagination: {
+        total: data.length,
+        page: 1,
+        limit: data.length || 20,
+        totalPages: 1,
+      },
+    };
+  }
+  if (data && Array.isArray(data.items)) {
+    return {
+      ...data,
+      items: data.items.map(normalizeReminder),
+    };
+  }
+  if (data?.data && Array.isArray(data.data)) {
+    return {
+      items: data.data.map(normalizeReminder),
+      pagination: {
+        total: data.total || data.data.length,
+        page: data.page || 1,
+        limit: data.limit || 20,
+        totalPages: data.totalPages || 1,
+      },
+    };
+  }
+  return {
+    items: [],
+    pagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
+  };
 };
 
 // ── Service ───────────────────────────────────────────────────────────────
@@ -54,26 +97,27 @@ export const reminderService = {
     const data = response.data;
 
     if (Array.isArray(data)) {
+      const items = data.map(normalizeReminder);
       return {
-        items: data,
+        items,
         pagination: {
-          total: data.length,
+          total: items.length,
           page: 1,
-          limit: data.length || 20,
+          limit: items.length || 20,
           totalPages: 1,
         },
         summary: {
-          pending: data.filter((r) => r.status === "PENDING").length,
-          taken: data.filter((r) => r.status === "TAKEN").length,
-          missed: data.filter((r) => r.status === "MISSED").length,
+          pending: items.filter((r: any) => r.status === "PENDING").length,
+          taken: items.filter((r: any) => r.status === "TAKEN").length,
+          missed: items.filter((r: any) => r.status === "MISSED").length,
         },
       };
     }
 
     if (data?.data && Array.isArray(data.data)) {
-      const items = data.data;
+      const items = data.data.map(normalizeReminder);
       return {
-        items: items,
+        items,
         pagination: {
           total: data.total || items.length,
           page: data.page || 1,
@@ -81,13 +125,9 @@ export const reminderService = {
           totalPages: data.totalPages || 1,
         },
         summary: {
-          pending: items.filter(
-            (r: { status: string }) => r.status === "PENDING",
-          ).length,
-          taken: items.filter((r: { status: string }) => r.status === "TAKEN")
-            .length,
-          missed: items.filter((r: { status: string }) => r.status === "MISSED")
-            .length,
+          pending: items.filter((r: any) => r.status === "PENDING").length,
+          taken: items.filter((r: any) => r.status === "TAKEN").length,
+          missed: items.filter((r: any) => r.status === "MISSED").length,
         },
       };
     }
@@ -106,7 +146,7 @@ export const reminderService = {
       data,
     );
     if (!res.success) throw new Error(res.error ?? "Failed to create reminder");
-    const reminder = res.data!;
+    const reminder = normalizeReminder(res.data!);
 
     // Utiliser scheduleTreatmentReminder (qui utilise la méthode schedule qui fonctionne)
     if (data.scheduledDate && data.scheduledTime) {
@@ -145,7 +185,7 @@ export const reminderService = {
     if (!res.success)
       throw new Error(res.error ?? "Failed to create simple reminder");
 
-    const reminder = res.data!;
+    const reminder = normalizeReminder(res.data!);
 
     // Planifier la notification de rappel
     if (data.startDate && data.times) {
@@ -174,7 +214,7 @@ export const reminderService = {
       data,
     );
     if (!res.success) throw new Error(res.error ?? "Failed to update reminder");
-    const reminder = res.data!;
+    const reminder = normalizeReminder(res.data!);
 
     // Annuler l'ancienne notification
     await notificationService.cancelNotification(reminderId);
@@ -221,7 +261,7 @@ export const reminderService = {
     if (!res.success) throw new Error(res.error ?? "Failed to mark as taken");
     // Annuler la notification
     await notificationService.cancelNotification(reminderId);
-    return res.data!;
+    return normalizeReminder(res.data!);
   },
 
   // Snooze un rappel pour une durée spécifiée (minutes)
@@ -235,7 +275,7 @@ export const reminderService = {
       { reminderId, minutes },
     );
     if (!res.success) throw new Error(res.error ?? "Failed to snooze reminder");
-    const reminder = res.data!;
+    const reminder = normalizeReminder(res.data!);
 
     await notificationService.cancelNotification(reminderId);
 
@@ -267,29 +307,29 @@ export const reminderService = {
     // Annuler la notification après skip
     await notificationService.cancelNotification(reminderId);
 
-    return res.data!;
+    return normalizeReminder(res.data!);
   },
 
   // ── Dashboard ──────────────────────────────────────────────────────────────
 
   // Récupère les prochains rappels (prochaines 24 heures)
   async getUpcomingReminders(): Promise<RemindersListResponse> {
-    const res = await apiClient.get<RemindersListResponse>(
+    const res = await apiClient.get<any>(
       API_ENDPOINTS.REMINDERS.UPCOMING,
     );
     if (!res.success)
       throw new Error(res.error ?? "Failed to fetch upcoming reminders");
-    return res.data!;
+    return normalizeListResponse(res.data);
   },
 
   // Récupère les prochains rappels (prochaines 24 heures)
   async getTodaySchedule(): Promise<RemindersListResponse> {
-    const res = await apiClient.get<RemindersListResponse>(
+    const res = await apiClient.get<any>(
       API_ENDPOINTS.REMINDERS.TODAY,
     );
     if (!res.success)
       throw new Error(res.error ?? "Failed to fetch today's schedule");
-    return res.data!;
+    return normalizeListResponse(res.data);
   },
 
   // Récupère les statistiques des rappels
@@ -320,10 +360,10 @@ export const reminderService = {
     const queryString = buildQueryString(query);
     const url = `${API_ENDPOINTS.REMINDERS.PATIENT(patientId)}${queryString}`;
 
-    const res = await apiClient.get<RemindersListResponse>(url);
+    const res = await apiClient.get<any>(url);
     if (!res.success)
       throw new Error(res.error ?? "Failed to fetch patient reminders");
-    return res.data!;
+    return normalizeListResponse(res.data);
   },
 
   // Récupère les rappels d'un médicament spécifique
@@ -334,10 +374,10 @@ export const reminderService = {
     const queryString = buildQueryString(query);
     const url = `${API_ENDPOINTS.REMINDERS.MEDICATION(medicationId)}${queryString}`;
 
-    const res = await apiClient.get<RemindersListResponse>(url);
+    const res = await apiClient.get<any>(url);
     if (!res.success)
       throw new Error(res.error ?? "Failed to fetch medication reminders");
-    return res.data!;
+    return normalizeListResponse(res.data);
   },
 
   // Crée plusieurs rappels en même temps
@@ -353,7 +393,7 @@ export const reminderService = {
     if (!res.success)
       throw new Error(res.error ?? "Failed to create bulk reminders");
 
-    const createdReminders = res.data!.reminders;
+    const createdReminders = (res.data!.reminders || []).map(normalizeReminder);
 
     // Planifier les notifications pour chaque rappel
     for (let i = 0; i < createdReminders.length; i++) {
