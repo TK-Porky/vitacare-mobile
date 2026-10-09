@@ -98,20 +98,29 @@ export const useAppointments = () => {
   const deleteAppointment = useCallback(async (id: string): Promise<boolean> => {
     return new Promise((resolve) => {
       Alert.alert(
-        i18next.t('appointments.deleteTitle'),
-        i18next.t('appointments.deleteMessage'),
+        i18next.t('appointments.deleteTitle') || "Supprimer le rendez-vous",
+        i18next.t('appointments.deleteMessage') || "Voulez-vous supprimer définitivement ce rendez-vous ?",
         [
           { text: i18next.t('common.cancel'), style: "cancel", onPress: () => resolve(false) },
           {
             text: i18next.t('common.delete'),
             style: "destructive",
-            onPress: () => {
-              const updated = (sessionCache ?? []).filter(
-                (a) => String(a.id) !== id,
-              );
-              sessionCache = updated;
-              setAllAppointments(updated);
-              resolve(true);
+            onPress: async () => {
+              try {
+                await appointmentService.deleteAppointment(id);
+                const updated = (sessionCache ?? []).filter(
+                  (a) => String(a.id) !== id,
+                );
+                sessionCache = updated;
+                setAllAppointments(updated);
+                resolve(true);
+              } catch (err: any) {
+                Alert.alert(
+                  i18next.t('common.error'),
+                  err?.message || i18next.t('errors.somethingWrong'),
+                );
+                resolve(false);
+              }
             },
           },
         ],

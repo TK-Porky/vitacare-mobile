@@ -64,6 +64,14 @@ export const useReminders = (query?: RemindersListQuery) => {
   });
 
   /**
+   * Real-time statistics summary query from backend
+   */
+  const summaryQuery = useQuery({
+    queryKey: reminderKeys.summary(),
+    queryFn: () => reminderService.getSummary(),
+  });
+
+  /**
    * Get reminder summary statistics
    */
   const useSummary = () => {
@@ -331,7 +339,7 @@ export const useReminders = (query?: RemindersListQuery) => {
     // Queries
     reminders: remindersQuery.data?.items || [],
     pagination: remindersQuery.data?.pagination || null,
-    summary: remindersQuery.data?.summary || null,
+    summary: summaryQuery.data || remindersQuery.data?.summary || { pending: 0, taken: 0, missed: 0 },
     isLoading: remindersQuery.isLoading,
     isFetching: remindersQuery.isFetching,
     error: remindersQuery.error,

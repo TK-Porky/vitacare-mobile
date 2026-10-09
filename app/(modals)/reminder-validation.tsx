@@ -34,7 +34,7 @@ export default function ReminderValidationModal() {
   >(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
-  const { markAsTaken, snoozeReminder, deleteReminder } = useReminders();
+  const { markAsTaken, snoozeReminder, skipReminder } = useReminders();
 
   // Effet de vibration au démarrage
   useEffect(() => {
@@ -120,8 +120,8 @@ export default function ReminderValidationModal() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
 
-      // ❌ Supprimer le rappel
-      await deleteReminder(reminderId as string);
+      // ❌ Passer (ignorer) le rappel
+      await skipReminder(reminderId as string);
 
       Alert.alert(
         t("reminders.skip"),
@@ -138,7 +138,7 @@ export default function ReminderValidationModal() {
     } finally {
       setIsLoading(false);
     }
-  }, [reminderId, medicationName, deleteReminder]);
+  }, [reminderId, medicationName, skipReminder]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
